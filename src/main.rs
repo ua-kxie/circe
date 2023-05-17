@@ -1,0 +1,282 @@
+mod nets;
+
+mod transforms;
+use transforms::{Point, CSPoint, VSPoint, CSBox, VSBox};
+mod viewport;
+use viewport::ViewportState;
+mod schematic;
+use schematic::{Schematic, SchematicState};
+
+use iced::keyboard::Modifiers;
+use iced::{executor, Size};
+use iced::widget::canvas::{
+    stroke, Cache, Cursor, Geometry, LineCap, Path, Stroke, LineDash, Frame,
+};
+use iced::widget::{canvas, container};
+use iced::{
+    Application, Color, Command, Element, Length, Rectangle, Settings,
+    Subscription, Theme, Vector,
+};
+use iced::widget::canvas::event::{self, Event};
+use iced::mouse;
+use euclid::{Vector2D, Transform2D, Box2D, Point2D};
+
+pub fn main() -> iced::Result {
+    Circe::run(Settings {
+        window: iced::window::Settings {
+             size: (350, 350), 
+             ..iced::window::Settings::default()
+            },
+        antialiasing: true,
+        ..Settings::default()
+    })
+}
+
+struct Circe {
+    // schematic: Schematic,
+    active_cache: Cache,
+    passive_cache: Cache,
+    background_cache: Cache,
+}
+
+#[derive(Debug, Clone)]
+enum Msg {  // which actions to handle here and which to let Schematic handle?
+    // TranslateTransform(Vector2D<f32, Viewport>),
+    // ScaleTransform(f32, Point2D<f32, Viewport>),
+    // NewNetCoord(Point2D<f32, Viewport>),
+    // CursorMoved(Point2D<f32, Viewport>),
+    // Confirm,
+    // Esc,
+    // Delete,
+    // SetState(SchematicState),
+    // Cycle(Point2D<f32, Viewport>),
+    // FitView(Box2D<f32, Viewport>),
+    // Select(Box2D<f32, Canvas>),  // canvas space to handle boxes where initial point is out of viewport bounds after panning
+    // SelectEnd,
+    // PushState(SchematicState),
+    // SchematicCommand(Event, Option<Point2D<f32, Canvas>>),
+}
+
+impl Application for Circe {
+    type Executor = executor::Default;
+    type Message = Msg;
+    type Theme = Theme;
+    type Flags = ();
+
+    fn new(_flags: ()) -> (Self, Command<Msg>) {
+        (
+            Circe {
+                // schematic: Default::default(),
+                active_cache: Default::default(),
+                passive_cache: Default::default(),
+                background_cache: Default::default(),
+            },
+            Command::none(),
+        )
+    }
+
+    fn title(&self) -> String {
+        String::from("Schematic Prototyping")
+    }
+
+    fn update(&mut self, message: Msg) -> Command<Msg> {
+        match message {
+        }
+        Command::none()
+    }
+
+    fn view(&self) -> Element<Msg> {
+        let canvas = canvas(self as &Self)
+            .width(Length::Fill)
+            .height(Length::Fill);
+
+        container(canvas)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+}
+
+use mouse::Event::*;
+use mouse::Button::*;
+use viewport::Viewport;
+
+impl canvas::Program<Msg> for Circe {
+    type State = Viewport;
+
+    fn update(
+        &self,
+        viewport: &mut Viewport,
+        event: Event,
+        bounds: Rectangle,
+        cursor: Cursor,
+    ) -> (event::Status, Option<Msg>) {
+        let curpos = cursor.position_in(&bounds);
+        let state = &viewport.state;
+        match (state, event, curpos) {
+            // clicking
+            (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
+                if let Some(ssp) = viewport.curpos_ssp() {
+                    self.passive_cache.clear();
+                    viewport.schematic.left_click(ssp);
+                }
+            }
+
+            // panning
+            (_, Event::Mouse(ButtonPressed(Middle)), Some(_)) => {
+                viewport.state = ViewportState::Panning;
+            }
+            (ViewportState::Panning, Event::Mouse(ButtonReleased(Middle)), _) => {
+                viewport.state = ViewportState::None;
+            }
+
+            // new view
+            (_, Event::Mouse(ButtonPressed(Right)), Some(p)) => {
+                let csp: CSPoint = Point::from(p).into();
+                let vsp = viewport.cv_transform().transform_point(csp);
+                viewport.state = ViewportState::NewView(vsp, vsp);
+            }
+            (ViewportState::NewView(vsp0, vsp1), Event::Mouse(ButtonReleased(Right)), _) => {
+                if vsp1 != vsp0 {
+                    viewport.display_bounds(
+                        CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
+                        VSBox::from_points([vsp0, vsp1])
+                    );
+                }
+                viewport.state = ViewportState::None;
+                self.passive_cache.clear();
+                self.active_cache.clear();
+            }
+
+            // zooming
+            (_, Event::Mouse(WheelScrolled{delta}), Some(p)) => { match delta {
+                mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => { 
+                    self.active_cache.clear();
+                    self.passive_cache.clear();
+                    let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
+                    viewport.zoom(scale);
+                }}
+            }
+
+            // keys
+            (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
+                match (vstate, key_code, modifiers.bits(), curpos) {
+                    (_, iced::keyboard::KeyCode::W, 0, _) => {
+                        viewport.schematic.key_wire();
+                    },
+                    (_, iced::keyboard::KeyCode::C, 0, _) => {
+                        viewport.schematic.key_cycle();
+                        self.active_cache.clear();
+                        self.passive_cache.clear();
+                    },
+                    (_, iced::keyboard::KeyCode::T, 0, _) => {
+                        viewport.schematic.key_test();
+                        self.active_cache.clear();
+                        self.passive_cache.clear();
+                    },
+                    (_, iced::keyboard::KeyCode::F, 0, _) => {
+                        viewport.display_bounds(
+                            CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
+                            viewport.schematic.bounding_box().inflate(5., 5.),
+                        );
+                        self.active_cache.clear();
+                        self.passive_cache.clear();
+                    },
+                    (_, iced::keyboard::KeyCode::Escape, 0, _) => {
+                        viewport.schematic.key_esc();
+                        self.active_cache.clear();
+                        self.passive_cache.clear();
+                    },
+                    (_, iced::keyboard::KeyCode::Delete, 0, _) => {
+                        viewport.schematic.key_del();
+                        self.active_cache.clear();
+                        self.passive_cache.clear();
+                    },
+                    _ => {},
+                }
+            }
+
+            (vstate, Event::Mouse(mouse::Event::CursorMoved { position }), opt_vsp) => {
+                let opt_vsp = opt_vsp.map(|p| Point::from(p).into());
+                self.active_cache.clear();
+                if let ViewportState::Panning = vstate {
+                    self.passive_cache.clear();
+                }
+                viewport.curpos_update(opt_vsp);
+            }
+            _ => {}
+        }
+        (event::Status::Ignored, None)
+    }
+
+    fn draw(
+        &self,
+        viewport: &Viewport,
+        _theme: &Theme,
+        bounds: Rectangle,
+        cursor: Cursor,
+    ) -> Vec<Geometry> {
+        let active = self.active_cache.draw(bounds.size(), |frame| {
+            viewport.schematic.draw_active(viewport.vc_transform(), viewport.vc_scale(), frame);
+            viewport.draw_cursor(frame);
+
+            if let ViewportState::NewView(vsp0, vsp1) = viewport.state {
+                let csp0 = viewport.vc_transform().transform_point(vsp0);
+                let csp1 = viewport.vc_transform().transform_point(vsp1);
+                let selsize = Size{width: csp1.x - csp0.x, height: csp1.y - csp0.y};
+                let f = canvas::Fill {
+                    style: canvas::Style::Solid(if selsize.height > 0. {Color::from_rgba(1., 0., 0., 0.1)} else {Color::from_rgba(0., 0., 1., 0.1)}),
+                    ..canvas::Fill::default()
+                };
+                frame.fill_rectangle(Point::from(csp0).into(), selsize, f);
+            }
+        });
+
+        let passive = self.passive_cache.draw(bounds.size(), |frame| {
+            viewport.draw_grid(frame, Box2D::new(CSPoint::origin(), Point2D::from([bounds.width, bounds.height])));
+            viewport.schematic.draw_passive(viewport.vc_transform(), viewport.vc_scale(), frame);
+        });
+
+        let background = self.background_cache.draw(bounds.size(), |frame| {
+            let f = canvas::Fill {
+                style: canvas::Style::Solid(Color::from_rgb(0.2, 0.2, 0.2)),
+                ..canvas::Fill::default()
+            };
+            frame.fill_rectangle(iced::Point::ORIGIN, bounds.size(), f);
+        });
+
+        vec![background, passive, active]
+    }
+
+    fn mouse_interaction(
+        &self,
+        viewport: &Viewport,
+        bounds: Rectangle,
+        cursor: Cursor,
+    ) -> mouse::Interaction {
+        if cursor.is_over(&bounds) {
+            match (&viewport.state, &viewport.schematic.state) {
+                (ViewportState::Panning, _) => mouse::Interaction::Grabbing,
+                (ViewportState::None, SchematicState::Idle(_)) => mouse::Interaction::default(),
+                (ViewportState::None, SchematicState::Wiring(_)) => mouse::Interaction::Crosshair,
+                _ => mouse::Interaction::default(),
+            }
+        } else {
+            mouse::Interaction::default()
+        }
+
+    }
+}
+
+// draw for all states in interaction_stack -
+// wire snapping -
+// wire persisting -
+
+// port placement
+// device serialization, along with wire and port geometry
+
+// device placement and saving, gnd, vdd, ideal res
+// netlisting
+// running simulations
+// wires move, wire/geometry move just one end
+// floating nets/ports highlight

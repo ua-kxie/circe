@@ -1,0 +1,13 @@
+[package]
+name = "circe"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+iced = {version="0.9", features = ["canvas"]}
+euclid = "0.22.9"
+lyon = "1.0"
+petgraph = "0.6.3"
+flagset = "0.4.3"
