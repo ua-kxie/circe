@@ -61,6 +61,7 @@ impl Nets {
         for e in self.selected.0.all_edges() {
             self.persistent.0.remove_edge(e.0, e.1);
         }
+        self.persistent.prune();
         self.selected.clear();
     }
 }
