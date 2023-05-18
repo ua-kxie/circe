@@ -4,7 +4,7 @@
 /// ViewportSpace is the schematic coordinate in f32
 /// SchematicSpace is the schematic coordinate in i16
 
-use crate::transforms::{CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, CanvasSpace, ViewportSpace, VSBox, CSBox};
+use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, CanvasSpace, ViewportSpace, VSBox, CSBox};
 use crate::schematic::Schematic;
 
 use euclid::{Vector2D, Rect, Size2D};
@@ -190,18 +190,18 @@ impl Viewport {
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         fn draw_grid_w_spacing(spacing: f32, bb_viewport: VSBox, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
             let v = bb_viewport.max - bb_viewport.min;
-            for col in 0..=(v.x.ceil() / spacing) as u32 {
-                for row in 0..=(v.y.ceil() / spacing) as u32 {
-                    let p_c = bb_viewport.min + Vector2D::<f32, ViewportSpace>::from([col as f32 * spacing, row as f32 * spacing]);
-                    let p = vct.transform_point(p_c);
-                    let p = iced::Point::from([p.x, p.y]);
-                    let c = Path::line(p, p);
-                    frame.stroke(&c, stroke.clone());
-                }
+            for col in 0..=(v.x.round() / spacing) as u32 {
+                let csp0 = bb_viewport.min + Vector2D::from([col as f32 * spacing, 0.0]);
+                let csp1 = bb_viewport.min + Vector2D::from([col as f32 * spacing, v.y.round()]);
+                let c = Path::line(
+                    Point::from(vct.transform_point(csp0)).into(), 
+                    Point::from(vct.transform_point(csp1)).into()
+                );
+                frame.stroke(&c, stroke.clone());
             }
         }
         let coarse_grid_threshold: f32 = 2.0;
-        let fine_grid_threshold: f32 = 4.;
+        let fine_grid_threshold: f32 = 4.0;
         if self.vc_scale() > coarse_grid_threshold {
             // draw coarse grid
             let spacing = 16.;
@@ -212,8 +212,9 @@ impl Viewport {
 
             let grid_stroke = Stroke {
                 width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
-                style: stroke::Style::Solid(Color::WHITE),
+                style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
                 line_cap: LineCap::Round,
+                line_dash: LineDash{segments: &[0.0, spacing * self.vc_scale()], offset: 0},
                 ..Stroke::default()
             };
 
@@ -233,9 +234,10 @@ impl Viewport {
                 let bb_viewport = bb_viewport.translate(v);
         
                 let grid_stroke = Stroke {
-                    width: 1.,
-                    style: stroke::Style::Solid(Color::WHITE),
+                    width: 1.0,
+                    style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
                     line_cap: LineCap::Round,
+                    line_dash: LineDash{segments: &[0.0, spacing * self.vc_scale()], offset: 0},
                     ..Stroke::default()
                 };
         
@@ -250,11 +252,11 @@ impl Viewport {
         }
         let ref_stroke = Stroke {
             width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
-            style: stroke::Style::Solid(Color::WHITE),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
-        let p = self.vc_transform().transform_point(VSPoint::from([0.,0.]));
+        let p = self.vc_transform().transform_point(VSPoint::origin());
         let r = self.vc_scale() * 8.;
         let c = Path::circle(iced::Point::from([p.x, p.y]), r);
         frame.stroke(&c, ref_stroke);
