@@ -43,7 +43,7 @@ impl Default for Viewport {
         Viewport { 
             schematic: Box::<Schematic>::default(),
             state: Default::default(),
-            transform: VCTransform::default().pre_scale(10., 10.), 
+            transform: VCTransform::default().pre_scale(10., 10.).then_scale(1., -1.), 
             scale: 10.0,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
 
             curpos: None,
@@ -79,7 +79,7 @@ impl Viewport {
         let mut vct = VCTransform::identity();
         
         let s = (csb.height() / vsb.height()).min(csb.height() / vsb.height()).clamp(Viewport::MIN_SCALING, Viewport::MAX_SCALING);  // scale from vsb to fit inside csb
-        vct = vct.then_scale(s, s);
+        vct = vct.then_scale(s, -s);
 
         let v = csb.center() - vct.transform_point(vsb.center());  // vector from vsb to csb
         vct = vct.then_translate(v);
@@ -132,7 +132,7 @@ impl Viewport {
             let scaled_transform = self.transform.then_scale(scale, scale);
 
             let mut new_transform;  // transform with applied scale and translated to maintain p_viewport position
-            let scaled_determinant = scaled_transform.determinant();
+            let scaled_determinant = scaled_transform.determinant().abs();
             if scaled_determinant < Viewport::MIN_SCALING * Viewport::MIN_SCALING {  // minimum scale
                 let clamped_scale = Viewport::MIN_SCALING / (self.scale);
                 new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
@@ -142,13 +142,12 @@ impl Viewport {
                 let clamped_scale = Viewport::MAX_SCALING / (self.scale);
                 new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
             }
-    
             let csp1 = new_transform.transform_point(vsp);
             let translation = csp - csp1;
             new_transform = new_transform.then_translate(translation);
-    
+
             self.transform = new_transform;
-            self.scale = self.transform.determinant().sqrt();
+            self.scale = self.transform.determinant().abs().sqrt();
         }
     }
 
@@ -171,13 +170,13 @@ impl Viewport {
         }
     }
 
-    pub fn draw_grid(&self, frame: &mut Frame, bb_viewport: Box2D<f32, CanvasSpace>) {
-        fn draw_grid_w_spacing(spacing: f32, bb_canvas: Box2D<f32, ViewportSpace>, cvtransform: VCTransform, frame: &mut Frame, stroke: Stroke) {
-            let v = bb_canvas.max - bb_canvas.min;
+    pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: Box2D<f32, CanvasSpace>) {
+        fn draw_grid_w_spacing(spacing: f32, bb_viewport: Box2D<f32, ViewportSpace>, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+            let v = bb_viewport.max - bb_viewport.min;
             for col in 0..=(v.x.ceil() / spacing) as u32 {
                 for row in 0..=(v.y.ceil() / spacing) as u32 {
-                    let p_c = bb_canvas.min + Vector2D::<f32, ViewportSpace>::from([col as f32 * spacing, row as f32 * spacing]);
-                    let p = cvtransform.transform_point(p_c);
+                    let p_c = bb_viewport.min + Vector2D::<f32, ViewportSpace>::from([col as f32 * spacing, row as f32 * spacing]);
+                    let p = vct.transform_point(p_c);
                     let p = iced::Point::from([p.x, p.y]);
                     let c = Path::line(p, p);
                     frame.stroke(&c, stroke.clone());
@@ -185,14 +184,15 @@ impl Viewport {
             }
         }
         let coarse_grid_threshold: f32 = 2.0;
-        let fine_grid_threshold: f32 = 4.;
+        let fine_grid_threshold: f32 = 4.0;
         if self.scale > coarse_grid_threshold {
             // draw coarse grid
             let spacing = 16.;
-            let bb_canvas = VSBox::new(
-                (self.cv_transform().transform_point(bb_viewport.min) / spacing).round() * spacing,
-                (self.cv_transform().transform_point(bb_viewport.max) / spacing).round() * spacing,
-            );
+            let bb_viewport = self.cv_transform().outer_transformed_box(&bb_canvas);
+            // let bb_viewport = VSBox::new(
+            //     (self.cv_transform().transform_point(bb_canvas.min) / spacing).round() * spacing,
+            //     (self.cv_transform().transform_point(bb_canvas.max) / spacing).round() * spacing,
+            // );
 
             let grid_stroke = Stroke {
                 width: (0.5 * self.scale).clamp(0.5, 3.0),
@@ -203,7 +203,7 @@ impl Viewport {
 
             draw_grid_w_spacing(
                 spacing, 
-                bb_canvas, 
+                bb_viewport, 
                 self.vc_transform(), 
                 frame, 
                 grid_stroke,
@@ -212,8 +212,8 @@ impl Viewport {
             if self.scale > fine_grid_threshold {  // draw fine grid if sufficiently zoomed in
                 let spacing = 2.;
                 let bb_canvas = VSBox::new(
-                    (self.cv_transform().transform_point(bb_viewport.min) / spacing).round() * spacing,
-                    (self.cv_transform().transform_point(bb_viewport.max) / spacing).round() * spacing,
+                    (self.cv_transform().transform_point(bb_canvas.min) / spacing).round() * spacing,
+                    (self.cv_transform().transform_point(bb_canvas.max) / spacing).round() * spacing,
                 );
         
                 let grid_stroke = Stroke {
@@ -239,7 +239,7 @@ impl Viewport {
             ..Stroke::default()
         };
         let p = self.vc_transform().transform_point(VSPoint::from([0.,0.]));
-        let r = self.transform.determinant().sqrt() * 8.;
+        let r = self.scale * 8.;
         let c = Path::circle(iced::Point::from([p.x, p.y]), r);
         frame.stroke(&c, ref_stroke);
     }
