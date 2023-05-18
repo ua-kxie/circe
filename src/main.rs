@@ -1,18 +1,21 @@
 mod nets;
+mod devices;
 
 mod transforms;
-use transforms::{Point, CSPoint, VSPoint, CSBox, VSBox};
+use std::fmt::Debug;
+
+use transforms::{Point, CSPoint, VSPoint, CSBox, VSBox, SSPoint};
 mod viewport;
 use viewport::ViewportState;
 mod schematic;
 use schematic::{Schematic, SchematicState};
 
 use iced::keyboard::Modifiers;
-use iced::{executor, Size};
+use iced::{executor, Size, alignment};
 use iced::widget::canvas::{
     stroke, Cache, Cursor, Geometry, LineCap, Path, Stroke, LineDash, Frame,
 };
-use iced::widget::{canvas, container};
+use iced::widget::{canvas, container, text, column};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Subscription, Theme, Vector,
@@ -34,27 +37,16 @@ pub fn main() -> iced::Result {
 
 struct Circe {
     // schematic: Schematic,
+    infotext: String,
+
     active_cache: Cache,
     passive_cache: Cache,
     background_cache: Cache,
 }
 
 #[derive(Debug, Clone)]
-enum Msg {  // which actions to handle here and which to let Schematic handle?
-    // TranslateTransform(Vector2D<f32, Viewport>),
-    // ScaleTransform(f32, Point2D<f32, Viewport>),
-    // NewNetCoord(Point2D<f32, Viewport>),
-    // CursorMoved(Point2D<f32, Viewport>),
-    // Confirm,
-    // Esc,
-    // Delete,
-    // SetState(SchematicState),
-    // Cycle(Point2D<f32, Viewport>),
-    // FitView(Box2D<f32, Viewport>),
-    // Select(Box2D<f32, Canvas>),  // canvas space to handle boxes where initial point is out of viewport bounds after panning
-    // SelectEnd,
-    // PushState(SchematicState),
-    // SchematicCommand(Event, Option<Point2D<f32, Canvas>>),
+enum Msg {
+    NewCurpos(Option<SSPoint>),
 }
 
 impl Application for Circe {
@@ -67,6 +59,8 @@ impl Application for Circe {
         (
             Circe {
                 // schematic: Default::default(),
+                infotext: String::from(""),
+
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
                 background_cache: Default::default(),
@@ -81,6 +75,12 @@ impl Application for Circe {
 
     fn update(&mut self, message: Msg) -> Command<Msg> {
         match message {
+            Msg::NewCurpos(opt_ssp) => {
+                self.infotext.clear();
+                if let Some(curpos_ssp) = opt_ssp {
+                    self.infotext.push_str(&format!("{:?}", curpos_ssp)); 
+                }
+            }
         }
         Command::none()
     }
@@ -89,11 +89,14 @@ impl Application for Circe {
         let canvas = canvas(self as &Self)
             .width(Length::Fill)
             .height(Length::Fill);
+        let infobar = text(&self.infotext).size(16).height(16).vertical_alignment(alignment::Vertical::Center);
 
-        container(canvas)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        column![
+            canvas,
+            infobar,
+        ]
+        .width(Length::Fill)
+        .into()
     }
 }
 
@@ -113,6 +116,7 @@ impl canvas::Program<Msg> for Circe {
     ) -> (event::Status, Option<Msg>) {
         let curpos = cursor.position_in(&bounds);
         let state = &viewport.state;
+        let mut msg = None;
         match (state, event, curpos) {
             // clicking
             (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
@@ -203,10 +207,11 @@ impl canvas::Program<Msg> for Circe {
                     self.passive_cache.clear();
                 }
                 viewport.curpos_update(opt_vsp);
+                msg = Some(Msg::NewCurpos(viewport.curpos_ssp()))
             }
             _ => {}
         }
-        (event::Status::Ignored, None)
+        (event::Status::Ignored, msg)
     }
 
     fn draw(

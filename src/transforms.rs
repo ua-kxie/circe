@@ -14,6 +14,10 @@ pub type CSPoint = euclid::Point2D<f32, CanvasSpace>;
 pub type VSPoint = euclid::Point2D<f32, ViewportSpace>;
 pub type SSPoint = euclid::Point2D<i16, SchematicSpace>;
 
+pub type CSVec = euclid::Vector2D<f32, CanvasSpace>;
+pub type VSVec = euclid::Vector2D<f32, ViewportSpace>;
+pub type SSVec = euclid::Vector2D<i16, SchematicSpace>;
+
 pub type CSBox = euclid::Box2D<f32, CanvasSpace>;
 pub type VSBox = euclid::Box2D<f32, ViewportSpace>;
 pub type SSBox = euclid::Box2D<i16, SchematicSpace>;
