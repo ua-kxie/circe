@@ -78,7 +78,7 @@ impl Schematic {
             SchematicState::Wiring(opt_ws) => {
                 if let Some((g, prev_ssp)) = opt_ws {
                     g.as_mut().clear();
-                    if let Some((vsp, ssp)) = opt_curpos {
+                    if let Some((_vsp, ssp)) = opt_curpos {
                         g.route(*prev_ssp, ssp);
                     }
                 }
