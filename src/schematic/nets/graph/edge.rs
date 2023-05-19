@@ -2,7 +2,7 @@ use crate::{
     transforms::{
         VSPoint, SSPoint, VSBox, SSBox, VCTransform, CVTransform, ViewportSpace, SchematicSpace
     }, 
-    nets::{Drawable, DrawState, Selectable}
+    schematic::nets::{Drawable, DrawState, Selectable}
 };
 use euclid::{Point2D, Box2D, Vector2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};

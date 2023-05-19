@@ -1,11 +1,14 @@
-pub use crate::nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
+mod nets;
+mod devices;
+
+pub use nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
 use iced::widget::Canvas;
 use iced::widget::canvas::event::Event;
 use iced::mouse::Event::*;
 use iced::mouse;
 
 use crate::transforms::{VSPoint, SSPoint, ViewportSpace, SchematicSpace, CSPoint, VCTransform, VSBox};
-use crate::devices::Device;
+use devices::Device;
 
 use iced::widget::canvas::{
     stroke, Cache, Cursor, LineCap, Path, Stroke, LineDash, Frame,

@@ -3,7 +3,7 @@
 /// 
 use std::cmp::Ordering;
 
-use crate::{transforms::{VSPoint, SSPoint, VSBox, SSBox, VCTransform, CVTransform, ViewportSpace, SchematicSpace}, nets::{Drawable, Selectable}};
+use crate::{transforms::{VSPoint, SSPoint, VSBox, SSBox, VCTransform, CVTransform, ViewportSpace, SchematicSpace}, schematic::nets::{Drawable, Selectable}};
 use euclid::{Point2D, Box2D, Vector2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 

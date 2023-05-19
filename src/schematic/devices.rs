@@ -1,9 +1,14 @@
-use euclid::{Size2D, default::Transform2D, Vector2D};
+use euclid::{Size2D, Transform2D, Vector2D, Angle};
 use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self}, Color, Size};
 
 // ex: Vgnd0 net1 0 0
 // device Id, net at port, ground net '0', device voltage 0
-use crate::{transforms::{SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox}, nets::{Selectable, Drawable}, viewport::Viewport};
+use crate::{schematic::nets::{Selectable, Drawable},
+    transforms::{
+        SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox, CVTransform
+    }, 
+    viewport::Viewport
+};
 
 #[derive(Debug)]
 struct Port {
@@ -53,7 +58,7 @@ impl Graphics {
 }
 
 pub struct Device {
-    transform: euclid::default::Transform2D<f32>,
+    transform: euclid::Transform2D<f32, ViewportSpace, ViewportSpace>,
     ports: Vec<Port>,
     bounds: SSRect,
     graphic: Graphics,
@@ -79,7 +84,7 @@ impl Device {
     
     pub fn new_res(ssp: SSPoint) -> Self {
         Device { 
-            transform: Transform2D::identity(), 
+            transform: Transform2D::identity().then_rotate(Angle::frac_pi_2()), 
             ports: vec![
                 Port {name: "+", offset: SSVec::new(0, 3)},
                 Port {name: "-", offset: SSVec::new(0, -3)},
@@ -132,6 +137,7 @@ fn draw_with(graphics: &Graphics, ports: &[Port], vct: VCTransform, frame: &mut 
 
 impl Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        let vct = self.transform.then(&vct);
         let solder_dia = 0.1;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * 2.0),
