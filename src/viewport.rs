@@ -189,9 +189,9 @@ impl Viewport {
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         fn draw_grid_w_spacing(spacing: f32, bb_viewport: VSBox, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
             let v = bb_viewport.max - bb_viewport.min;
-            for col in 0..=(v.x.round() / spacing) as u32 {
+            for col in 0..=(v.x.ceil() / spacing) as u32 {
                 let csp0 = bb_viewport.min + Vector2D::from([col as f32 * spacing, 0.0]);
-                let csp1 = bb_viewport.min + Vector2D::from([col as f32 * spacing, v.y.round()]);
+                let csp1 = bb_viewport.min + Vector2D::from([col as f32 * spacing, v.y.ceil()]);
                 let c = Path::line(
                     Point::from(vct.transform_point(csp0)).into(), 
                     Point::from(vct.transform_point(csp1)).into()

@@ -5,6 +5,7 @@ use iced::mouse::Event::*;
 use iced::mouse;
 
 use crate::transforms::{VSPoint, SSPoint, ViewportSpace, SchematicSpace, CSPoint, VCTransform, VSBox};
+use crate::devices::Device;
 
 use iced::widget::canvas::{
     stroke, Cache, Cursor, LineCap, Path, Stroke, LineDash, Frame,
@@ -32,6 +33,7 @@ impl Default for SchematicState {
 #[derive(Default)]
 pub struct Schematic {
     net: Box<Nets>,
+    devices: Device,
     pub state: SchematicState,
 
     curpos: Option<(VSPoint, SSPoint)>,
@@ -128,6 +130,7 @@ impl Schematic {
     ) {  // draw elements which may need to be redrawn at any event
         self.net.persistent.draw_persistent(vct, vcscale, frame);
         self.net.selected.draw_selected(vct, vcscale, frame);
+        self.devices.draw_persistent(vct, vcscale, frame);
     }
 
     pub fn bounding_box(&self) -> VSBox {
