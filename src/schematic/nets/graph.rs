@@ -1,7 +1,6 @@
-use crate::transforms::{VSPoint, SSPoint, VSBox, SSBox, VCTransform, CVTransform, ViewportSpace, SchematicSpace};
-use euclid::{Point2D, Box2D, Vector2D};
+use crate::transforms::{SSPoint, VCTransform};
+use euclid::{Point2D};
 use petgraph::graphmap::GraphMap;
-// use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 
 mod vertex;
 pub use vertex::NetVertex;
@@ -26,10 +25,8 @@ pub trait NetsGraphExt {
     fn edge_occupies_ssp(&self, ssp: SSPoint) -> bool;
     fn vertex_occupies_ssp(&self, ssp: SSPoint) -> bool;
     fn occupies_ssp(&self, ssp: SSPoint) -> bool;
-    // fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn clear(&mut self);
     fn prune(&mut self);
-    // fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame, curpos_vsp: VSPoint);
 }
 
 impl NetsGraphExt for NetsGraph {

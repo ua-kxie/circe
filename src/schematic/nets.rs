@@ -1,12 +1,12 @@
 pub mod graph;
-use graph::{NetsGraph, NetEdge, NetVertex};
+use graph::NetsGraph;
 
 use petgraph::algo::tarjan_scc;
 
-use crate::transforms::{VSPoint, SSPoint, VSBox, SSBox, VCTransform, CVTransform, ViewportSpace, SchematicSpace};
+use crate::transforms::{VSPoint, VSBox, VCTransform};
 use iced::widget::canvas::Frame;
 
-use flagset::{FlagSet, flags};
+use flagset::flags;
 
 use self::graph::NetsGraphExt;
 
@@ -40,20 +40,19 @@ pub struct Nets {
 impl Nets {
     pub fn tt(&self) {
         let a = tarjan_scc(&self.persistent.0);  // this finds the unconnected components 
-        dbg!(a);
     }
-    pub fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame, curpos_vsp: VSPoint) {
-        for (_, _, edge) in self.persistent.0.all_edges() {
-            if edge.collision_by_vsp(curpos_vsp) {
-                edge.draw_preview(vct, vcscale, frame)
-            }
-        }
-        for vertex in self.persistent.0.nodes() {
-            if vertex.collision_by_vsp(curpos_vsp) {
-                vertex.draw_preview(vct, vcscale, frame)
-            }
-        }
-    }
+    // pub fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame, curpos_vsp: VSPoint) {
+    //     for (_, _, edge) in self.persistent.0.all_edges() {
+    //         if edge.collision_by_vsp(curpos_vsp) {
+    //             edge.draw_preview(vct, vcscale, frame)
+    //         }
+    //     }
+    //     for vertex in self.persistent.0.nodes() {
+    //         if vertex.collision_by_vsp(curpos_vsp) {
+    //             vertex.draw_preview(vct, vcscale, frame)
+    //         }
+    //     }
+    // }
     pub fn delete_selected_from_persistent(&mut self) {
         // for v in self.selected.0.nodes() {
         //     self.persistent.0.remove_node(v);

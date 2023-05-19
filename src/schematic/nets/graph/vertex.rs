@@ -3,9 +3,9 @@
 /// 
 use std::cmp::Ordering;
 
-use crate::{transforms::{VSPoint, SSPoint, VSBox, SSBox, VCTransform, CVTransform, ViewportSpace, SchematicSpace}, schematic::nets::{Drawable, Selectable}};
-use euclid::{Point2D, Box2D, Vector2D};
-use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
+use crate::{transforms::{VSPoint, SSPoint, VSBox, VCTransform}, schematic::nets::{Drawable, Selectable}};
+use euclid::Box2D;
+use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap}, Color};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct NetVertex (pub SSPoint);

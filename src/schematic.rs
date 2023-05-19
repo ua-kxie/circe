@@ -8,12 +8,14 @@ use iced::mouse::Event::*;
 use iced::mouse;
 
 use crate::transforms::{VSPoint, SSPoint, ViewportSpace, SchematicSpace, CSPoint, VCTransform, VSBox};
-use devices::Device;
+use devices::DeviceInstance;
 
 use iced::widget::canvas::{
     stroke, Cache, Cursor, LineCap, Path, Stroke, LineDash, Frame,
 };
 use iced::Color;
+
+use self::devices::Devices;
 
 #[derive(Clone, Debug)]
 pub enum BaseElement {
@@ -36,7 +38,7 @@ impl Default for SchematicState {
 #[derive(Default)]
 pub struct Schematic {
     net: Box<Nets>,
-    devices: Device,
+    devices: Devices,
     pub state: SchematicState,
 
     curpos: Option<(VSPoint, SSPoint)>,
