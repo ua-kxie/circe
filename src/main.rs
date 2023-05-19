@@ -36,7 +36,7 @@ pub fn main() -> iced::Result {
 }
 
 struct Circe {
-    // schematic: Schematic,
+    schematic: Schematic,
     infotext: String,
 
     active_cache: Cache,
@@ -46,7 +46,13 @@ struct Circe {
 
 #[derive(Debug, Clone)]
 enum Msg {
-    NewCurpos(Option<SSPoint>),
+    NewCurpos(Option<(VSPoint, SSPoint)>),
+    LeftClick(SSPoint),
+    Wire,
+    Cycle,
+    Test,
+    Esc,
+    Del,
 }
 
 impl Application for Circe {
@@ -58,7 +64,7 @@ impl Application for Circe {
     fn new(_flags: ()) -> (Self, Command<Msg>) {
         (
             Circe {
-                // schematic: Default::default(),
+                schematic: Default::default(),
                 infotext: String::from(""),
 
                 active_cache: Default::default(),
@@ -75,12 +81,31 @@ impl Application for Circe {
 
     fn update(&mut self, message: Msg) -> Command<Msg> {
         match message {
-            Msg::NewCurpos(opt_ssp) => {
+            Msg::NewCurpos(opt_curpos) => {
+                self.schematic.curpos_update(opt_curpos);
                 self.infotext.clear();
-                if let Some(curpos_ssp) = opt_ssp {
+                if let Some((_vsp, curpos_ssp)) = opt_curpos {
                     self.infotext.push_str(&format!("{:?}", curpos_ssp)); 
                 }
             }
+            Msg::LeftClick(ssp) => {
+                self.schematic.left_click(ssp);
+            },
+            Msg::Wire => {
+                self.schematic.key_wire();
+            },
+            Msg::Cycle => {
+                self.schematic.key_cycle();
+            },
+            Msg::Test => {
+                self.schematic.key_test();
+            },
+            Msg::Esc => {
+                self.schematic.key_esc();
+            },
+            Msg::Del => {
+                self.schematic.key_del();
+            },
         }
         Command::none()
     }
@@ -122,7 +147,7 @@ impl canvas::Program<Msg> for Circe {
             (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
                 if let Some(ssp) = viewport.curpos_ssp() {
                     self.passive_cache.clear();
-                    viewport.schematic.left_click(ssp);
+                    msg = Some(Msg::LeftClick(ssp));
                 }
             }
 
@@ -166,33 +191,34 @@ impl canvas::Program<Msg> for Circe {
             (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
                 match (vstate, key_code, modifiers.bits(), curpos) {
                     (_, iced::keyboard::KeyCode::W, 0, _) => {
-                        viewport.schematic.key_wire();
+                        msg = Some(Msg::Wire);
                     },
                     (_, iced::keyboard::KeyCode::C, 0, _) => {
-                        viewport.schematic.key_cycle();
+                        msg = Some(Msg::Cycle);
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::T, 0, _) => {
-                        viewport.schematic.key_test();
+                        msg = Some(Msg::Test);
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::F, 0, _) => {
+                        let vsb = self.schematic.bounding_box().inflate(5., 5.);
                         viewport.display_bounds(
                             CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
-                            viewport.schematic.bounding_box().inflate(5., 5.),
+                            vsb,
                         );
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::Escape, 0, _) => {
-                        viewport.schematic.key_esc();
+                        msg = Some(Msg::Esc);
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::Delete, 0, _) => {
-                        viewport.schematic.key_del();
+                        msg = Some(Msg::Del);
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
@@ -200,14 +226,14 @@ impl canvas::Program<Msg> for Circe {
                 }
             }
 
-            (vstate, Event::Mouse(mouse::Event::CursorMoved { position }), opt_vsp) => {
-                let opt_vsp = opt_vsp.map(|p| Point::from(p).into());
+            (vstate, Event::Mouse(mouse::Event::CursorMoved { position }), opt_csp) => {
+                let opt_csp = opt_csp.map(|p| Point::from(p).into());
                 self.active_cache.clear();
                 if let ViewportState::Panning = vstate {
                     self.passive_cache.clear();
                 }
-                viewport.curpos_update(opt_vsp);
-                msg = Some(Msg::NewCurpos(viewport.curpos_ssp()))
+                viewport.curpos_update(opt_csp);
+                msg = Some(Msg::NewCurpos(viewport.curpos_vs_ss()))
             }
             _ => {}
         }
@@ -222,7 +248,7 @@ impl canvas::Program<Msg> for Circe {
         cursor: Cursor,
     ) -> Vec<Geometry> {
         let active = self.active_cache.draw(bounds.size(), |frame| {
-            viewport.schematic.draw_active(viewport.vc_transform(), viewport.vc_scale(), frame);
+            self.schematic.draw_active(viewport.vc_transform(), viewport.vc_scale(), frame);
             viewport.draw_cursor(frame);
 
             if let ViewportState::NewView(vsp0, vsp1) = viewport.state {
@@ -239,7 +265,7 @@ impl canvas::Program<Msg> for Circe {
 
         let passive = self.passive_cache.draw(bounds.size(), |frame| {
             viewport.draw_grid(frame, Box2D::new(CSPoint::origin(), Point2D::from([bounds.width, bounds.height])));
-            viewport.schematic.draw_passive(viewport.vc_transform(), viewport.vc_scale(), frame);
+            self.schematic.draw_passive(viewport.vc_transform(), viewport.vc_scale(), frame);
         });
 
         let background = self.background_cache.draw(bounds.size(), |frame| {
@@ -260,7 +286,7 @@ impl canvas::Program<Msg> for Circe {
         cursor: Cursor,
     ) -> mouse::Interaction {
         if cursor.is_over(&bounds) {
-            match (&viewport.state, &viewport.schematic.state) {
+            match (&viewport.state, &self.schematic.state) {
                 (ViewportState::Panning, _) => mouse::Interaction::Grabbing,
                 (ViewportState::None, SchematicState::Idle(_)) => mouse::Interaction::default(),
                 (ViewportState::None, SchematicState::Wiring(_)) => mouse::Interaction::Crosshair,

@@ -30,7 +30,7 @@ impl Default for ViewportState {
 }
 
 pub struct Viewport {
-    pub schematic: Box<Schematic>,
+    // pub schematic: Box<Schematic>,
     pub state: ViewportState,
     transform: VCTransform, 
     scale: f32,
@@ -41,7 +41,7 @@ pub struct Viewport {
 impl Default for Viewport {
     fn default() -> Self {
         Viewport { 
-            schematic: Box::<Schematic>::default(),
+            // schematic: Box::<Schematic>::default(),
             state: Default::default(),
             transform: VCTransform::default().pre_scale(10., 10.).then_scale(1., -1.), 
             scale: 10.0,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
@@ -59,7 +59,7 @@ impl Viewport {
         let vsb = Rect::new(VSPoint::origin(), Size2D::new(50.0, 50.0)).to_box2d();
         let (vct, s) = Viewport::bounds_transform(csb, vsb);
         Viewport { 
-            schematic: Box::<Schematic>::default(),
+            // schematic: Box::<Schematic>::default(),
             state: Default::default(),
             transform: vct, 
             scale: s,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
@@ -91,6 +91,10 @@ impl Viewport {
 
     pub fn curpos_ssp(&self) -> Option<SSPoint> {
         self.curpos.map(|tup| tup.2)
+    }
+
+    pub fn curpos_vs_ss(&self) -> Option<(VSPoint, SSPoint)> {
+        self.curpos.map(|tup| (tup.1, tup.2))
     }
 
     pub fn cv_transform(&self) -> CVTransform {
@@ -136,10 +140,8 @@ impl Viewport {
             }
 
             self.curpos = Some((csp1, vsp1, ssp1));
-            self.schematic.curpos_update(Some((vsp1, ssp1)));
         } else {
             self.curpos = None;
-            self.schematic.curpos_update(None);
         }
     }
 
