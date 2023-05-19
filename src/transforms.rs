@@ -1,5 +1,5 @@
 use iced::Point as IcedPoint;
-use euclid::{Point2D};
+use euclid::Point2D;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CanvasSpace;  // viewport space tag - the patch of screen which is drawn on
