@@ -22,6 +22,7 @@ pub type CSBox = euclid::Box2D<f32, CanvasSpace>;
 pub type VSBox = euclid::Box2D<f32, ViewportSpace>;
 pub type SSBox = euclid::Box2D<i16, SchematicSpace>;
 
+pub type VSRect = euclid::Rect<f32, ViewportSpace>;
 pub type SSRect = euclid::Rect<i16, SchematicSpace>;
 
 pub type VCTransform = euclid::Transform2D<f32, ViewportSpace, CanvasSpace>;
