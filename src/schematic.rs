@@ -28,6 +28,7 @@ pub enum BaseElement {
 pub enum SchematicState {
     Wiring(Option<(Box<NetsGraph>, SSPoint)>),
     Idle(Option<BaseElement>),
+    DevicePlacement(DeviceInstance),
 }
 
 impl Default for SchematicState {
@@ -81,6 +82,10 @@ impl Schematic {
                     }
                 }
             },
+            SchematicState::DevicePlacement(di) => {
+                self.devices.push(di.clone());
+                self.state = SchematicState::Idle(None);
+            },
         };
     }
     pub fn curpos_update(&mut self, opt_curpos: Option<(VSPoint, SSPoint)>) {
@@ -101,6 +106,11 @@ impl Schematic {
                     self.selskip = skip;
                 } else {
                     *opt_be = None;
+                }
+            },
+            SchematicState::DevicePlacement(di) => {
+                if let Some((_vsp, ssp)) = opt_curpos {
+                    di.set_translation(ssp)
                 }
             },
         };
@@ -128,6 +138,9 @@ impl Schematic {
                         BaseElement::Device(d) => d.draw_preview(vct, vcscale, frame),
                     }
                 }
+            },
+            SchematicState::DevicePlacement(di) => {
+                di.draw_preview(vct, vcscale, frame);
             },
         }
     }
@@ -198,6 +211,7 @@ impl Schematic {
             SchematicState::Idle(_) => {
                 self.net.selected.clear();
             },
+            SchematicState::DevicePlacement(_) => {},
         }
     }
     pub fn key_wire(&mut self) {
@@ -208,15 +222,24 @@ impl Schematic {
         if let SchematicState::Idle(opt_be) = &mut tmpst {
             if let Some((vsp, _)) = self.curpos {
                 let mut skip = self.selskip;
-                dbg!(skip);
                 *opt_be = self.selectable(vsp, &mut skip);
-                dbg!(skip);
                 self.selskip = skip;
             } else {
                 *opt_be = None;
             }
         }
         self.state = tmpst;
+    }
+    pub fn key_r(&mut self) {
+        match &mut self.state {
+            SchematicState::Idle(_) => {
+                self.state = SchematicState::DevicePlacement(self.devices.place_res())
+            },
+            SchematicState::Wiring(_) => {},
+            SchematicState::DevicePlacement(di) => {
+                di.rotate(true);
+            },
+        }
     }
     pub fn key_test(&mut self) {
         self.net.tt();

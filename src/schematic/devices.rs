@@ -9,7 +9,7 @@ use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self}
 use crate::{
     schematic::nets::{Selectable, Drawable},
     transforms::{
-        SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox, CVTransform
+        SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox, CVTransform, VSVec
     }, 
 };
 
@@ -46,14 +46,17 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn push(&mut self, di: DeviceInstance) {
+        self.devices_vec.push(di);
+    }
     pub fn iter(&self) -> std::slice::Iter<DeviceInstance> {
         self.devices_vec.iter()
     }
     fn new() -> Self {
         Devices { devices_vec: vec![], res: Arc::new(DeviceType::new_res()) }
     }
-    fn place_res(&mut self) {
-        self.devices_vec.push(DeviceInstance::new_res(self.res.clone()))
+    pub fn place_res(&mut self) -> DeviceInstance {
+        DeviceInstance::new_res(self.res.clone())
     }
 }
 
@@ -173,12 +176,25 @@ impl DeviceType {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeviceInstance {
-    transform: euclid::Transform2D<f32, ViewportSpace, ViewportSpace>,
+    transform: euclid::Transform2D<i16, ViewportSpace, ViewportSpace>,
     device_type: Arc<DeviceType>,
     instance_bounds: VSBox,
 }
 
 impl DeviceInstance {
+    pub fn set_translation(&mut self, v: SSPoint) {
+        self.transform.m31 = v.x;
+        self.transform.m32 = v.y;
+        self.instance_bounds = self.transform.cast().outer_transformed_box(&self.instance_bounds);
+    }
+    pub fn rotate(&mut self, cw: bool) {
+        if cw {
+            self.transform = self.transform.cast::<f32>().pre_rotate(Angle::frac_pi_2()).cast();
+        } else {
+            self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
+        }
+        self.instance_bounds = self.transform.cast().outer_transformed_box(&self.instance_bounds);
+    }
     pub fn new_gnd(dt: Arc<DeviceType>) -> Self {
         let bds = VSBox::from_points([dt.bounds.min.cast().cast_unit(), dt.bounds.max.cast().cast_unit()]);
         DeviceInstance { 
@@ -200,6 +216,7 @@ impl DeviceInstance {
 
 impl Selectable for DeviceInstance {
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool {
+        dbg!(self.instance_bounds);
         self.instance_bounds.contains(curpos_vsp)
     }
 
@@ -240,7 +257,7 @@ fn draw_with(graphics: &Graphics, ports: &[Port], vct: VCTransform, frame: &mut 
 
 impl Drawable for DeviceInstance {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let vct = self.transform.then(&vct);
+        let vct = self.transform.cast().then(&vct);
         let solder_dia = 0.1;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * 2.0),
@@ -251,7 +268,7 @@ impl Drawable for DeviceInstance {
         draw_with(&self.device_type.graphic, &self.device_type.ports, vct, frame, wire_stroke);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let vct = self.transform.then(&vct);
+        let vct = self.transform.cast().then(&vct);
         let solder_dia = 0.3;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * 2.),
@@ -262,7 +279,7 @@ impl Drawable for DeviceInstance {
         draw_with(&self.device_type.graphic, &self.device_type.ports, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let vct = self.transform.then(&vct);
+        let vct = self.transform.cast().then(&vct);
         let solder_dia = 0.1;
         let stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * 1.),

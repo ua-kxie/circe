@@ -50,6 +50,7 @@ enum Msg {
     Test,
     Esc,
     Del,
+    R,
 }
 
 impl Application for Circe {
@@ -102,6 +103,9 @@ impl Application for Circe {
             },
             Msg::Del => {
                 self.schematic.key_del();
+            },
+            Msg::R => {
+                self.schematic.key_r();
             },
         }
         Command::none()
@@ -189,6 +193,10 @@ impl canvas::Program<Msg> for Circe {
                 match (vstate, key_code, modifiers.bits(), curpos) {
                     (_, iced::keyboard::KeyCode::W, 0, _) => {
                         msg = Some(Msg::Wire);
+                    },
+                    (_, iced::keyboard::KeyCode::R, 0, _) => {
+                        msg = Some(Msg::R);
+                        self.active_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::C, 0, _) => {
                         msg = Some(Msg::Cycle);

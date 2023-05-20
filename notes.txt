@@ -1,0 +1,3 @@
+todo:
+
+mouse hover preview highlight in any state (wiring, etc)
