@@ -1,3 +1,20 @@
 todo:
 
-mouse hover preview highlight in any state (wiring, etc)
+- immediate:
+    unify selection algos, drawing interface
+    mouse hover preview highlight in any state (wiring, etc)
+    move some logic into main (?), display zoom scale in infobar
+
+    moving/grabbing devices and wires (m)
+    additive/subtractive selection, area selection
+
+    named nets, canvas text
+    add gnd, voltage source devices (g, v)
+
+- long term:
+    generate netlist
+    device parameters
+    iced components
+    feed netlist to NgSpice simulator
+
+    bypass iced and tesellate with lyon directly
