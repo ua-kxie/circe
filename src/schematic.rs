@@ -1,10 +1,10 @@
 mod nets;
 mod devices;
 
-use std::{sync::Arc, ops::Deref};
+use std::sync::Arc;
 
 pub use nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, ViewportSpace, SchematicSpace, CSPoint, VCTransform, VSBox};
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox};
 use devices::DeviceInstance;
 
 use iced::widget::canvas::{
@@ -155,7 +155,9 @@ impl Schematic {
     }
 
     pub fn bounding_box(&self) -> VSBox {
-        VSBox::from_points(self.net.persistent.0.nodes().map(|x| x.0.cast().cast_unit()))
+        let bbn = VSBox::from_points(self.net.persistent.0.nodes().map(|x| x.0.cast().cast_unit()));
+        let bbi = self.devices.bounding_box();
+        bbn.union(&bbi)
     }
 
     fn selectable(&self, curpos_vsp: VSPoint, skip: &mut usize) -> Option<BaseElement> {

@@ -80,9 +80,10 @@ fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, st
 
 impl Drawable for NetEdge {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = 0.02;
+        let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
+        let zoom_thshld = <NetEdge as Drawable>::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (wire_width * vcscale).max(wire_width * 50.),
+            width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 1.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -90,9 +91,10 @@ impl Drawable for NetEdge {
         draw_with(self.0, self.1, vct, frame, wire_stroke);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = 0.02;
+        let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
+        let zoom_thshld = <NetEdge as Drawable>::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (wire_width * vcscale).max(wire_width * 50.),
+            width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -100,12 +102,13 @@ impl Drawable for NetEdge {
         draw_with(self.0, self.1, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = 0.02;
+        let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
+        let zoom_thshld = <NetEdge as Drawable>::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (wire_width * vcscale).max(wire_width * 50.),
+            width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Butt,
-            line_dash: LineDash{segments: &[3. * (wire_width * vcscale).max(wire_width)], offset: 0},
+            line_dash: LineDash{segments: &[3. * (wire_width * vcscale).max(wire_width * 2.0)], offset: 0},
             ..Stroke::default()
         };
         draw_with(self.0, self.1, vct, frame, wire_stroke);

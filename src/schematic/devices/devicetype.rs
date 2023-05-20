@@ -1,14 +1,13 @@
 use crate::{
-    schematic::nets::{Selectable, Drawable},
     transforms::{
-        SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox, CVTransform, VSVec
+        SSPoint, SSBox, VSPoint
     }, 
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Port {
     pub name: &'static str,
-    pub offset: SSVec,
+    pub offset: SSPoint,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -109,7 +108,7 @@ impl DeviceType {
     pub fn new_gnd() -> Self {
         Self {
             ports: vec![
-                Port {name: "gnd", offset: SSVec::new(0, 2)}
+                Port {name: "gnd", offset: SSPoint::new(0, 2)}
             ],
             bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
             graphic: Graphics::new_gnd(),
@@ -119,8 +118,8 @@ impl DeviceType {
     pub fn new_res() -> Self {
         Self {
             ports: vec![
-                Port {name: "+", offset: SSVec::new(0, 3)},
-                Port {name: "-", offset: SSVec::new(0, -3)},
+                Port {name: "+", offset: SSPoint::new(0, 3)},
+                Port {name: "-", offset: SSPoint::new(0, -3)},
             ],
             bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
             graphic: Graphics::new_res(),

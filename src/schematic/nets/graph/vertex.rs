@@ -52,9 +52,10 @@ fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) 
 
 impl Drawable for NetVertex {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = 0.3;
+        let solder_dia = <NetVertex as Drawable>::SOLDER_DIAMETER;
+        let zoom_thshld = <NetVertex as Drawable>::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 20.),
+            width: (solder_dia * vcscale).max(solder_dia * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 1.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -62,9 +63,10 @@ impl Drawable for NetVertex {
         draw_with(self.0, vct, frame, wire_stroke);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = 0.3;
+        let solder_dia = <NetVertex as Drawable>::SOLDER_DIAMETER;
+        let zoom_thshld = <NetVertex as Drawable>::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 20.),
+            width: (solder_dia * vcscale).max(solder_dia * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -72,9 +74,10 @@ impl Drawable for NetVertex {
         draw_with(self.0, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = 0.3;
+        let solder_dia = <NetVertex as Drawable>::SOLDER_DIAMETER;
+        let zoom_thshld = <NetVertex as Drawable>::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 20.),
+            width: (solder_dia * vcscale).max(solder_dia * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Round,
             ..Stroke::default()

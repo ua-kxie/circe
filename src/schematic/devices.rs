@@ -4,14 +4,12 @@ mod devicetype;
 mod deviceinstance;
 
 use std::sync::Arc;
-
-use euclid::{Size2D, Transform2D, Vector2D, Angle};
-use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self}, Color, Size};
+use iced::widget::canvas::Frame;
 
 use crate::{
-    schematic::nets::{Selectable, Drawable},
+    schematic::nets::{Drawable},
     transforms::{
-        SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox, CVTransform, VSVec
+        SSPoint, VSBox, VCTransform
     }, 
 };
 
@@ -50,6 +48,10 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn bounding_box(&self) -> VSBox {
+        let pts = self.devices_vec.iter().flat_map(|i| [i.bounds().min, i.bounds().max].into_iter());
+        VSBox::from_points(pts)
+    }
     pub fn push(&mut self, di: DeviceInstance) {
         self.devices_vec.push(Arc::new(di));
     }

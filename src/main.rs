@@ -19,7 +19,7 @@ use iced::{
 };
 use iced::widget::canvas::event::{self, Event};
 use iced::mouse;
-use euclid::{Vector2D, Transform2D, Box2D, Point2D};
+use euclid::{Box2D, Point2D};
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {

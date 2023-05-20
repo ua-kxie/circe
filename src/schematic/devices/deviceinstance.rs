@@ -8,7 +8,7 @@ use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self}
 use crate::{
     schematic::nets::{Selectable, Drawable},
     transforms::{
-        SSVec, SSPoint, SSBox, VSBox, SSRect, VSPoint, VCTransform, Point, CanvasSpace, ViewportSpace, CSPoint, CSVec, VSRect, CSBox, CVTransform, VSVec
+        SSPoint, VSBox, VSPoint, VCTransform, Point, ViewportSpace
     }, 
 };
 
@@ -23,6 +23,9 @@ pub struct DeviceInstance {
 }
 
 impl DeviceInstance {
+    pub fn bounds(&self) -> &VSBox {
+        &self.instance_bounds
+    }
     pub fn toggle_select(&self) {
         self.selected.set(!self.selected.get());
     }
@@ -95,19 +98,22 @@ fn draw_with(graphics: &Graphics, ports: &[Port], vct: VCTransform, frame: &mut 
     };
     for port in ports {
         let dim = 0.4;
-        let rect: VSRect = VSRect::new((port.offset.cast().cast_unit() - Vector2D::new(dim/2.0, dim/2.0)).to_point(), Size2D::new(dim, dim));
+        let ssb = VSBox::new(
+            (port.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0)), 
+            (port.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0)), 
+        );
 
-        let csrect = vct.outer_transformed_rect(&rect);
+        let csbox = vct.outer_transformed_box(&ssb);
         
-        let top_left = csrect.to_box2d().min;
-        let size = Size::new(csrect.width(), csrect.height());
+        let top_left = csbox.min;
+        let size = Size::new(csbox.width(), csbox.height());
         frame.fill_rectangle(Point::from(top_left).into(), size, f.clone());
     }
 }
 
 impl Drawable for DeviceInstance {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let vct = self.transform.cast().then(&vct);
+        let vct_composite = self.transform.cast().then(&vct);
         let solder_dia = 0.1;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * 2.0),
@@ -115,7 +121,7 @@ impl Drawable for DeviceInstance {
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
-        draw_with(&self.device_type.get_graphics(), &self.device_type.get_ports(), vct, frame, wire_stroke);
+        draw_with(&self.device_type.get_graphics(), &self.device_type.get_ports(), vct_composite, frame, wire_stroke);
         
         if self.selected.get() {
             let solder_dia = 0.1;
@@ -126,10 +132,10 @@ impl Drawable for DeviceInstance {
                 ..Stroke::default()
             };
             let mut path_builder = Builder::new();
-            let rect = self.instance_bounds;
-            let rect = vct.outer_transformed_box(&rect.cast().cast_unit());
-            let size = Size::new(rect.width(), rect.height());
-            path_builder.rectangle(Point::from(rect.min).into(), size);
+            let vsb = self.instance_bounds;
+            let csb = vct.outer_transformed_box(&vsb);
+            let size = Size::new(csb.width(), csb.height());
+            path_builder.rectangle(Point::from(csb.min).into(), size);
             frame.stroke(&path_builder.build(), stroke);    
         }
     }

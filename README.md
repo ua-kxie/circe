@@ -10,8 +10,10 @@ C - cycle tentative selection
 
 Del - delete selected
 
+R - resistor, rotate active
 
-click wires or vertices to select
+
+click wires or device to select
 
 mouse wheel to zoom and pan
 

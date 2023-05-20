@@ -71,7 +71,7 @@ impl Viewport {
     fn bounds_transform(csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {
         let mut vct = VCTransform::identity();
         
-        let s = (csb.height() / vsb.height()).min(csb.height() / vsb.height()).clamp(Viewport::MIN_SCALING, Viewport::MAX_SCALING);  // scale from vsb to fit inside csb
+        let s = (csb.height() / vsb.height()).min(csb.width() / vsb.width()).clamp(Viewport::MIN_SCALING, Viewport::MAX_SCALING);  // scale from vsb to fit inside csb
         vct = vct.then_scale(s, -s);
 
         let v = csb.center() - vct.transform_point(vsb.center());  // vector from vsb to csb
