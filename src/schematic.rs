@@ -21,6 +21,7 @@ use self::devices::Devices;
 pub enum BaseElement {
     NetEdge(NetEdge),
     NetVertex(NetVertex),
+    Device(DeviceInstance),
 }
 
 #[derive(Clone, Debug)]
@@ -74,6 +75,9 @@ impl Schematic {
                         BaseElement::NetVertex(v) => {
                             self.net.selected.0.add_node(*v);
                         },
+                        BaseElement::Device(d) => {
+                            // todo
+                        }
                     }
                 }
             },
@@ -121,6 +125,7 @@ impl Schematic {
                     match be {
                         BaseElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
                         BaseElement::NetVertex(v) => v.draw_preview(vct, vcscale, frame),
+                        BaseElement::Device(d) => d.draw_preview(vct, vcscale, frame),
                     }
                 }
             },
@@ -160,6 +165,15 @@ impl Schematic {
                     if count > *skip {
                         *skip = count;
                         return Some(BaseElement::NetVertex(v));
+                    }
+                }
+            }
+            for d in self.devices.iter() {
+                if d.collision_by_vsp(curpos_vsp) {
+                    count += 1;
+                    if count > *skip {
+                        *skip = count;
+                        return Some(BaseElement::Device(d.clone()));
                     }
                 }
             }

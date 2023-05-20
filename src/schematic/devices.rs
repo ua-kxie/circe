@@ -46,6 +46,9 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn iter(&self) -> std::slice::Iter<DeviceInstance> {
+        self.devices_vec.iter()
+    }
     fn new() -> Self {
         Devices { devices_vec: vec![], res: Arc::new(DeviceType::new_res()) }
     }
@@ -54,12 +57,13 @@ impl Devices {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct Port {
     name: &'static str,
     offset: SSVec,
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
 struct Graphics {
     pts: Vec<Vec<VSPoint>>
 }
@@ -125,17 +129,18 @@ impl Graphics {
 //     Raw(RawDef),
 //     Value(ValueDef),
 // }
-
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 enum TypeEnum {
     // R(RDef),
-    L,
+    #[default] L,
     C,
     V,
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeviceType {
     ports: Vec<Port>,
-    bounds: SSRect,
+    bounds: SSBox,
     graphic: Graphics,
     type_enum: TypeEnum,  // R, L, C, V, etc.
 }
@@ -146,7 +151,7 @@ impl DeviceType {
             ports: vec![
                 Port {name: "gnd", offset: SSVec::new(0, 2)}
             ],
-            bounds: SSRect::new(SSPoint::origin(), Size2D::new(2, 4)), 
+            bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
             graphic: Graphics::new_gnd(),
             type_enum: TypeEnum::V, 
         }
@@ -157,7 +162,7 @@ impl DeviceType {
                 Port {name: "+", offset: SSVec::new(0, 3)},
                 Port {name: "-", offset: SSVec::new(0, -3)},
             ],
-            bounds: SSRect::new(SSPoint::origin(), Size2D::new(4, 6)), 
+            bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
             graphic: Graphics::new_res(),
             type_enum: TypeEnum::C, 
         }
@@ -166,30 +171,36 @@ impl DeviceType {
 
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeviceInstance {
     transform: euclid::Transform2D<f32, ViewportSpace, ViewportSpace>,
     device_type: Arc<DeviceType>,
+    instance_bounds: VSBox,
 }
 
 impl DeviceInstance {
     pub fn new_gnd(dt: Arc<DeviceType>) -> Self {
+        let bds = VSBox::from_points([dt.bounds.min.cast().cast_unit(), dt.bounds.max.cast().cast_unit()]);
         DeviceInstance { 
             transform: Transform2D::identity(), 
             device_type: dt, 
+            instance_bounds: bds,
         }
     }
     
     pub fn new_res(dt: Arc<DeviceType>) -> Self {
+        let bds = VSBox::from_points([dt.bounds.min.cast().cast_unit(), dt.bounds.max.cast().cast_unit()]);
         DeviceInstance { 
             transform: Transform2D::identity(), 
             device_type: dt, 
+            instance_bounds: bds,
         }
     }
 }
 
 impl Selectable for DeviceInstance {
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool {
-        self.device_type.bounds.to_box2d().cast().cast_unit().contains(curpos_vsp)
+        self.instance_bounds.contains(curpos_vsp)
     }
 
     fn contained_by_vsb(&self, _selbox: VSBox) -> bool {
@@ -240,9 +251,10 @@ impl Drawable for DeviceInstance {
         draw_with(&self.device_type.graphic, &self.device_type.ports, vct, frame, wire_stroke);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        let vct = self.transform.then(&vct);
         let solder_dia = 0.3;
         let wire_stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 20.),
+            width: (solder_dia * vcscale).max(solder_dia * 2.),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -250,13 +262,19 @@ impl Drawable for DeviceInstance {
         draw_with(&self.device_type.graphic, &self.device_type.ports, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = 0.3;
-        let wire_stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 20.),
+        let vct = self.transform.then(&vct);
+        let solder_dia = 0.1;
+        let stroke = Stroke {
+            width: (solder_dia * vcscale).max(solder_dia * 1.),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
-            line_cap: LineCap::Round,
+            line_cap: LineCap::Square,
             ..Stroke::default()
         };
-        draw_with(&self.device_type.graphic, &self.device_type.ports, vct, frame, wire_stroke);
+        let mut path_builder = Builder::new();
+        let rect = self.device_type.bounds;
+        let rect = vct.outer_transformed_box(&rect.cast().cast_unit());
+        let size = Size::new(rect.width(), rect.height());
+        path_builder.rectangle(Point::from(rect.min).into(), size);
+        frame.stroke(&path_builder.build(), stroke);    
     }
 }
