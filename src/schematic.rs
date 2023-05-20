@@ -1,27 +1,22 @@
 mod nets;
 mod devices;
 
-pub use nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
-use iced::widget::Canvas;
-use iced::widget::canvas::event::Event;
-use iced::mouse::Event::*;
-use iced::mouse;
+use std::{sync::Arc, ops::Deref};
 
+pub use nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
 use crate::transforms::{VSPoint, SSPoint, ViewportSpace, SchematicSpace, CSPoint, VCTransform, VSBox};
 use devices::DeviceInstance;
 
 use iced::widget::canvas::{
-    stroke, Cache, Cursor, LineCap, Path, Stroke, LineDash, Frame,
+    Frame,
 };
-use iced::Color;
-
 use self::devices::Devices;
 
 #[derive(Clone, Debug)]
 pub enum BaseElement {
     NetEdge(NetEdge),
     NetVertex(NetVertex),
-    Device(DeviceInstance),
+    Device(Arc<DeviceInstance>),
 }
 
 #[derive(Clone, Debug)]
@@ -49,6 +44,9 @@ pub struct Schematic {
 }
 
 impl Schematic {
+    pub fn curpos_ssp(&self) -> Option<SSPoint> {
+        self.curpos.map(|tup| tup.1)
+    }
     pub fn left_click(&mut self, ssp: SSPoint) {
         match &mut self.state {
             SchematicState::Wiring(opt_ws) => {
@@ -77,7 +75,7 @@ impl Schematic {
                             self.net.selected.0.add_node(*v);
                         },
                         BaseElement::Device(d) => {
-                            // todo
+                            d.toggle_select();
                         }
                     }
                 }
@@ -201,6 +199,7 @@ impl Schematic {
     pub fn key_del(&mut self) {
         if let SchematicState::Idle(_) = self.state {
             self.net.delete_selected_from_persistent();
+            self.devices.delete_selected();
         }
     }
     pub fn key_esc(&mut self) {
@@ -211,7 +210,9 @@ impl Schematic {
             SchematicState::Idle(_) => {
                 self.net.selected.clear();
             },
-            SchematicState::DevicePlacement(_) => {},
+            SchematicState::DevicePlacement(_) => {
+                self.state = SchematicState::Idle(None);
+            },
         }
     }
     pub fn key_wire(&mut self) {
@@ -233,7 +234,7 @@ impl Schematic {
     pub fn key_r(&mut self) {
         match &mut self.state {
             SchematicState::Idle(_) => {
-                self.state = SchematicState::DevicePlacement(self.devices.place_res())
+                self.state = SchematicState::DevicePlacement(self.devices.place_res(self.curpos_ssp().unwrap_or(SSPoint::origin())));
             },
             SchematicState::Wiring(_) => {},
             SchematicState::DevicePlacement(di) => {
