@@ -1,20 +1,24 @@
 todo:
 
 - immediate:
-    unify selection algos, drawing interface
+    unify selection algos, draw/stroke interface, additive/subtractive selection, area selection
     mouse hover preview highlight in any state (wiring, etc)
-    move some logic into main (?), display zoom scale in infobar
+    terminate line seg on wiring to a port
+    move some logic into main (?)
 
     moving/grabbing devices and wires (m)
-    additive/subtractive selection, area selection
 
     named nets, canvas text
     add gnd, voltage source devices (g, v)
 
-- long term:
+- medium term:
     generate netlist
     device parameters
-    iced components
     feed netlist to NgSpice simulator
+
+- long term:
+    schematic saving/loading (serde)
+
+    device designer, device saving/loading, device libraries
 
     bypass iced and tesellate with lyon directly
