@@ -35,10 +35,8 @@ pub fn main() -> iced::Result {
 
 struct Circe {
     schematic: Schematic,
-    curpos_ssp: Option<SSPoint>,
-    viewport_scale: f32,
+    zoom_scale: f32,
     infotext: String,
-    value: Option<u32>,
 
     active_cache: Cache,
     passive_cache: Cache,
@@ -55,7 +53,7 @@ enum Msg {
     Esc,
     Del,
     R,
-    NumericInputChanged(Option<u32>),
+    NewZoom(f32),
 }
 
 impl Application for Circe {
@@ -68,10 +66,8 @@ impl Application for Circe {
         (
             Circe {
                 schematic: Default::default(),
-                curpos_ssp: None,
-                viewport_scale: 0.0,
+                zoom_scale: 10.0,  // would be better to get this from the viewport on startup
                 infotext: String::from(""),
-                value: None,
 
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
@@ -115,8 +111,8 @@ impl Application for Circe {
             Msg::R => {
                 self.schematic.key_r();
             },
-            Msg::NumericInputChanged(value) => {
-                self.value = value
+            Msg::NewZoom(value) => {
+                self.zoom_scale = value
             },
         }
         Command::none()
@@ -126,13 +122,11 @@ impl Application for Circe {
         let canvas = canvas(self as &Self)
             .width(Length::Fill)
             .height(Length::Fill);
-        let infobar0 = text(&self.infotext).size(16).height(16).vertical_alignment(alignment::Vertical::Center);
-        let infobar_component = infobar(self.value, Msg::NumericInputChanged);
+        let infobar = infobar(self.schematic.curpos_ssp(), self.zoom_scale);
 
         column![
             canvas,
-            infobar0,
-            infobar_component,
+            infobar,
         ]
         .width(Length::Fill)
         .into()
@@ -186,6 +180,7 @@ impl canvas::Program<Msg> for Circe {
                         VSBox::from_points([vsp0, vsp1])
                     );
                 }
+                msg = Some(Msg::NewZoom(viewport.vc_scale()));
                 viewport.state = ViewportState::None;
                 self.passive_cache.clear();
                 self.active_cache.clear();
@@ -199,6 +194,7 @@ impl canvas::Program<Msg> for Circe {
                     let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
                     viewport.zoom(scale);
                 }}
+                msg = Some(Msg::NewZoom(viewport.vc_scale()));
             }
 
             // keys
@@ -324,107 +320,67 @@ mod infobar {
     use iced_lazy::{component, Component};
     use iced::{Element, Length, Renderer};
 
-    pub struct NumericInput<Message> {
-        value: Option<u32>,
-        on_change: Box<dyn Fn(Option<u32>) -> Message>,
-    }
+    use crate::transforms::SSPoint;
 
-    pub fn infobar<Message>(
-        value: Option<u32>,
-        on_change: impl Fn(Option<u32>) -> Message + 'static,
-    ) -> NumericInput<Message> {
-        NumericInput::new(value, on_change)
+    pub struct InfoBar {
+        curpos_ssp: Option<SSPoint>,
+        zoom_scale: f32,
+        // net_name: Option<&'a str>,
     }
-
-    #[derive(Debug, Clone)]
-    pub enum Event {
-        InputChanged(String),
-        IncrementPressed,
-        DecrementPressed,
-    }
-
-    impl<Message> NumericInput<Message> {
+    
+    impl InfoBar {
         pub fn new(
-            value: Option<u32>,
-            on_change: impl Fn(Option<u32>) -> Message + 'static,
+            curpos_ssp: Option<SSPoint>,
+            zoom_scale: f32,
         ) -> Self {
             Self {
-                value,
-                on_change: Box::new(on_change),
+                curpos_ssp,
+                zoom_scale,
             }
         }
     }
 
-    impl<Message> Component<Message, Renderer> for NumericInput<Message> {
+    pub fn infobar(
+        curpos_ssp: Option<SSPoint>,
+        zoom_scale: f32,
+    ) -> InfoBar {
+        InfoBar::new(curpos_ssp, zoom_scale)
+    }
+
+    impl<Message> Component<Message, Renderer> for InfoBar {
         type State = ();
-        type Event = Event;
+        type Event = ();
 
         fn update(
             &mut self,
             _state: &mut Self::State,
-            event: Event,
+            event: (),
         ) -> Option<Message> {
-            match event {
-                Event::IncrementPressed => Some((self.on_change)(Some(
-                    self.value.unwrap_or_default().saturating_add(1),
-                ))),
-                Event::DecrementPressed => Some((self.on_change)(Some(
-                    self.value.unwrap_or_default().saturating_sub(1),
-                ))),
-                Event::InputChanged(value) => {
-                    if value.is_empty() {
-                        Some((self.on_change)(None))
-                    } else {
-                        value
-                            .parse()
-                            .ok()
-                            .map(Some)
-                            .map(self.on_change.as_ref())
-                    }
-                }
-            }
+            None
         }
-
-        fn view(&self, _state: &Self::State) -> Element<Event, Renderer> {
-            let button = |label, on_press| {
-                button(
-                    text(label)
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .horizontal_alignment(alignment::Horizontal::Center)
-                        .vertical_alignment(alignment::Vertical::Center),
-                )
-                .width(40)
-                .height(40)
-                .on_press(on_press)
-            };
+        fn view(&self, _state: &Self::State) -> Element<(), Renderer> {
+            let str_ssp;
+            if let Some(ssp) = self.curpos_ssp {
+                str_ssp = format!("x: {}; y: {}", ssp.x, ssp.y);
+            } else {
+                str_ssp = String::from("");
+            }
 
             row![
-                button("-", Event::DecrementPressed),
-                text_input(
-                    "Type a number",
-                    self.value
-                        .as_ref()
-                        .map(u32::to_string)
-                        .as_deref()
-                        .unwrap_or(""),
-                )
-                .on_input(Event::InputChanged)
-                .padding(10),
-                button("+", Event::IncrementPressed),
+                text(str_ssp).size(16).height(16).vertical_alignment(alignment::Vertical::Center),
+                text(&format!("{:04.1}", self.zoom_scale)).size(16).height(16).vertical_alignment(alignment::Vertical::Center),
             ]
-            .align_items(Alignment::Center)
             .spacing(10)
             .into()
         }
     }
 
-    impl<'a, Message> From<NumericInput<Message>> for Element<'a, Message, Renderer>
+    impl<'a, Message> From<InfoBar> for Element<'a, Message, Renderer>
     where
         Message: 'a,
     {
-        fn from(numeric_input: NumericInput<Message>) -> Self {
-            component(numeric_input)
+        fn from(infobar: InfoBar) -> Self {
+            component(infobar)
         }
     }
 }
