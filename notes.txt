@@ -1,10 +1,11 @@
 todo:
 
 - immediate:
-    unify selection algos, draw/stroke interface, additive/subtractive selection, area selection
+    unify selection algos, additive/subtractive selection, area selection
+    move some logic into main (?)
+    unify draw/stroke interface
     mouse hover preview highlight in any state (wiring, etc)
     terminate line seg on wiring to a port
-    move some logic into main (?)
 
     moving/grabbing devices and wires (m)
 
@@ -22,3 +23,4 @@ todo:
     device designer, device saving/loading, device libraries
 
     bypass iced and tesellate with lyon directly
+    drawing/stroke culling

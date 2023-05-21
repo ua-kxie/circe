@@ -92,22 +92,8 @@ fn draw_with(graphics: &Graphics, ports: &[Port], vct: VCTransform, frame: &mut 
     }
     frame.stroke(&path_builder.build(), stroke);
 
-    let f = canvas::Fill {
-        style: canvas::Style::Solid(Color::from_rgb(1.0, 0.0, 0.0)),
-        ..canvas::Fill::default()
-    };
-    for port in ports {
-        let dim = 0.4;
-        let ssb = VSBox::new(
-            (port.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0)), 
-            (port.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0)), 
-        );
-
-        let csbox = vct.outer_transformed_box(&ssb);
-        
-        let top_left = csbox.min;
-        let size = Size::new(csbox.width(), csbox.height());
-        frame.fill_rectangle(Point::from(top_left).into(), size, f.clone());
+    for p in ports {
+        p.draw_persistent(vct, 0.0, frame);
     }
 }
 
