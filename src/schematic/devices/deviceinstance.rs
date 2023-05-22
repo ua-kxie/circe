@@ -31,20 +31,17 @@ impl DeviceInstance {
         path_builder.rectangle(Point::from(csb.min).into(), size);
         frame.stroke(&path_builder.build(), stroke);    
     }
-    fn stroke_ports(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        for p in self.device_type.get_ports() {
-            p.draw_persistent(vct_composite, 0.0, frame);
-        }
-    }
     fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        let mut path_builder = Builder::new();
+        // let mut path_builder = Builder::new();
         for v1 in &self.device_type.get_graphics().pts {
-            path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
+            // there's a bug where dashed stroke can draw a solid line across a move
+            // path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
+            let mut path_builder = Builder::new();
             for v0 in v1 {
                 path_builder.line_to(Point::from(vct_composite.transform_point(*v0)).into());
             }
+            frame.stroke(&path_builder.build(), stroke.clone());
         }
-        frame.stroke(&path_builder.build(), stroke);
     }
     pub fn bounds(&self) -> &VSBox {
         &self.instance_bounds
@@ -151,10 +148,13 @@ impl Drawable for DeviceInstance {
             ..Stroke::default()
         };
         let vct_composite = self.transform.cast().then(&vct);
+
         self.stroke_bounds(vct, frame, stroke.clone());
         self.stroke_symbol(vct_composite, frame, stroke.clone());
         for p in self.device_type.get_ports() {
             p.draw_preview(vct_composite, vcscale, frame)
         }
+
+
     }
 }

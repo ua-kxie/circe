@@ -24,3 +24,8 @@ todo:
 
     bypass iced and tesellate with lyon directly
     drawing/stroke culling
+
+notes about selections:
+    storing elements in a state enum works well enough when there is one
+    would it work well for a vec? - try
+    parallel schematic for selected elements?
