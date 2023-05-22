@@ -23,6 +23,31 @@ pub struct DeviceInstance {
 }
 
 impl DeviceInstance {
+    fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+        let mut path_builder = Builder::new();
+        let vsb = self.instance_bounds;
+        let csb = vct.outer_transformed_box(&vsb);
+        let size = Size::new(csb.width(), csb.height());
+        path_builder.rectangle(Point::from(csb.min).into(), size);
+        frame.stroke(&path_builder.build(), stroke);    
+    }
+    fn stroke_ports(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+        let vct_composite = self.transform.cast().then(&vct);
+        for p in self.device_type.get_ports() {
+            p.draw_persistent(vct_composite, 0.0, frame);
+        }
+    }
+    fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+        let vct_composite = self.transform.cast().then(&vct);
+        let mut path_builder = Builder::new();
+        for v1 in &self.device_type.get_graphics().pts {
+            path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
+            for v0 in v1 {
+                path_builder.line_to(Point::from(vct_composite.transform_point(*v0)).into());
+            }
+        }
+        frame.stroke(&path_builder.build(), stroke);
+    }
     pub fn bounds(&self) -> &VSBox {
         &self.instance_bounds
     }
@@ -81,74 +106,40 @@ impl Selectable for DeviceInstance {
         todo!()
     }
 }
-
-fn draw_with(graphics: &Graphics, ports: &[Port], vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-    let mut path_builder = Builder::new();
-    for v1 in &graphics.pts {
-        path_builder.move_to(Point::from(vct.transform_point(v1[0])).into());
-        for v0 in v1 {
-            path_builder.line_to(Point::from(vct.transform_point(*v0)).into());
-        }
-    }
-    frame.stroke(&path_builder.build(), stroke);
-
-    for p in ports {
-        p.draw_persistent(vct, 0.0, frame);
-    }
-}
+const STROKE_WIDTH: f32 = 0.1;
 
 impl Drawable for DeviceInstance {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let vct_composite = self.transform.cast().then(&vct);
-        let solder_dia = 0.1;
-        let wire_stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 2.0),
+        let stroke = Stroke {
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 0.0)),
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
-        draw_with(&self.device_type.get_graphics(), &self.device_type.get_ports(), vct_composite, frame, wire_stroke);
-        
-        if self.selected.get() {
-            let solder_dia = 0.1;
-            let stroke = Stroke {
-                width: (solder_dia * vcscale).max(solder_dia * 2.),
-                style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
-                line_cap: LineCap::Round,
-                ..Stroke::default()
-            };
-            let mut path_builder = Builder::new();
-            let vsb = self.instance_bounds;
-            let csb = vct.outer_transformed_box(&vsb);
-            let size = Size::new(csb.width(), csb.height());
-            path_builder.rectangle(Point::from(csb.min).into(), size);
-            frame.stroke(&path_builder.build(), stroke);    
-        }
+        // self.stroke_bounds(vct, frame, stroke.clone());
+        self.stroke_ports(vct, frame, stroke.clone());
+        self.stroke_symbol(vct, frame, stroke.clone());
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        // let vct = self.transform.cast().then(&vct);
-        // let solder_dia = 0.3;
-        // let wire_stroke = Stroke {
-        //     width: (solder_dia * vcscale).max(solder_dia * 2.),
-        //     style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
-        //     line_cap: LineCap::Round,
-        //     ..Stroke::default()
-        // };
-        // draw_with(&self.device_type.get_graphics(), &self.device_type.get_ports(), vct, frame, wire_stroke);
+        let stroke = Stroke {
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.),
+            style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
+            line_cap: LineCap::Round,
+            ..Stroke::default()
+        };
+        self.stroke_bounds(vct, frame, stroke.clone());
+        // self.stroke_ports(vct, frame, stroke.clone());
+        self.stroke_symbol(vct, frame, stroke.clone());
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = 0.1;
         let stroke = Stroke {
-            width: (solder_dia * vcscale).max(solder_dia * 1.),
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
-        let mut path_builder = Builder::new();
-        let rect = self.instance_bounds;
-        let rect = vct.outer_transformed_box(&rect.cast().cast_unit());
-        let size = Size::new(rect.width(), rect.height());
-        path_builder.rectangle(Point::from(rect.min).into(), size);
-        frame.stroke(&path_builder.build(), stroke);    
+        self.stroke_bounds(vct, frame, stroke.clone());
+        self.stroke_ports(vct, frame, stroke.clone());
+        self.stroke_symbol(vct, frame, stroke.clone());
     }
 }

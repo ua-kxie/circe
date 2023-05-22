@@ -36,7 +36,7 @@ pub struct Schematic {
     net: Box<Nets>,
     devices: Devices,
     pub state: SchematicState,
-
+    
     curpos: Option<(VSPoint, SSPoint)>,
 
     selskip: usize,

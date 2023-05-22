@@ -3,10 +3,10 @@ use iced::{Size, widget::canvas, Color};
 
 use crate::{
     transforms::{
-        SSPoint, SSBox, VSPoint, VSBox, Point
+        SSPoint, VSBox, VSPoint, VCTransform, Point, ViewportSpace, SSBox
     }, schematic::Drawable, 
 };
-
+use iced::{widget::canvas::{Frame, Stroke}};
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Port {
     pub name: &'static str,
@@ -14,9 +14,9 @@ pub struct Port {
 }
 
 impl Drawable for Port {
-    fn draw_persistent(&self, vct: crate::transforms::VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
         let f = canvas::Fill {
-            style: canvas::Style::Solid(Color::from_rgb(1.0, 0.0, 0.0)),
+            style: canvas::Style::Solid(Color::from_rgba(1.0, 0.0, 0.0, 0.8)),
             ..canvas::Fill::default()
         };
         let dim = 0.4;
@@ -33,11 +33,39 @@ impl Drawable for Port {
     }
 
     fn draw_selected(&self, vct: crate::transforms::VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        todo!()
+        let f = canvas::Fill {
+            style: canvas::Style::Solid(Color::from_rgba(1.0, 1.0, 0.0, 0.5)),
+            ..canvas::Fill::default()
+        };
+        let dim = 0.4;
+        let ssb = VSBox::new(
+            (self.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0)), 
+            (self.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0)), 
+        );
+
+        let csbox = vct.outer_transformed_box(&ssb);
+        
+        let top_left = csbox.min;
+        let size = Size::new(csbox.width(), csbox.height());
+        frame.fill_rectangle(Point::from(top_left).into(), size, f.clone());
     }
 
     fn draw_preview(&self, vct: crate::transforms::VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        todo!()
+        let f = canvas::Fill {
+            style: canvas::Style::Solid(Color::from_rgba(1.0, 1.0, 0.5, 0.2)),
+            ..canvas::Fill::default()
+        };
+        let dim = 0.4;
+        let ssb = VSBox::new(
+            (self.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0)), 
+            (self.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0)), 
+        );
+
+        let csbox = vct.outer_transformed_box(&ssb);
+        
+        let top_left = csbox.min;
+        let size = Size::new(csbox.width(), csbox.height());
+        frame.fill_rectangle(Point::from(top_left).into(), size, f.clone());
     }
 }
 
