@@ -15,7 +15,6 @@ use self::devices::Devices;
 #[derive(Clone, Debug)]
 pub enum BaseElement {
     NetEdge(NetEdge),
-    NetVertex(NetVertex),
     Device(Arc<DeviceInstance>),
 }
 
@@ -69,10 +68,7 @@ impl Schematic {
                 if let Some(be) = opt_be {
                     match be {
                         BaseElement::NetEdge(e) => {
-                            self.net.selected.0.add_edge(NetVertex(e.0), NetVertex(e.1), *e);
-                        },
-                        BaseElement::NetVertex(v) => {
-                            self.net.selected.0.add_node(*v);
+                            self.net.select_edge(e.clone());
                         },
                         BaseElement::Device(d) => {
                             d.toggle_select();
@@ -101,7 +97,7 @@ impl Schematic {
                 if let Some((vsp, _)) = self.curpos {
                     let mut skip = self.selskip;
                     *opt_be = self.selectable(vsp, &mut skip);
-                    self.selskip = skip;
+                    self.selskip = skip.saturating_sub(1);
                 } else {
                     *opt_be = None;
                 }
@@ -132,7 +128,6 @@ impl Schematic {
                 if let Some(be) = opt_be {
                     match be {
                         BaseElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
-                        BaseElement::NetVertex(v) => v.draw_preview(vct, vcscale, frame),
                         BaseElement::Device(d) => d.draw_preview(vct, vcscale, frame),
                     }
                 }
@@ -150,7 +145,6 @@ impl Schematic {
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
         self.net.persistent.draw_persistent(vct, vcscale, frame);
-        self.net.selected.draw_selected(vct, vcscale, frame);
         self.devices.draw_persistent(vct, vcscale, frame);
     }
 
@@ -168,19 +162,19 @@ impl Schematic {
                     count += 1;
                     if count > *skip {
                         *skip = count;
-                        return Some(BaseElement::NetEdge(*e.2));
+                        return Some(BaseElement::NetEdge(e.2.clone()));
                     }
                 }
             }
-            for v in self.net.persistent.0.nodes() {
-                if v.collision_by_vsp(curpos_vsp) {
-                    count += 1;
-                    if count > *skip {
-                        *skip = count;
-                        return Some(BaseElement::NetVertex(v));
-                    }
-                }
-            }
+            // for v in self.net.persistent.0.nodes() {
+            //     if v.collision_by_vsp(curpos_vsp) {
+            //         count += 1;
+            //         if count > *skip {
+            //             *skip = count;
+            //             return Some(BaseElement::NetVertex(v));
+            //         }
+            //     }
+            // }
             for d in self.devices.iter() {
                 if d.collision_by_vsp(curpos_vsp) {
                     count += 1;
@@ -210,7 +204,7 @@ impl Schematic {
                 self.state = SchematicState::Idle(None);
             },
             SchematicState::Idle(_) => {
-                self.net.selected.clear();
+                self.net.clear_selected();
             },
             SchematicState::DevicePlacement(_) => {
                 self.state = SchematicState::Idle(None);

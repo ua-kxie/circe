@@ -7,8 +7,10 @@ use crate::{
 use euclid::{Point2D, Box2D, Vector2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct NetEdge (pub SSPoint, pub SSPoint);
+use std::cell::Cell;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
 
 impl NetEdge {
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
@@ -89,6 +91,10 @@ impl Drawable for NetEdge {
             ..Stroke::default()
         };
         draw_with(self.0, self.1, vct, frame, wire_stroke);
+
+        if self.2.get() {
+            self.draw_selected(vct, vcscale, frame);
+        }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;

@@ -9,6 +9,7 @@ mod edge;
 pub use edge::NetEdge;
 
 use super::Drawable;
+use std::cell::Cell;
 
 #[derive(Debug, Clone)]
 pub struct NetsGraph(pub GraphMap<NetVertex, NetEdge, petgraph::Undirected>);
@@ -45,8 +46,8 @@ impl NetsGraphExt for NetsGraph {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.0.remove_edge(e.0, e.1);
-                    self.0.add_edge(e.0, *v, NetEdge(e.0.0, v.0));
-                    self.0.add_edge(e.1, *v, NetEdge(e.1.0, v.0));
+                    self.0.add_edge(e.0, *v, NetEdge(e.0.0, v.0, Cell::new(false)));
+                    self.0.add_edge(e.1, *v, NetEdge(e.1.0, v.0, Cell::new(false)));
                 }
             }
         }
@@ -62,7 +63,7 @@ impl NetsGraphExt for NetsGraph {
                 2 => {
                     let src = connected_vertices[0];
                     let dst = connected_vertices[1];
-                    let ew = NetEdge(src.0, dst.0);
+                    let ew = NetEdge(src.0, dst.0, Cell::new(false));
                     if ew.occupies_ssp(v.0) {
                         self.0.remove_node(v);
                         self.0.add_edge(src, dst, ew);
@@ -99,21 +100,21 @@ impl NetsGraphExt for NetsGraph {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge(src, dst));
+                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge(src, dst, Cell::new(false)));
             },
             (_x, 0) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge(src, dst));
+                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge(src, dst, Cell::new(false)));
             },
             (_x, y) => {
                 let corner = Point2D::new(src.x, src.y + y);
-                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge(src, corner));
-                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge(corner, dst));
+                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge(src, corner, Cell::new(false)));
+                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge(corner, dst, Cell::new(false)));
             }
         }
     }
     fn merge(&mut self, other: &NetsGraph) {
         for edge in other.0.all_edges() {
-            self.0.add_edge(edge.0, edge.1, *edge.2);  // adding edges also add nodes if they do not already exist
+            self.0.add_edge(edge.0, edge.1, edge.2.clone());  // adding edges also add nodes if they do not already exist
         }
         self.prune();
     }

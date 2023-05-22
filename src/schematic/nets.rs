@@ -10,6 +10,8 @@ use flagset::flags;
 
 use self::graph::NetsGraphExt;
 
+use super::{NetEdge, NetVertex};
+
 pub trait Selectable {
     // collision with point, selection box
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool;
@@ -37,33 +39,35 @@ flags! {
 #[derive(Default)]
 pub struct Nets {
     pub persistent: NetsGraph,
-    pub selected: NetsGraph,
+    // pub selected: NetsGraph,
 }
 
 impl Nets {
     pub fn tt(&self) {
         let a = tarjan_scc(&self.persistent.0);  // this finds the unconnected components 
     }
-    // pub fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame, curpos_vsp: VSPoint) {
-    //     for (_, _, edge) in self.persistent.0.all_edges() {
-    //         if edge.collision_by_vsp(curpos_vsp) {
-    //             edge.draw_preview(vct, vcscale, frame)
-    //         }
-    //     }
-    //     for vertex in self.persistent.0.nodes() {
-    //         if vertex.collision_by_vsp(curpos_vsp) {
-    //             vertex.draw_preview(vct, vcscale, frame)
-    //         }
-    //     }
-    // }
+    pub fn clear_selected(&self) {
+        for e in self.persistent.0.all_edges() {
+            e.2.2.set(false);
+        }
+    }
+    pub fn select_edge(&mut self, e: NetEdge) {
+        e.2.set(true);
+        self.persistent.0.add_edge(NetVertex(e.0), NetVertex(e.1), e.clone());
+    }
     pub fn delete_selected_from_persistent(&mut self) {
         // for v in self.selected.0.nodes() {
         //     self.persistent.0.remove_node(v);
         // }
-        for e in self.selected.0.all_edges() {
+        let mut tmp = vec![];
+        for e in self.persistent.0.all_edges() {
+            if e.2.2.get() {
+                tmp.push((e.0, e.1));
+            }
+        }
+        for e in tmp {
             self.persistent.0.remove_edge(e.0, e.1);
         }
         self.persistent.prune();
-        self.selected.clear();
     }
 }
