@@ -36,7 +36,7 @@ pub struct Schematic {
     net: Box<Nets>,
     devices: Devices,
     pub state: SchematicState,
-    
+
     curpos: Option<(VSPoint, SSPoint)>,
 
     selskip: usize,
@@ -71,7 +71,7 @@ impl Schematic {
                             self.net.select_edge(e.clone());
                         },
                         BaseElement::Device(d) => {
-                            d.toggle_select();
+                            d.set_select();
                         }
                     }
                 }
@@ -145,7 +145,9 @@ impl Schematic {
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
         self.net.persistent.draw_persistent(vct, vcscale, frame);
+        self.net.persistent.draw_selected(vct, vcscale, frame);
         self.devices.draw_persistent(vct, vcscale, frame);
+        self.devices.draw_selected(vct, vcscale, frame);
     }
 
     pub fn bounding_box(&self) -> VSBox {
@@ -205,6 +207,7 @@ impl Schematic {
             },
             SchematicState::Idle(_) => {
                 self.net.clear_selected();
+                self.devices.clear_selected();
             },
             SchematicState::DevicePlacement(_) => {
                 self.state = SchematicState::Idle(None);

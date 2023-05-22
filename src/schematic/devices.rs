@@ -37,7 +37,9 @@ impl Drawable for Devices {
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.devices_vec {
-            d.draw_selected(vct, vcscale, frame);
+            if d.selected() {
+                d.draw_selected(vct, vcscale, frame);
+            }
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
@@ -48,6 +50,11 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn clear_selected(&mut self) {
+        for d in &self.devices_vec {
+            d.unset_select();
+        }
+    }
     pub fn bounding_box(&self) -> VSBox {
         let pts = self.devices_vec.iter().flat_map(|i| [i.bounds().min, i.bounds().max].into_iter());
         VSBox::from_points(pts)

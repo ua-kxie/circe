@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::devicetype::{DeviceType, Port, Graphics};
 
 use euclid::{Size2D, Transform2D, Vector2D, Angle};
-use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self}, Color, Size};
+use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self, LineDash}, Color, Size};
 
 use crate::{
     schematic::nets::{Selectable, Drawable},
@@ -31,14 +31,12 @@ impl DeviceInstance {
         path_builder.rectangle(Point::from(csb.min).into(), size);
         frame.stroke(&path_builder.build(), stroke);    
     }
-    fn stroke_ports(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        let vct_composite = self.transform.cast().then(&vct);
+    fn stroke_ports(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
         for p in self.device_type.get_ports() {
             p.draw_persistent(vct_composite, 0.0, frame);
         }
     }
-    fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        let vct_composite = self.transform.cast().then(&vct);
+    fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
         let mut path_builder = Builder::new();
         for v1 in &self.device_type.get_graphics().pts {
             path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
@@ -53,6 +51,12 @@ impl DeviceInstance {
     }
     pub fn toggle_select(&self) {
         self.selected.set(!self.selected.get());
+    }
+    pub fn set_select(&self) {
+        self.selected.set(true);
+    }
+    pub fn unset_select(&self) {
+        self.selected.set(false);
     }
     pub fn selected(&self) -> bool {
         self.selected.get()
@@ -116,30 +120,41 @@ impl Drawable for DeviceInstance {
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
+        let vct_composite = self.transform.cast().then(&vct);
         // self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_ports(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
+        self.stroke_symbol(vct_composite, frame, stroke.clone());
+        for p in self.device_type.get_ports() {
+            p.draw_persistent(vct_composite, vcscale, frame)
+        }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.),
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.) / 2.0,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
         self.stroke_bounds(vct, frame, stroke.clone());
         // self.stroke_ports(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
+        let vct_composite = self.transform.cast().then(&vct);
+        self.stroke_symbol(vct_composite, frame, stroke.clone());
+        for p in self.device_type.get_ports() {
+            p.draw_selected(vct_composite, vcscale, frame)
+        }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.),
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
-            line_cap: LineCap::Square,
+            line_cap: LineCap::Butt,
+            line_dash: LineDash{segments: &[3. * (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0)], offset: 0},
             ..Stroke::default()
         };
+        let vct_composite = self.transform.cast().then(&vct);
         self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_ports(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
+        self.stroke_symbol(vct_composite, frame, stroke.clone());
+        for p in self.device_type.get_ports() {
+            p.draw_preview(vct_composite, vcscale, frame)
+        }
     }
 }
