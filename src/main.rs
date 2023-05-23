@@ -36,7 +36,6 @@ pub fn main() -> iced::Result {
 struct Circe {
     schematic: Schematic,
     zoom_scale: f32,
-    infotext: String,
 
     active_cache: Cache,
     passive_cache: Cache,
@@ -67,7 +66,6 @@ impl Application for Circe {
             Circe {
                 schematic: Default::default(),
                 zoom_scale: 10.0,  // would be better to get this from the viewport on startup
-                infotext: String::from(""),
 
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
@@ -85,28 +83,24 @@ impl Application for Circe {
         match message {
             Msg::NewCurpos(opt_curpos) => {
                 self.schematic.curpos_update(opt_curpos);
-                self.infotext.clear();
-                if let Some((_vsp, curpos_ssp)) = opt_curpos {
-                    self.infotext.push_str(&format!("{:?}", curpos_ssp)); 
-                }
             }
             Msg::LeftClick(ssp) => {
                 self.schematic.left_click(ssp);
             },
             Msg::Wire => {
-                self.schematic.key_wire();
+                self.schematic.enter_wiring_mode();
             },
             Msg::Cycle => {
-                self.schematic.key_cycle();
+                self.schematic.select_next_by_vspoint();
             },
             Msg::Test => {
                 self.schematic.key_test();
             },
             Msg::Esc => {
-                self.schematic.key_esc();
+                self.schematic.clear_selected();
             },
             Msg::Del => {
-                self.schematic.key_del();
+                self.schematic.delete_selected();
             },
             Msg::R => {
                 self.schematic.key_r();
