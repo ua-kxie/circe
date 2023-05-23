@@ -55,6 +55,7 @@ enum Msg {
     NewZoom(f32),
     LeftClickDown,
     LeftClickUp,
+    M,
 }
 
 impl Application for Circe {
@@ -86,9 +87,6 @@ impl Application for Circe {
             Msg::NewCurpos(opt_curpos) => {
                 self.schematic.curpos_update(opt_curpos);
             }
-            // Msg::LeftClick(ssp) => {
-            //     self.schematic.left_click(ssp);
-            // },
             Msg::Wire => {
                 self.schematic.enter_wiring_mode();
             },
@@ -99,7 +97,7 @@ impl Application for Circe {
                 self.schematic.key_test();
             },
             Msg::Esc => {
-                self.schematic.clear_selected();
+                self.schematic.esc();
             },
             Msg::Del => {
                 self.schematic.delete_selected();
@@ -115,6 +113,9 @@ impl Application for Circe {
             },
             Msg::LeftClickUp => {
                 self.schematic.left_click_up();
+            },
+            Msg::M => {
+                self.schematic.move_();
             },
         }
         Command::none()
@@ -206,6 +207,9 @@ impl canvas::Program<Msg> for Circe {
             // keys
             (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
                 match (vstate, key_code, modifiers.bits(), curpos) {
+                    (_, iced::keyboard::KeyCode::M, 0, _) => {
+                        msg = Some(Msg::M);
+                    },
                     (_, iced::keyboard::KeyCode::W, 0, _) => {
                         msg = Some(Msg::Wire);
                     },

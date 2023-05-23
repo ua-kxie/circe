@@ -24,6 +24,7 @@ pub enum SchematicState {
     Idle,
     DevicePlacement(DeviceInstance),
     Selecting(VSBox),
+    Moving(SSPoint, SSPoint),
 }
 
 impl Default for SchematicState {
@@ -114,6 +115,12 @@ impl Schematic {
                 self.state = SchematicState::Idle;
             },
             SchematicState::Selecting(_) => {},
+            SchematicState::Moving(ssp0, ssp1) => {
+                let ssv = *ssp1 - *ssp0;
+                self.net.move_selected(ssv);
+                // self.devices.move_selected(ssv);
+                self.state = SchematicState::Idle;
+            },
         };
     }
     pub fn left_click_up(&mut self) {
@@ -154,6 +161,11 @@ impl Schematic {
                     self.tentatives_by_vsbox(&vsb);
                 }
             },
+            SchematicState::Moving(_, ssp1) => {
+                if let Some((_vsp, ssp)) = opt_curpos {
+                    *ssp1 = ssp;
+                }
+            },
         };
         self.state = tmpst;
         self.curpos = opt_curpos;
@@ -187,10 +199,14 @@ impl Schematic {
                     style: canvas::Style::Solid(if vsb.height() > 0. {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
                     ..canvas::Fill::default()
                 };
-                let mut path_builder = Builder::new();
                 let csb = vct.outer_transformed_box(&vsb);
                 let size = Size::new(csb.width(), csb.height());
                 frame.fill_rectangle(Point::from(csb.min).into(), size, f);
+            },
+            SchematicState::Moving(ssp0, ssp1) => {
+                let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
+                self.net.draw_selected_preview(vct_c, vcscale, frame);
+                self.devices.draw_selected_preview(vct_c, vcscale, frame);
             },
         }
     }
@@ -248,17 +264,14 @@ impl Schematic {
             self.devices.delete_selected();
         }
     }
-    pub fn clear_selected(&mut self) {
+    pub fn esc(&mut self) {
         match &mut self.state {
-            SchematicState::Wiring(_) => {
-                self.state = SchematicState::Idle;
-            },
-            SchematicState::DevicePlacement(_) => {
-                self.state = SchematicState::Idle;
-            },
-            _ => {
+            SchematicState::Idle => {
                 self.net.clear_selected();
                 self.devices.clear_selected();
+            }
+            _ => {
+                self.state = SchematicState::Idle;
             }
         }
     }
@@ -280,15 +293,19 @@ impl Schematic {
             SchematicState::Idle => {
                 self.state = SchematicState::DevicePlacement(self.devices.place_res(self.curpos_ssp().unwrap_or(SSPoint::origin())));
             },
-            SchematicState::Wiring(_) => {},
             SchematicState::DevicePlacement(di) => {
                 di.rotate(true);
             },
-            SchematicState::Selecting(_) => {},
+            _ => {},
         }
     }
     pub fn key_test(&mut self) {
         self.net.tt();
+    }
+    pub fn move_(&mut self) {
+        if let Some((vsp, ssp)) = self.curpos {
+            self.state = SchematicState::Moving(ssp, ssp);
+        }
     }
     pub fn select_ini(&mut self) {
         if let Some((vsp, _)) = self.curpos {

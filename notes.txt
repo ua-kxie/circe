@@ -1,21 +1,22 @@
 todo:
 
 - immediate:
-    unify selection algos, additive/subtractive selection, area selection
-    move some logic into main (?)
-    unify draw/stroke interface
-    mouse hover preview highlight in any state (wiring, etc)
+    moving devices (arc mutability)
     terminate line seg on wiring to a port
 
-    moving/grabbing devices and wires (m)
+    move some logic into main (?)
+    unify draw/stroke interface
+    (tech debt)
 
     named nets, canvas text
-    add gnd, voltage source devices (g, v)
 
 - medium term:
+    add gnd, voltage source devices (g, v)
     generate netlist
     device parameters
     feed netlist to NgSpice simulator
+
+    device/wire copy/paste
 
 - long term:
     schematic saving/loading (serde)
@@ -24,6 +25,12 @@ todo:
 
     bypass iced and tesellate with lyon directly
     drawing/stroke culling
+
+    additive/subtractive selection - waiting on better modifiers support
+
+    wiring pathfinder
+
+    grabbing (moves devices while keeping wire connections)
 
 notes about selections:
     storing elements in a state enum works well enough when there is one

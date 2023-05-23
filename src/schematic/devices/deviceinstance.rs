@@ -8,7 +8,7 @@ use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self,
 use crate::{
     schematic::nets::{Selectable, Drawable},
     transforms::{
-        SSPoint, VSBox, VSPoint, VCTransform, Point, ViewportSpace
+        SSPoint, VSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace
     }, 
 };
 
@@ -62,6 +62,9 @@ impl DeviceInstance {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
         self.instance_bounds = self.transform.cast().outer_transformed_box(&self.device_type.get_bounds().cast().cast_unit());
+    }
+    pub fn pre_translate(&mut self, ssv: Vector2D<i16, ViewportSpace>) {
+        self.transform = self.transform.pre_translate(ssv);
     }
     pub fn rotate(&mut self, cw: bool) {
         if cw {
@@ -154,7 +157,5 @@ impl Drawable for DeviceInstance {
         for p in self.device_type.get_ports() {
             p.draw_preview(vct_composite, vcscale, frame)
         }
-
-
     }
 }

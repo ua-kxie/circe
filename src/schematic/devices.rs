@@ -4,12 +4,13 @@ mod devicetype;
 mod deviceinstance;
 
 use std::sync::Arc;
+use euclid::Vector2D;
 use iced::widget::canvas::Frame;
 
 use crate::{
     schematic::nets::{Drawable},
     transforms::{
-        SSPoint, VSBox, VCTransform
+        SSPoint, VSBox, VCTransform, SchematicSpace
     }, 
 };
 
@@ -50,6 +51,16 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    // pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+    //     for d in self.devices_vec.iter().filter(|&d| d.selected()) {
+    //         d.pre_translate(ssv.cast_unit());  // arc problem
+    //     }
+    // }
+    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        for d in self.devices_vec.iter().filter(|&d| d.selected()) {
+            d.draw_preview(vct, vcscale, frame);
+        }
+    }
     pub fn clear_selected(&mut self) {
         for d in &self.devices_vec {
             d.unset_select();
