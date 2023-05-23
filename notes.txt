@@ -1,6 +1,8 @@
 todo:
 
 - immediate:
+    rework panning to work with initial and final coords, instead of delta each frame
+
     unify selection algos, additive/subtractive selection, area selection
     move some logic into main (?)
     unify draw/stroke interface

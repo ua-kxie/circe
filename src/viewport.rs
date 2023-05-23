@@ -202,7 +202,7 @@ impl Viewport {
             }
         }
         let coarse_grid_threshold: f32 = 2.0;
-        let fine_grid_threshold: f32 = 4.0;
+        let fine_grid_threshold: f32 = 6.0;
         if self.vc_scale() > coarse_grid_threshold {
             // draw coarse grid
             let spacing = 16.;
