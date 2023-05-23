@@ -136,9 +136,6 @@ impl Drawable for NetsGraph {
                 edge.draw_selected(vct, vcscale, frame)
             }
         }
-        // for vertex in self.0.nodes() {
-        //     vertex.draw_selected(vct, vcscale, frame)
-        // }
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {

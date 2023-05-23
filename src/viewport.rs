@@ -5,7 +5,6 @@
 /// SchematicSpace is the schematic coordinate in i16
 
 use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, CanvasSpace, ViewportSpace, VSBox, CSBox};
-use crate::schematic::Schematic;
 
 use euclid::{Vector2D, Rect, Size2D};
 
@@ -18,7 +17,6 @@ use iced::{Color};
 #[derive(Clone, Debug)]
 pub enum ViewportState {
     Panning,
-    Selecting(VSPoint),
     NewView(VSPoint, VSPoint),
     None,
 }
@@ -131,9 +129,6 @@ impl Viewport {
                         *vsp_other = *vsp_origin; 
                     }
                 }
-                ViewportState::Selecting(_vsp0) => {
-                    // todo
-                },
                 ViewportState::None => {
                     // todo?
                 },
