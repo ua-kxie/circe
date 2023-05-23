@@ -45,7 +45,7 @@ struct Circe {
 #[derive(Debug, Clone)]
 enum Msg {
     NewCurpos(Option<(VSPoint, SSPoint)>),
-    LeftClick(SSPoint),
+    // LeftClick(SSPoint),
     Wire,
     Cycle,
     Test,
@@ -53,6 +53,8 @@ enum Msg {
     Del,
     R,
     NewZoom(f32),
+    LeftClickDown,
+    LeftClickUp,
 }
 
 impl Application for Circe {
@@ -84,9 +86,9 @@ impl Application for Circe {
             Msg::NewCurpos(opt_curpos) => {
                 self.schematic.curpos_update(opt_curpos);
             }
-            Msg::LeftClick(ssp) => {
-                self.schematic.left_click(ssp);
-            },
+            // Msg::LeftClick(ssp) => {
+            //     self.schematic.left_click(ssp);
+            // },
             Msg::Wire => {
                 self.schematic.enter_wiring_mode();
             },
@@ -107,6 +109,12 @@ impl Application for Circe {
             },
             Msg::NewZoom(value) => {
                 self.zoom_scale = value
+            },
+            Msg::LeftClickDown => {
+                self.schematic.left_click_down();
+            },
+            Msg::LeftClickUp => {
+                self.schematic.left_click_up();
             },
         }
         Command::none()
@@ -147,10 +155,14 @@ impl canvas::Program<Msg> for Circe {
         match (state, event, curpos) {
             // clicking
             (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
-                if let Some(ssp) = viewport.curpos_ssp() {
-                    self.passive_cache.clear();
-                    msg = Some(Msg::LeftClick(ssp));
-                }
+                msg = Some(Msg::LeftClickDown);
+                self.active_cache.clear();
+                self.passive_cache.clear();
+            }
+            (_, Event::Mouse(ButtonReleased(Left)), _) => {
+                msg = Some(Msg::LeftClickUp);
+                self.active_cache.clear();
+                self.passive_cache.clear();
             }
 
             // panning

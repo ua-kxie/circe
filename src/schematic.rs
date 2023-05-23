@@ -4,12 +4,12 @@ mod devices;
 use std::sync::Arc;
 
 pub use nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox};
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point};
 use devices::DeviceInstance;
 
-use iced::widget::canvas::{
-    Frame,
-};
+use iced::{widget::canvas::{
+    Frame, path::Builder, self,
+}, Size, Color};
 use self::devices::Devices;
 
 #[derive(Clone, Debug)]
@@ -23,6 +23,7 @@ pub enum SchematicState {
     Wiring(Option<(Box<NetsGraph>, SSPoint)>),
     Idle,
     DevicePlacement(DeviceInstance),
+    Selecting(VSBox),
 }
 
 impl Default for SchematicState {
@@ -45,15 +46,16 @@ pub struct Schematic {
 }
 
 impl Schematic {
-    pub fn tentatives_by_vsbox(&mut self, vsb: VSBox) {
+    pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
         self.tentatives.clear();
+        let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
         for d in self.devices.iter() {
-            if d.bounds().intersects(&vsb) {
+            if d.bounds().intersects(&vsb_p) {
                 self.tentatives.push(BaseElement::Device(d.clone()));
             }
         }
         for e in self.net.persistent.0.all_edges() {
-            if vsb.contains(e.0.0.cast().cast_unit()) || vsb.contains(e.1.0.cast().cast_unit()) {
+            if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
                 self.tentatives.push(BaseElement::NetEdge(e.2.clone()));
             }
         }
@@ -79,31 +81,48 @@ impl Schematic {
     pub fn curpos_ssp(&self) -> Option<SSPoint> {
         self.curpos.map(|tup| tup.1)
     }
-    pub fn left_click(&mut self, ssp: SSPoint) {
+    pub fn left_click_down(&mut self) {
+        let opt_ssp = self.curpos;
         match &mut self.state {
             SchematicState::Wiring(opt_ws) => {
-                let mut new_ws = None;
-                if let Some((g, prev_ssp)) = opt_ws {  // subsequent click
-                    if ssp == *prev_ssp { 
-                    } else if self.net.persistent.occupies_ssp(ssp) {
-                        self.net.as_mut().persistent.merge(g.as_ref());
-                        new_ws = None;
-                    } else {
-                        self.net.as_mut().persistent.merge(g.as_ref());
+                if let Some((_vsp, ssp)) = opt_ssp {
+                    let mut new_ws = None;
+                    if let Some((g, prev_ssp)) = opt_ws {  // subsequent click
+                        if ssp == *prev_ssp { 
+                        } else if self.net.persistent.occupies_ssp(ssp) {
+                            self.net.as_mut().persistent.merge(g.as_ref());
+                            new_ws = None;
+                        } else {
+                            self.net.as_mut().persistent.merge(g.as_ref());
+                            new_ws = Some((Box::<NetsGraph>::default(), ssp));
+                        }
+                    } else {  // first click
                         new_ws = Some((Box::<NetsGraph>::default(), ssp));
                     }
-                } else {  // first click
-                    new_ws = Some((Box::<NetsGraph>::default(), ssp));
+                    *opt_ws = new_ws;
                 }
-                *opt_ws = new_ws;
             },
             SchematicState::Idle => {
                 self.tentatives_to_selected();
+                if let Some((vsp, _ssp)) = opt_ssp {
+                    self.state = SchematicState::Selecting(VSBox::new(vsp, vsp));
+                }
+
             },
             SchematicState::DevicePlacement(di) => {
                 self.devices.push(di.clone());
                 self.state = SchematicState::Idle;
             },
+            SchematicState::Selecting(_) => {},
+        };
+    }
+    pub fn left_click_up(&mut self) {
+        match &mut self.state {
+            SchematicState::Selecting(vsb) => {
+                self.tentatives_to_selected();
+                self.state = SchematicState::Idle;
+            },
+            _ => {},
         };
     }
     pub fn curpos_update(&mut self, opt_curpos: Option<(VSPoint, SSPoint)>) {
@@ -112,7 +131,6 @@ impl Schematic {
             self.tentative_by_vspoint(vsp, &mut skip);
             self.selskip = skip;
         }
-
         let mut tmpst = self.state.clone();
         match &mut tmpst {
             SchematicState::Wiring(opt_ws) => {
@@ -127,7 +145,13 @@ impl Schematic {
             },
             SchematicState::DevicePlacement(di) => {
                 if let Some((_vsp, ssp)) = opt_curpos {
-                    di.set_translation(ssp)
+                    di.set_translation(ssp);
+                }
+            },
+            SchematicState::Selecting(vsb) => {
+                if let Some((vsp, _ssp)) = opt_curpos {
+                    vsb.max = vsp;
+                    self.tentatives_by_vsbox(&vsb);
                 }
             },
         };
@@ -157,6 +181,16 @@ impl Schematic {
             },
             SchematicState::DevicePlacement(di) => {
                 di.draw_preview(vct, vcscale, frame);
+            },
+            SchematicState::Selecting(vsb) => {
+                let f = canvas::Fill {
+                    style: canvas::Style::Solid(if vsb.height() > 0. {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
+                    ..canvas::Fill::default()
+                };
+                let mut path_builder = Builder::new();
+                let csb = vct.outer_transformed_box(&vsb);
+                let size = Size::new(csb.width(), csb.height());
+                frame.fill_rectangle(Point::from(csb.min).into(), size, f);
             },
         }
     }
@@ -219,13 +253,13 @@ impl Schematic {
             SchematicState::Wiring(_) => {
                 self.state = SchematicState::Idle;
             },
-            SchematicState::Idle => {
-                self.net.clear_selected();
-                self.devices.clear_selected();
-            },
             SchematicState::DevicePlacement(_) => {
                 self.state = SchematicState::Idle;
             },
+            _ => {
+                self.net.clear_selected();
+                self.devices.clear_selected();
+            }
         }
     }
     pub fn enter_wiring_mode(&mut self) {
@@ -250,10 +284,22 @@ impl Schematic {
             SchematicState::DevicePlacement(di) => {
                 di.rotate(true);
             },
+            SchematicState::Selecting(_) => {},
         }
     }
     pub fn key_test(&mut self) {
         self.net.tt();
+    }
+    pub fn select_ini(&mut self) {
+        if let Some((vsp, _)) = self.curpos {
+            self.state = SchematicState::Selecting(VSBox::new(vsp, vsp))
+        }
+    }
+    pub fn select_fin(&mut self) {
+        if let SchematicState::Selecting(_vsb) = self.state {
+            self.tentatives_to_selected();
+            self.state = SchematicState::Idle;
+        }
     }
 }
 
