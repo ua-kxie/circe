@@ -3,7 +3,7 @@
 mod devicetype;
 mod deviceinstance;
 
-use std::sync::Arc;
+use std::{rc::Rc, cell::RefCell};
 use euclid::Vector2D;
 use iced::widget::canvas::Frame;
 
@@ -17,11 +17,10 @@ use crate::{
 pub use self::deviceinstance::DeviceInstance;
 use self::devicetype::DeviceType;
 
-#[derive(Debug)]
 pub struct Devices {
-    devices_vec: Vec<Arc<DeviceInstance>>,
+    devices_vec: Vec<Rc<RefCell<DeviceInstance>>>,
 
-    res: Arc<DeviceType>,
+    res: Rc<DeviceType>,
 }
 
 impl Default for Devices {
@@ -33,47 +32,47 @@ impl Default for Devices {
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.devices_vec {
-            d.draw_persistent(vct, vcscale, frame);
+            d.borrow().draw_persistent(vct, vcscale, frame);
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.devices_vec {
-            if d.selected() {
-                d.draw_selected(vct, vcscale, frame);
+            if d.borrow().selected() {
+                d.borrow().draw_selected(vct, vcscale, frame);
             }
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.devices_vec {
-            d.draw_preview(vct, vcscale, frame);
+            d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
 }
 
 impl Devices {
-    // pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-    //     for d in self.devices_vec.iter().filter(|&d| d.selected()) {
-    //         d.pre_translate(ssv.cast_unit());  // arc problem
-    //     }
-    // }
+    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected()) {
+            d.borrow_mut().pre_translate(ssv.cast_unit());
+        }
+    }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.devices_vec.iter().filter(|&d| d.selected()) {
-            d.draw_preview(vct, vcscale, frame);
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected()) {
+            d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
     pub fn clear_selected(&mut self) {
         for d in &self.devices_vec {
-            d.unset_select();
+            d.borrow_mut().unset_select();
         }
     }
     pub fn bounding_box(&self) -> VSBox {
-        let pts = self.devices_vec.iter().flat_map(|i| [i.bounds().min, i.bounds().max].into_iter());
+        let pts = self.devices_vec.iter().flat_map(|d| [d.borrow().bounds().min, d.borrow().bounds().max].into_iter());
         VSBox::from_points(pts)
     }
     pub fn push(&mut self, di: DeviceInstance) {
-        self.devices_vec.push(Arc::new(di));
+        self.devices_vec.push(Rc::new(di.into()));
     }
-    pub fn iter(&self) -> std::slice::Iter<Arc<DeviceInstance>> {
+    pub fn iter(&self) -> std::slice::Iter<Rc<RefCell<DeviceInstance>>> {
         self.devices_vec.iter()
     }
     pub fn place_res(&mut self, ssp: SSPoint) -> DeviceInstance {
@@ -81,11 +80,11 @@ impl Devices {
     }
     pub fn delete_selected(&mut self) {
         self.devices_vec = self.devices_vec.iter().filter_map(|e| {
-            if !e.selected() {Some(e.clone())} else {None}
+            if !e.borrow().selected() {Some(e.clone())} else {None}
         }).collect()
     }
     fn new() -> Self {
-        Devices { devices_vec: vec![], res: Arc::new(DeviceType::new_res()) }
+        Devices { devices_vec: vec![], res: Rc::new(DeviceType::new_res()) }
     }
 }
 

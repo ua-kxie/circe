@@ -160,6 +160,9 @@ impl DeviceType {
     pub fn get_bounds(&self) -> &SSBox {
         &self.bounds
     }
+    pub fn get_vsbounds(&self) -> VSBox {
+        self.bounds.cast().cast_unit()
+    }
     pub fn get_graphics(&self) -> &Graphics {
         &self.graphic
     }

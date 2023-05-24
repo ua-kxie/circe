@@ -1,7 +1,7 @@
 mod nets;
 mod devices;
 
-use std::sync::Arc;
+use std::{rc::Rc, cell::RefCell};
 
 pub use nets::{Selectable, Drawable, Nets, graph::{NetsGraph, NetsGraphExt, NetEdge, NetVertex}};
 use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point};
@@ -12,10 +12,10 @@ use iced::{widget::canvas::{
 }, Size, Color};
 use self::devices::Devices;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum BaseElement {
     NetEdge(NetEdge),
-    Device(Arc<DeviceInstance>),
+    Device(Rc<RefCell<DeviceInstance>>),
 }
 
 #[derive(Clone, Debug)]
@@ -51,7 +51,7 @@ impl Schematic {
         self.tentatives.clear();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
         for d in self.devices.iter() {
-            if d.bounds().intersects(&vsb_p) {
+            if d.borrow().bounds().intersects(&vsb_p) {
                 self.tentatives.push(BaseElement::Device(d.clone()));
             }
         }
@@ -74,7 +74,7 @@ impl Schematic {
                     self.net.select_edge(e.clone());
                 },
                 BaseElement::Device(d) => {
-                    d.set_select();
+                    d.borrow_mut().set_select();
                 }
             }
         }
@@ -118,7 +118,7 @@ impl Schematic {
             SchematicState::Moving(ssp0, ssp1) => {
                 let ssv = *ssp1 - *ssp0;
                 self.net.move_selected(ssv);
-                // self.devices.move_selected(ssv);
+                self.devices.move_selected(ssv);
                 self.state = SchematicState::Idle;
             },
         };
@@ -180,7 +180,7 @@ impl Schematic {
         for be in &self.tentatives {
             match be {
                 BaseElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
-                BaseElement::Device(d) => d.draw_preview(vct, vcscale, frame),
+                BaseElement::Device(d) => d.borrow().draw_preview(vct, vcscale, frame),
             }
         }
         match &self.state {
@@ -242,7 +242,7 @@ impl Schematic {
                 }
             }
             for d in self.devices.iter() {
-                if d.collision_by_vsp(curpos_vsp) {
+                if d.borrow().collision_by_vsp(curpos_vsp) {
                     count += 1;
                     if count > *skip {
                         *skip = count;

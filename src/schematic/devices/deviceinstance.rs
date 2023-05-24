@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::devicetype::{DeviceType, Port, Graphics};
 
@@ -12,14 +12,13 @@ use crate::{
     }, 
 };
 
-use std::cell::Cell;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeviceInstance {
     transform: euclid::Transform2D<i16, ViewportSpace, ViewportSpace>,
-    device_type: Arc<DeviceType>,
+    device_type: Rc<DeviceType>,
     instance_bounds: VSBox,
-    selected: Cell<bool>,
+    selected: bool,
 }
 
 impl DeviceInstance {
@@ -46,17 +45,17 @@ impl DeviceInstance {
     pub fn bounds(&self) -> &VSBox {
         &self.instance_bounds
     }
-    pub fn toggle_select(&self) {
-        self.selected.set(!self.selected.get());
+    pub fn toggle_select(&mut self) {
+        self.selected = !self.selected;
     }
-    pub fn set_select(&self) {
-        self.selected.set(true);
+    pub fn set_select(&mut self) {
+        self.selected = true;
     }
-    pub fn unset_select(&self) {
-        self.selected.set(false);
+    pub fn unset_select(&mut self) {
+        self.selected = false;
     }
     pub fn selected(&self) -> bool {
-        self.selected.get()
+        self.selected
     }
     pub fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
@@ -65,6 +64,7 @@ impl DeviceInstance {
     }
     pub fn pre_translate(&mut self, ssv: Vector2D<i16, ViewportSpace>) {
         self.transform = self.transform.pre_translate(ssv);
+        self.instance_bounds = self.transform.outer_transformed_box(&self.device_type.get_bounds().cast_unit()).cast().cast_unit(); //self.device_type.as_ref().get_bounds().cast().cast_unit()
     }
     pub fn rotate(&mut self, cw: bool) {
         if cw {
@@ -74,23 +74,23 @@ impl DeviceInstance {
         }
         self.instance_bounds = self.transform.cast().outer_transformed_box(&self.device_type.get_bounds().cast().cast_unit());
     }
-    pub fn new_gnd(dt: Arc<DeviceType>) -> Self {
+    pub fn new_gnd(dt: Rc<DeviceType>) -> Self {
         let bds = VSBox::from_points([dt.get_bounds().min.cast().cast_unit(), dt.get_bounds().max.cast().cast_unit()]);
         DeviceInstance { 
             transform: Transform2D::identity(), 
             device_type: dt, 
             instance_bounds: bds,
-            selected: Cell::new(false),
+            selected: false,
         }
     }
     
-    pub fn new_res(ssp: SSPoint, dt: Arc<DeviceType>) -> Self {
+    pub fn new_res(ssp: SSPoint, dt: Rc<DeviceType>) -> Self {
         let bds = VSBox::from_points([dt.get_bounds().min.cast().cast_unit(), dt.get_bounds().max.cast().cast_unit()]);
         let mut d = DeviceInstance { 
             transform: Transform2D::identity(), 
             device_type: dt, 
             instance_bounds: bds,
-            selected: Cell::new(false),
+            selected: false,
         };
         d.set_translation(ssp);
         d
