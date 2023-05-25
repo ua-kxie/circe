@@ -35,47 +35,58 @@ impl Default for SchematicState {
 
 #[derive(Default)]
 pub struct Schematic {
-    net: Nets,
+    nets: Nets,
     devices: Devices,
     pub state: SchematicState,
-
-    tentatives: Vec<BaseElement>,
 
     selskip: usize,
 }
 
 impl Schematic {
+    fn clear_selected(&mut self) {
+        self.devices.clear_selected();
+        self.nets.clear_selected();
+    }
+    fn clear_tentatives(&mut self) {
+        self.devices.clear_tentatives();
+        self.nets.clear_tentatives();
+    }
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
-        self.tentatives.clear();
+        self.clear_tentatives();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
         for d in self.devices.iter() {
             if d.borrow().bounds().intersects(&vsb_p) {
-                self.tentatives.push(BaseElement::Device(d.clone()));
+                d.borrow_mut().set_tentative();
             }
         }
-        for e in self.net.persistent.0.all_edges() {
+        for e in self.nets.persistent.0.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
-                self.tentatives.push(BaseElement::NetEdge(e.2.clone()));
+                e.2.tentative = true;
             }
         }
     }
     pub fn tentative_by_vspoint(&mut self, vsp: VSPoint, skip: &mut usize) {
-        self.tentatives.clear();
+        self.clear_tentatives();
         if let Some(be) = self.selectable(vsp, skip) {
-            self.tentatives.push(be);
-        }
-    }
-    fn tentatives_to_selected(&mut self) {
-        for be in &self.tentatives {
             match be {
                 BaseElement::NetEdge(e) => {
-                    self.net.select_edge(e.clone());
+                    let mut netedge = e.clone();
+                    netedge.tentative = true;
+                    self.nets.persistent.0.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
                 },
                 BaseElement::Device(d) => {
-                    d.borrow_mut().set_select();
-                }
+                    d.borrow_mut().set_tentative();
+                },
             }
         }
+    }
+    pub fn select_next_by_vspoint(&mut self, curpos_vsp: VSPoint) {
+        let mut skip = self.selskip;
+        self.tentative_by_vspoint(curpos_vsp, &mut skip)
+    }
+    fn tentatives_to_selected(&mut self) {
+        self.nets.tentatives_to_selected();
+        self.devices.tentatives_to_selected();
     }
     pub fn left_click_down(&mut self, curpos_vsp: VSPoint) {
         match &mut self.state {
@@ -84,11 +95,11 @@ impl Schematic {
                 let mut new_ws = None;
                 if let Some((g, prev_ssp)) = opt_ws {  // subsequent click
                     if ssp == *prev_ssp { 
-                    } else if self.net.persistent.occupies_ssp(ssp) {
-                        self.net.persistent.merge(g.as_ref());
+                    } else if self.nets.persistent.occupies_ssp(ssp) {
+                        self.nets.persistent.merge(g.as_ref());
                         new_ws = None;
                     } else {
-                        self.net.persistent.merge(g.as_ref());
+                        self.nets.persistent.merge(g.as_ref());
                         new_ws = Some((Box::<NetsGraph>::default(), ssp));
                     }
                 } else {  // first click
@@ -107,7 +118,7 @@ impl Schematic {
             SchematicState::Selecting(_) => {},
             SchematicState::Moving(ssp0, ssp1) => {
                 let ssv = *ssp1 - *ssp0;
-                self.net.move_selected(ssv);
+                self.nets.move_selected(ssv);
                 self.devices.move_selected(ssv);
                 self.state = SchematicState::Idle;
             },
@@ -163,12 +174,9 @@ impl Schematic {
         vcscale: f32,
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
-        for be in &self.tentatives {
-            match be {
-                BaseElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
-                BaseElement::Device(d) => d.borrow().draw_preview(vct, vcscale, frame),
-            }
-        }
+        self.nets.persistent.draw_preview(vct, vcscale, frame);
+        self.devices.draw_preview(vct, vcscale, frame);
+
         match &self.state {
             SchematicState::Wiring(ws) => {
                 if let Some((net, ..)) = ws {
@@ -191,7 +199,7 @@ impl Schematic {
             },
             SchematicState::Moving(ssp0, ssp1) => {
                 let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
-                self.net.draw_selected_preview(vct_c, vcscale, frame);
+                self.nets.draw_selected_preview(vct_c, vcscale, frame);
                 self.devices.draw_selected_preview(vct_c, vcscale, frame);
             },
         }
@@ -203,14 +211,14 @@ impl Schematic {
         vcscale: f32,
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
-        self.net.persistent.draw_persistent(vct, vcscale, frame);
-        self.net.persistent.draw_selected(vct, vcscale, frame);
+        self.nets.persistent.draw_persistent(vct, vcscale, frame);
+        self.nets.persistent.draw_selected(vct, vcscale, frame);
         self.devices.draw_persistent(vct, vcscale, frame);
         self.devices.draw_selected(vct, vcscale, frame);
     }
 
     pub fn bounding_box(&self) -> VSBox {
-        let bbn = VSBox::from_points(self.net.persistent.0.nodes().map(|x| x.0.cast().cast_unit()));
+        let bbn = VSBox::from_points(self.nets.persistent.0.nodes().map(|x| x.0.cast().cast_unit()));
         let bbi = self.devices.bounding_box();
         bbn.union(&bbi)
     }
@@ -218,7 +226,7 @@ impl Schematic {
     fn selectable(&self, curpos_vsp: VSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
             let mut count = 0;
-            for e in self.net.persistent.0.all_edges() {
+            for e in self.nets.persistent.0.all_edges() {
                 if e.2.collision_by_vsp(curpos_vsp) {
                     count += 1;
                     if count > *skip {
@@ -246,14 +254,14 @@ impl Schematic {
 
     pub fn delete_selected(&mut self) {
         if let SchematicState::Idle = self.state {
-            self.net.delete_selected_from_persistent();
+            self.nets.delete_selected_from_persistent();
             self.devices.delete_selected();
         }
     }
     pub fn esc(&mut self) {
         match &mut self.state {
             SchematicState::Idle => {
-                self.net.clear_selected();
+                self.nets.clear_selected();
                 self.devices.clear_selected();
             }
             _ => {
@@ -263,14 +271,6 @@ impl Schematic {
     }
     pub fn enter_wiring_mode(&mut self) {
         self.state = SchematicState::Wiring(None);
-    }
-    pub fn select_next_by_vspoint(&mut self, curpos_vsp: VSPoint) {
-        self.tentatives.clear();
-        let mut skip = self.selskip;
-        if let Some(be) = self.selectable(curpos_vsp, &mut skip) {
-            self.selskip = skip;
-            self.tentatives.push(be);
-        }
     }
     pub fn key_r(&mut self, curpos_ssp: SSPoint) {
         match &mut self.state {
@@ -284,7 +284,7 @@ impl Schematic {
         }
     }
     pub fn key_test(&mut self) {
-        self.net.tt();
+        self.nets.tt();
     }
     pub fn move_(&mut self, curpos_ssp: SSPoint) {
         self.state = SchematicState::Moving(curpos_ssp, curpos_ssp);

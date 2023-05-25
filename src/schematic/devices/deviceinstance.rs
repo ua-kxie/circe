@@ -52,11 +52,20 @@ impl DeviceInstance {
     pub fn set_select(&mut self) {
         self.selected = true;
     }
+    pub fn set_tentative(&mut self) {
+        self.tentative = true;
+    }
     pub fn unset_select(&mut self) {
         self.selected = false;
     }
+    pub fn unset_tentative(&mut self) {
+        self.tentative = false;
+    }
     pub fn selected(&self) -> bool {
         self.selected
+    }
+    pub fn tentative(&self) -> bool {
+        self.tentative
     }
     pub fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;

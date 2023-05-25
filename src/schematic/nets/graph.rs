@@ -139,7 +139,7 @@ impl Drawable for NetsGraph {
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        for (_, _, edge) in self.0.all_edges() {
+        for (_, _, edge) in self.0.all_edges().filter(|e| e.2.tentative) {
             edge.draw_preview(vct, vcscale, frame)
         }
         for vertex in self.0.nodes() {

@@ -43,13 +43,19 @@ impl Drawable for Devices {
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in &self.devices_vec {
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative()) {
             d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
 }
 
 impl Devices {
+    pub fn tentatives_to_selected(&mut self) {
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative()) {
+            d.borrow_mut().set_select();
+            d.borrow_mut().unset_tentative();
+        }
+    }
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         for d in self.devices_vec.iter().filter(|&d| d.borrow().selected()) {
             d.borrow_mut().pre_translate(ssv.cast_unit());
@@ -63,6 +69,11 @@ impl Devices {
     pub fn clear_selected(&mut self) {
         for d in &self.devices_vec {
             d.borrow_mut().unset_select();
+        }
+    }
+    pub fn clear_tentatives(&mut self) {
+        for d in &self.devices_vec {
+            d.borrow_mut().unset_tentative();
         }
     }
     pub fn bounding_box(&self) -> VSBox {

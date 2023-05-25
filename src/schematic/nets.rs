@@ -46,6 +46,12 @@ pub struct Nets {
 }
 
 impl Nets {
+    pub fn tentatives_to_selected(&mut self) {
+        for e in self.persistent.0.all_edges_mut().filter(|e| e.2.tentative) {
+            e.2.selected = true;
+            e.2.tentative = false;
+        }
+    }
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         let mut tmp = vec![];
         for e in self.persistent.0.all_edges().filter(|e| e.2.selected) {
@@ -69,6 +75,11 @@ impl Nets {
     pub fn clear_selected(&mut self) {
         for e in self.persistent.0.all_edges_mut() {
             e.2.selected = false;
+        }
+    }
+    pub fn clear_tentatives(&mut self) {
+        for e in self.persistent.0.all_edges_mut() {
+            e.2.tentative = false;
         }
     }
     pub fn select_edge(&mut self, mut e: NetEdge) {
