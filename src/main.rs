@@ -7,15 +7,14 @@ use viewport::ViewportState;
 mod schematic;
 use schematic::{Schematic, SchematicState};
 
-use iced::keyboard::Modifiers;
-use iced::{executor, Size, alignment};
+use iced::{executor, Size};
 use iced::widget::canvas::{
-    stroke, Cache, Cursor, Geometry, LineCap, Path, Stroke, LineDash, Frame,
+    Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, container, text, column};
+use iced::widget::{canvas, column};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
-    Subscription, Theme, Vector,
+    Theme,
 };
 use iced::widget::canvas::event::{self, Event};
 use iced::mouse;

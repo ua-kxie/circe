@@ -8,7 +8,7 @@ use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point};
 use devices::DeviceInstance;
 
 use iced::{widget::canvas::{
-    Frame, path::Builder, self,
+    Frame, self,
 }, Size, Color};
 use self::devices::Devices;
 
@@ -35,7 +35,7 @@ impl Default for SchematicState {
 
 #[derive(Default)]
 pub struct Schematic {
-    net: Box<Nets>,
+    net: Nets,
     devices: Devices,
     pub state: SchematicState,
 
@@ -91,10 +91,10 @@ impl Schematic {
                     if let Some((g, prev_ssp)) = opt_ws {  // subsequent click
                         if ssp == *prev_ssp { 
                         } else if self.net.persistent.occupies_ssp(ssp) {
-                            self.net.as_mut().persistent.merge(g.as_ref());
+                            self.net.persistent.merge(g.as_ref());
                             new_ws = None;
                         } else {
-                            self.net.as_mut().persistent.merge(g.as_ref());
+                            self.net.persistent.merge(g.as_ref());
                             new_ws = Some((Box::<NetsGraph>::default(), ssp));
                         }
                     } else {  // first click

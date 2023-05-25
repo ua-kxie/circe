@@ -5,11 +5,10 @@
 /// SchematicSpace is the schematic coordinate in i16
 
 use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, CanvasSpace, ViewportSpace, VSBox, CSBox};
-
 use euclid::{Vector2D, Rect, Size2D};
 
 use iced::widget::canvas::{
-    stroke, Cache, Cursor, Geometry, LineCap, Path, Stroke, LineDash, Frame,
+    stroke, LineCap, Path, Stroke, LineDash, Frame, Text,
 };
 
 use iced::{Color};
@@ -28,7 +27,7 @@ impl Default for ViewportState {
 }
 
 pub struct Viewport {
-    // pub schematic: Box<Schematic>,
+    // preview: PSchematic,
     pub state: ViewportState,
     transform: VCTransform, 
     scale: f32,
@@ -39,7 +38,7 @@ pub struct Viewport {
 impl Default for Viewport {
     fn default() -> Self {
         Viewport { 
-            // schematic: Box::<Schematic>::default(),
+            // preview: PSchematic::default(),
             state: Default::default(),
             transform: VCTransform::default().pre_scale(10., 10.).then_scale(1., -1.), 
             scale: 10.0,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
@@ -53,20 +52,7 @@ impl Viewport {
     const MAX_SCALING: f32 = 100.0;  // most zoomed in - every 100 pixel is 1
     const MIN_SCALING: f32 = 1.;  // most zoomed out - every pixel is 1
 
-    pub fn new_with_bounds(csb: CSBox) -> Self {
-        let vsb = Rect::new(VSPoint::origin(), Size2D::new(50.0, 50.0)).to_box2d();
-        let (vct, s) = Viewport::bounds_transform(csb, vsb);
-        Viewport { 
-            // schematic: Box::<Schematic>::default(),
-            state: Default::default(),
-            transform: vct, 
-            scale: s,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
-
-            curpos: None,
-        }
-    }
-
-    fn bounds_transform(csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {
+    fn bounds_transform(csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
         let mut vct = VCTransform::identity();
         
         let s = (csb.height() / vsb.height()).min(csb.width() / vsb.width()).clamp(Viewport::MIN_SCALING, Viewport::MAX_SCALING);  // scale from vsb to fit inside csb
@@ -78,7 +64,7 @@ impl Viewport {
         (vct, s)
     }
 
-    pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {  // change transform such that VSBox fit inside CSBox
+    pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
         (self.transform, self.scale) = Viewport::bounds_transform(csb, vsb);
 
         // recalculate cursor in viewport, or it will be wrong until cursor is moved
@@ -133,7 +119,6 @@ impl Viewport {
                     // todo?
                 },
             }
-
             self.curpos = Some((csp1, vsp1, ssp1));
         } else {
             self.curpos = None;
@@ -155,7 +140,7 @@ impl Viewport {
                 let clamped_scale = Viewport::MAX_SCALING / self.vc_scale();
                 new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
             }
-            let csp1 = new_transform.transform_point(vsp);
+            let csp1 = new_transform.transform_point(vsp);  // translate based on cursor location
             let translation = csp - csp1;
             new_transform = new_transform.then_translate(translation);
 
@@ -184,6 +169,14 @@ impl Viewport {
     }
 
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
+        let a = Text {
+            content: String::from("testing string"),
+            position: Point::from(self.vc_transform().transform_point(VSPoint::origin())).into(),
+            color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
+            size: self.vc_scale(),
+            ..Default::default()
+        };
+        frame.fill_text(a);
         fn draw_grid_w_spacing(spacing: f32, bb_viewport: VSBox, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
             let v = bb_viewport.max - bb_viewport.min;
             for col in 0..=(v.x.ceil() / spacing) as u32 {

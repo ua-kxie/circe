@@ -41,7 +41,7 @@ flags! {
 
 #[derive(Default)]
 pub struct Nets {
-    pub persistent: NetsGraph,
+    pub persistent: Box<NetsGraph>,
     // pub selected: NetsGraph,
 }
 
