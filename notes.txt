@@ -1,7 +1,6 @@
 todo:
 
 - immediate:
-    remove nets-netsgraph abstraction
     terminate line seg on wiring to a port
 
     move some logic into main (?)
