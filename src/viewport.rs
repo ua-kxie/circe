@@ -66,7 +66,6 @@ impl Viewport {
 
     pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
         (self.transform, self.scale) = Viewport::bounds_transform(csb, vsb);
-
         // recalculate cursor in viewport, or it will be wrong until cursor is moved
         if let Some((csp, ..)) = self.curpos {
             self.curpos_update(Some(csp));
@@ -75,6 +74,10 @@ impl Viewport {
 
     pub fn curpos_ssp(&self) -> Option<SSPoint> {
         self.curpos.map(|tup| tup.2)
+    }
+
+    pub fn curpos_vsp(&self) -> Option<VSPoint> {
+        self.curpos.map(|tup| tup.1)
     }
 
     pub fn curpos_vs_ss(&self) -> Option<(VSPoint, SSPoint)> {

@@ -35,6 +35,7 @@ pub fn main() -> iced::Result {
 struct Circe {
     schematic: Schematic,
     zoom_scale: f32,
+    curpos_ssp: Option<SSPoint>,
 
     active_cache: Cache,
     passive_cache: Cache,
@@ -44,17 +45,16 @@ struct Circe {
 #[derive(Debug, Clone)]
 enum Msg {
     NewCurpos(Option<(VSPoint, SSPoint)>),
-    // LeftClick(SSPoint),
     Wire,
-    Cycle,
+    Cycle(VSPoint),
     Test,
     Esc,
     Del,
-    R,
+    R(SSPoint),
     NewZoom(f32),
-    LeftClickDown,
+    LeftClickDown(VSPoint),
     LeftClickUp,
-    M,
+    M(SSPoint),
 }
 
 impl Application for Circe {
@@ -68,6 +68,7 @@ impl Application for Circe {
             Circe {
                 schematic: Default::default(),
                 zoom_scale: 10.0,  // would be better to get this from the viewport on startup
+                curpos_ssp: None,
 
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
@@ -85,12 +86,13 @@ impl Application for Circe {
         match message {
             Msg::NewCurpos(opt_curpos) => {
                 self.schematic.curpos_update(opt_curpos);
+                self.curpos_ssp = opt_curpos.map(|x| x.1)
             }
             Msg::Wire => {
                 self.schematic.enter_wiring_mode();
             },
-            Msg::Cycle => {
-                self.schematic.select_next_by_vspoint();
+            Msg::Cycle(vsp) => {
+                self.schematic.select_next_by_vspoint(vsp);
             },
             Msg::Test => {
                 self.schematic.key_test();
@@ -101,20 +103,20 @@ impl Application for Circe {
             Msg::Del => {
                 self.schematic.delete_selected();
             },
-            Msg::R => {
-                self.schematic.key_r();
+            Msg::R(ssp) => {
+                self.schematic.key_r(ssp);
             },
             Msg::NewZoom(value) => {
                 self.zoom_scale = value
             },
-            Msg::LeftClickDown => {
-                self.schematic.left_click_down();
+            Msg::LeftClickDown(vsp) => {
+                self.schematic.left_click_down(vsp);
             },
             Msg::LeftClickUp => {
                 self.schematic.left_click_up();
             },
-            Msg::M => {
-                self.schematic.move_();
+            Msg::M(ssp) => {
+                self.schematic.move_(ssp);
             },
         }
         Command::none()
@@ -124,7 +126,7 @@ impl Application for Circe {
         let canvas = canvas(self as &Self)
             .width(Length::Fill)
             .height(Length::Fill);
-        let infobar = infobar(self.schematic.curpos_ssp(), self.zoom_scale);
+        let infobar = infobar(self.curpos_ssp, self.zoom_scale);
 
         column![
             canvas,
@@ -155,9 +157,12 @@ impl canvas::Program<Msg> for Circe {
         match (state, event, curpos) {
             // clicking
             (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
-                msg = Some(Msg::LeftClickDown);
-                self.active_cache.clear();
-                self.passive_cache.clear();
+                if let Some(vsp) = viewport.curpos_vsp() {
+                    msg = Some(Msg::LeftClickDown(vsp));
+                    self.active_cache.clear();
+                    self.passive_cache.clear();
+                }
+
             }
             (_, Event::Mouse(ButtonReleased(Left)), _) => {
                 msg = Some(Msg::LeftClickUp);
@@ -207,19 +212,25 @@ impl canvas::Program<Msg> for Circe {
             (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
                 match (vstate, key_code, modifiers.bits(), curpos) {
                     (_, iced::keyboard::KeyCode::M, 0, _) => {
-                        msg = Some(Msg::M);
+                        if let Some(ssp) = viewport.curpos_ssp(){
+                            msg = Some(Msg::M(ssp));
+                        }
                     },
                     (_, iced::keyboard::KeyCode::W, 0, _) => {
                         msg = Some(Msg::Wire);
                     },
                     (_, iced::keyboard::KeyCode::R, 0, _) => {
-                        msg = Some(Msg::R);
-                        self.active_cache.clear();
+                        if let Some(ssp) = viewport.curpos_ssp(){
+                            msg = Some(Msg::R(ssp));
+                            self.active_cache.clear();
+                        }
                     },
                     (_, iced::keyboard::KeyCode::C, 0, _) => {
-                        msg = Some(Msg::Cycle);
-                        self.active_cache.clear();
-                        self.passive_cache.clear();
+                        if let Some(vsp) = viewport.curpos_vsp(){
+                            msg = Some(Msg::Cycle(vsp));
+                            self.active_cache.clear();
+                            self.passive_cache.clear();
+                        }
                     },
                     (_, iced::keyboard::KeyCode::T, 0, _) => {
                         msg = Some(Msg::Test);
