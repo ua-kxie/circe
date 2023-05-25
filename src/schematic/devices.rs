@@ -37,13 +37,13 @@ impl Drawable for Devices {
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.devices_vec {
-            if d.borrow().selected() {
+            if d.borrow().selected {
                 d.borrow().draw_selected(vct, vcscale, frame);
             }
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative()) {
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative) {
             d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
@@ -51,29 +51,29 @@ impl Drawable for Devices {
 
 impl Devices {
     pub fn tentatives_to_selected(&mut self) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative()) {
-            d.borrow_mut().set_select();
-            d.borrow_mut().unset_tentative();
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative) {
+            d.borrow_mut().selected = true;
+            d.borrow_mut().tentative = false;
         }
     }
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected()) {
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected) {
             d.borrow_mut().pre_translate(ssv.cast_unit());
         }
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected()) {
+        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected) {
             d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
     pub fn clear_selected(&mut self) {
         for d in &self.devices_vec {
-            d.borrow_mut().unset_select();
+            d.borrow_mut().selected = false;
         }
     }
     pub fn clear_tentatives(&mut self) {
         for d in &self.devices_vec {
-            d.borrow_mut().unset_tentative();
+            d.borrow_mut().tentative = false;
         }
     }
     pub fn bounding_box(&self) -> VSBox {
@@ -91,7 +91,7 @@ impl Devices {
     }
     pub fn delete_selected(&mut self) {
         self.devices_vec = self.devices_vec.iter().filter_map(|e| {
-            if !e.borrow().selected() {Some(e.clone())} else {None}
+            if !e.borrow().selected {Some(e.clone())} else {None}
         }).collect()
     }
     fn new() -> Self {

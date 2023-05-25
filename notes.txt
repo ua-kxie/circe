@@ -1,12 +1,14 @@
 todo:
 
 - immediate:
-    moving devices (arc mutability)
+    remove nets-netsgraph abstraction
     terminate line seg on wiring to a port
 
     move some logic into main (?)
     unify draw/stroke interface
     (tech debt)
+    handling events:
+    match state, then event
 
     named nets, canvas text
 
