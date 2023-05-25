@@ -46,8 +46,8 @@ impl NetsGraphExt for NetsGraph {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.0.remove_edge(e.0, e.1);
-                    self.0.add_edge(e.0, *v, NetEdge(e.0.0, v.0, Cell::new(false)));
-                    self.0.add_edge(e.1, *v, NetEdge(e.1.0, v.0, Cell::new(false)));
+                    self.0.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, ..Default::default()});
+                    self.0.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, ..Default::default()});
                 }
             }
         }
@@ -63,7 +63,7 @@ impl NetsGraphExt for NetsGraph {
                 2 => {
                     let src = connected_vertices[0];
                     let dst = connected_vertices[1];
-                    let ew = NetEdge(src.0, dst.0, Cell::new(false));
+                    let ew = NetEdge{src: src.0, dst: dst.0, ..Default::default()};
                     if ew.occupies_ssp(v.0) {
                         self.0.remove_node(v);
                         self.0.add_edge(src, dst, ew);
@@ -100,15 +100,15 @@ impl NetsGraphExt for NetsGraph {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge(src, dst, Cell::new(false)));
+                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, ..Default::default()});
             },
             (_x, 0) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge(src, dst, Cell::new(false)));
+                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, ..Default::default()});
             },
             (_x, y) => {
                 let corner = Point2D::new(src.x, src.y + y);
-                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge(src, corner, Cell::new(false)));
-                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge(corner, dst, Cell::new(false)));
+                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, ..Default::default()});
+                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, ..Default::default()});
             }
         }
     }
@@ -132,7 +132,7 @@ impl Drawable for NetsGraph {
 
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
         for (_, _, edge) in self.0.all_edges() {
-            if edge.2.get() {
+            if edge.selected {
                 edge.draw_selected(vct, vcscale, frame)
             }
         }

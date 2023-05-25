@@ -10,37 +10,43 @@ use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Col
 use std::cell::Cell;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
+// pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
+pub struct NetEdge {
+    pub src: SSPoint,
+    pub dst: SSPoint,
+    pub tentative: bool,
+    pub selected: bool,
+}
 
 impl NetEdge {
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        let v = self.1 - self.0;
+        let v = self.dst - self.src;
         if v.x == 0 {
             // anywhere on vertical line
-            ssp.x == self.0.x && ssp.y < self.0.y.max(self.1.y) && ssp.y > self.0.y.min(self.1.y)
+            ssp.x == self.src.x && ssp.y < self.src.y.max(self.dst.y) && ssp.y > self.src.y.min(self.dst.y)
         } else if v.y == 0 {
             // anywhere on horizontal line
-            ssp.y == self.0.y && ssp.x < self.0.x.max(self.1.x) && ssp.x > self.0.x.min(self.1.x)
+            ssp.y == self.src.y && ssp.x < self.src.x.max(self.dst.x) && ssp.x > self.src.x.min(self.dst.x)
         } else {  
             // either edge of oblique line
-            ssp == self.0 || ssp == self.1
+            ssp == self.src || ssp == self.dst
         }
     }
 }
 
 impl Selectable for NetEdge {
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool {
-        let v = self.1 - self.0;
+        let v = self.dst - self.src;
         if v.x == 0 {
             let ab = VSBox::from_points([  // from pts instead of new to guarantee positive sized box
-                self.0.cast().cast_unit(), 
-                self.1.cast().cast_unit()
+                self.src.cast().cast_unit(), 
+                self.dst.cast().cast_unit()
             ]).inflate(0.2, 0.);
             ab.contains(curpos_vsp)
         } else if v.y == 0 {
             let ab = VSBox::from_points([  // from pts instead of new to guarantee positive sized box
-                self.0.cast().cast_unit(), 
-                self.1.cast().cast_unit()
+                self.src.cast().cast_unit(), 
+                self.dst.cast().cast_unit()
             ]).inflate(0., 0.2);
             ab.contains(curpos_vsp)
         } else {  // oblique line
@@ -49,7 +55,7 @@ impl Selectable for NetEdge {
             let mut t = CVTransform::identity();
             let v1: Vector2D<f32, ViewportSpace> = v.cast().cast_unit();
             t = t.then_rotate(v1.angle_from_x_axis());
-            t = t.then_translate(self.0.to_vector().cast().cast_unit());
+            t = t.then_translate(self.src.to_vector().cast().cast_unit());
             let t = t.inverse().unwrap();
 
             // transform curpos_vsp with A
@@ -90,9 +96,9 @@ impl Drawable for NetEdge {
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
-        draw_with(self.0, self.1, vct, frame, wire_stroke);
+        draw_with(self.src, self.dst, vct, frame, wire_stroke);
 
-        if self.2.get() {
+        if self.selected {
             self.draw_selected(vct, vcscale, frame);
         }
     }
@@ -105,7 +111,7 @@ impl Drawable for NetEdge {
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
-        draw_with(self.0, self.1, vct, frame, wire_stroke);
+        draw_with(self.src, self.dst, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
@@ -117,6 +123,6 @@ impl Drawable for NetEdge {
             line_dash: LineDash{segments: &[3. * (wire_width * vcscale).max(wire_width * 2.0)], offset: 0},
             ..Stroke::default()
         };
-        draw_with(self.0, self.1, vct, frame, wire_stroke);
+        draw_with(self.src, self.dst, vct, frame, wire_stroke);
     }
 }

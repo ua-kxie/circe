@@ -19,6 +19,7 @@ pub struct DeviceInstance {
     device_type: Rc<DeviceType>,
     instance_bounds: VSBox,
     selected: bool,
+    tentative: bool,
 }
 
 impl DeviceInstance {
@@ -81,6 +82,7 @@ impl DeviceInstance {
             device_type: dt, 
             instance_bounds: bds,
             selected: false,
+            tentative: false,
         }
     }
     
@@ -91,6 +93,7 @@ impl DeviceInstance {
             device_type: dt, 
             instance_bounds: bds,
             selected: false,
+            tentative: false,
         };
         d.set_translation(ssp);
         d

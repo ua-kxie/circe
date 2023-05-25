@@ -48,36 +48,36 @@ pub struct Nets {
 impl Nets {
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         let mut tmp = vec![];
-        for e in self.persistent.0.all_edges().filter(|e| e.2.2.get()) {
+        for e in self.persistent.0.all_edges().filter(|e| e.2.selected) {
             tmp.push((e.0, e.1));
         }
         for e in tmp {
             self.persistent.0.remove_edge(e.0, e.1);
             let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.persistent.0.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge(ssp0, ssp1, Cell::new(false)));
+            self.persistent.0.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, ..Default::default()});
         }
         self.persistent.prune();
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for e in self.persistent.0.all_edges().filter(|e| e.2.2.get()) {
+        for e in self.persistent.0.all_edges().filter(|e| e.2.selected) {
             e.2.draw_preview(vct, vcscale, frame);
         }
     }
     pub fn tt(&self) {
         let a = tarjan_scc(&self.persistent.0);  // this finds the unconnected components 
     }
-    pub fn clear_selected(&self) {
-        for e in self.persistent.0.all_edges() {
-            e.2.2.set(false);
+    pub fn clear_selected(&mut self) {
+        for e in self.persistent.0.all_edges_mut() {
+            e.2.selected = false;
         }
     }
-    pub fn select_edge(&mut self, e: NetEdge) {
-        e.2.set(true);
-        self.persistent.0.add_edge(NetVertex(e.0), NetVertex(e.1), e.clone());
+    pub fn select_edge(&mut self, mut e: NetEdge) {
+        e.selected = true;
+        self.persistent.0.add_edge(NetVertex(e.src), NetVertex(e.dst), e.clone());
     }
     pub fn delete_selected_from_persistent(&mut self) {
         let mut tmp = vec![];
-        for e in self.persistent.0.all_edges().filter(|e| e.2.2.get()) {
+        for e in self.persistent.0.all_edges().filter(|e| e.2.selected) {
             tmp.push((e.0, e.1));
         }
         for e in tmp {
