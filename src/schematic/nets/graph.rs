@@ -25,7 +25,7 @@ impl Nets {
     pub fn clear(&mut self) {
         self.0.clear();
     }
-    pub fn prune(&mut self) {
+    pub fn prune(&mut self) {  // extra vertices to add, e.g. ports
         let all_vertices: Vec<NetVertex> = self.0.nodes().collect();
         for v in &all_vertices {  // bisect edges
             let mut colliding_edges = vec![];
@@ -144,10 +144,6 @@ impl Nets {
         for e in self.0.all_edges_mut() {
             e.2.tentative = false;
         }
-    }
-    pub fn select_edge(&mut self, mut e: NetEdge) {
-        e.selected = true;
-        self.0.add_edge(NetVertex(e.src), NetVertex(e.dst), e.clone());
     }
     pub fn delete_selected_from_persistent(&mut self) {
         let mut tmp = vec![];

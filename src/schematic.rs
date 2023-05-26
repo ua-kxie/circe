@@ -24,7 +24,7 @@ pub enum SchematicState {
     Idle,
     DevicePlacement(DeviceInstance),
     Selecting(VSBox),
-    Moving(SSPoint, SSPoint),
+    Moving(Option<(SSPoint, SSPoint)>),
 }
 
 impl Default for SchematicState {
@@ -121,11 +121,16 @@ impl Schematic {
                 self.state = SchematicState::Idle;
             },
             SchematicState::Selecting(_) => {},
-            SchematicState::Moving(ssp0, ssp1) => {
-                let ssv = *ssp1 - *ssp0;
-                self.nets.move_selected(ssv);
-                self.devices.move_selected(ssv);
-                self.state = SchematicState::Idle;
+            SchematicState::Moving(mut opt_pts) => {
+                if let Some((ssp0, ssp1)) = &mut opt_pts {
+                    let ssv = *ssp1 - *ssp0;
+                    self.nets.move_selected(ssv);
+                    self.devices.move_selected(ssv);
+                    self.state = SchematicState::Idle;
+                } else {
+                    let ssp: euclid::Point2D<_, _> = curpos_vsp.round().cast().cast_unit();
+                    self.state = SchematicState::Moving(Some((ssp, ssp)));
+                }
             },
         };
     }
@@ -136,41 +141,36 @@ impl Schematic {
         }
     }
     pub fn curpos_update(&mut self, opt_curpos: Option<(VSPoint, SSPoint)>) {
-        if let Some((vsp, _ssp)) = opt_curpos {
+        if let Some((vsp, ssp)) = opt_curpos {
             let mut skip = self.selskip.saturating_sub(1);
             self.tentative_by_vspoint(vsp, &mut skip);
             self.selskip = skip;
-        }
-        let mut tmpst = self.state.clone();
-        match &mut tmpst {
-            SchematicState::Wiring(opt_ws) => {
-                if let Some((g, prev_ssp)) = opt_ws {
-                    g.as_mut().clear();
-                    if let Some((_vsp, ssp)) = opt_curpos {
+
+            let mut tmpst = self.state.clone();
+            match &mut tmpst {
+                SchematicState::Wiring(opt_ws) => {
+                    if let Some((g, prev_ssp)) = opt_ws {
+                        g.as_mut().clear();
                         g.route(*prev_ssp, ssp);
                     }
-                }
-            },
-            SchematicState::Idle => {
-            },
-            SchematicState::DevicePlacement(di) => {
-                if let Some((_vsp, ssp)) = opt_curpos {
+                },
+                SchematicState::Idle => {
+                },
+                SchematicState::DevicePlacement(di) => {
                     di.set_translation(ssp);
-                }
-            },
-            SchematicState::Selecting(vsb) => {
-                if let Some((vsp, _ssp)) = opt_curpos {
+                },
+                SchematicState::Selecting(vsb) => {
                     vsb.max = vsp;
                     self.tentatives_by_vsbox(&vsb);
-                }
-            },
-            SchematicState::Moving(_, ssp1) => {
-                if let Some((_vsp, ssp)) = opt_curpos {
-                    *ssp1 = ssp;
-                }
-            },
-        };
-        self.state = tmpst;
+                },
+                SchematicState::Moving(opt_pts) => {
+                    if let Some((_ssp0, ssp1)) = opt_pts {
+                        *ssp1 = ssp;
+                    }
+                },
+            };
+            self.state = tmpst;
+        }
     }
 
     pub fn draw_active(
@@ -202,10 +202,12 @@ impl Schematic {
                 let size = Size::new(csb.width(), csb.height());
                 frame.fill_rectangle(Point::from(csb.min).into(), size, f);
             },
-            SchematicState::Moving(ssp0, ssp1) => {
-                let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
-                self.nets.draw_selected_preview(vct_c, vcscale, frame);
-                self.devices.draw_selected_preview(vct_c, vcscale, frame);
+            SchematicState::Moving(opt_pts) => {
+                if let Some((ssp0, ssp1)) = opt_pts {
+                    let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
+                    self.nets.draw_selected_preview(vct_c, vcscale, frame);
+                    self.devices.draw_selected_preview(vct_c, vcscale, frame);
+                }
             },
         }
     }
@@ -290,8 +292,8 @@ impl Schematic {
     pub fn key_test(&mut self) {
         self.nets.tt();
     }
-    pub fn move_(&mut self, curpos_ssp: SSPoint) {
-        self.state = SchematicState::Moving(curpos_ssp, curpos_ssp);
+    pub fn move_(&mut self) {
+        self.state = SchematicState::Moving(None);
     }
 }
 

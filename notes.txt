@@ -1,8 +1,6 @@
 todo:
 
 - immediate:
-    rework move feature - first enter move mode, then click once to define start, click again to define end
-
     move some logic into main (?)
     unify draw/stroke interface
     (tech debt)

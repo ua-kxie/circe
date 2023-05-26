@@ -54,7 +54,7 @@ enum Msg {
     NewZoom(f32),
     LeftClickDown(VSPoint),
     LeftClickUp,
-    M(SSPoint),
+    M,
 }
 
 impl Application for Circe {
@@ -115,8 +115,8 @@ impl Application for Circe {
             Msg::LeftClickUp => {
                 self.schematic.left_click_up();
             },
-            Msg::M(ssp) => {
-                self.schematic.move_(ssp);
+            Msg::M => {
+                self.schematic.move_();
             },
         }
         Command::none()
@@ -212,9 +212,7 @@ impl canvas::Program<Msg> for Circe {
             (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
                 match (vstate, key_code, modifiers.bits(), curpos) {
                     (_, iced::keyboard::KeyCode::M, 0, _) => {
-                        if let Some(ssp) = viewport.curpos_ssp(){
-                            msg = Some(Msg::M(ssp));
-                        }
+                        msg = Some(Msg::M);
                     },
                     (_, iced::keyboard::KeyCode::W, 0, _) => {
                         msg = Some(Msg::Wire);
@@ -325,6 +323,7 @@ impl canvas::Program<Msg> for Circe {
                 (ViewportState::None, SchematicState::Idle) => mouse::Interaction::default(),
                 (ViewportState::None, SchematicState::Wiring(_)) => mouse::Interaction::Crosshair,
                 (ViewportState::None, SchematicState::DevicePlacement(_)) => mouse::Interaction::ResizingHorizontally,
+                (ViewportState::None, SchematicState::Moving(_)) => mouse::Interaction::ResizingVertically,
                 _ => mouse::Interaction::default(),
             }
         } else {
