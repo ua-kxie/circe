@@ -50,6 +50,9 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn ports_ssp(&self) -> Vec<SSPoint> {
+        self.devices_vec.iter().flat_map(|d| d.borrow().ports_ssp()).collect()
+    }
     pub fn tentatives_to_selected(&mut self) {
         for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative) {
             d.borrow_mut().selected = true;

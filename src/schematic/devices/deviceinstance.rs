@@ -23,6 +23,9 @@ pub struct DeviceInstance {
 }
 
 impl DeviceInstance {
+    pub fn ports_ssp(&self) -> Vec<SSPoint> {
+        self.device_type.get_ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
+    }   
     pub fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
         for p in self.device_type.get_ports() {
             if self.transform.transform_point(p.offset) == ssp {

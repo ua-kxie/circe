@@ -25,7 +25,7 @@ impl Nets {
     pub fn clear(&mut self) {
         self.0.clear();
     }
-    pub fn prune(&mut self) {  // extra vertices to add, e.g. ports
+    pub fn prune(&mut self, extra_vertices: Vec<SSPoint>) {  // extra vertices to add, e.g. ports
         let all_vertices: Vec<NetVertex> = self.0.nodes().collect();
         for v in &all_vertices {  // bisect edges
             let mut colliding_edges = vec![];
@@ -63,7 +63,21 @@ impl Nets {
                 _ => {}
             }
         }
-
+        for v in extra_vertices {  // bisect edges
+            let mut colliding_edges = vec![];
+            for e in self.0.all_edges() {
+                if e.2.occupies_ssp(v) {
+                    colliding_edges.push((e.0, e.1));
+                }
+            }
+            if !colliding_edges.is_empty() {
+                for e in colliding_edges {
+                    self.0.remove_edge(e.0, e.1);
+                    self.0.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, ..Default::default()});
+                    self.0.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, ..Default::default()});
+                }
+            }
+        }
     }
     pub fn edge_occupies_ssp(&self, ssp: SSPoint) -> bool {
         for (_, _, edge) in self.0.all_edges() {
@@ -103,11 +117,11 @@ impl Nets {
             }
         }
     }
-    pub fn merge(&mut self, other: &Nets) {
+    pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
         for edge in other.0.all_edges() {
             self.0.add_edge(edge.0, edge.1, edge.2.clone());  // adding edges also add nodes if they do not already exist
         }
-        self.prune();
+        self.prune(extra_vertices);
     }
     pub fn tentatives_to_selected(&mut self) {
         for e in self.0.all_edges_mut().filter(|e| e.2.tentative) {
@@ -125,7 +139,6 @@ impl Nets {
             let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
             self.0.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, ..Default::default()});
         }
-        self.prune();
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for e in self.0.all_edges().filter(|e| e.2.selected) {
@@ -145,7 +158,7 @@ impl Nets {
             e.2.tentative = false;
         }
     }
-    pub fn delete_selected_from_persistent(&mut self) {
+    pub fn delete_selected_from_persistent(&mut self, extra_vertices: Vec<SSPoint>) {
         let mut tmp = vec![];
         for e in self.0.all_edges().filter(|e| e.2.selected) {
             tmp.push((e.0, e.1));
@@ -153,7 +166,7 @@ impl Nets {
         for e in tmp {
             self.0.remove_edge(e.0, e.1);
         }
-        self.prune();
+        self.prune(extra_vertices);
     }
 }
 

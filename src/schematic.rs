@@ -100,10 +100,10 @@ impl Schematic {
                 if let Some((g, prev_ssp)) = opt_ws {  // subsequent click
                     if ssp == *prev_ssp { 
                     } else if self.occupies_ssp(ssp) {
-                        self.nets.merge(g.as_ref());
+                        self.nets.merge(g.as_ref(), self.devices.ports_ssp());
                         new_ws = None;
                     } else {
-                        self.nets.merge(g.as_ref());
+                        self.nets.merge(g.as_ref(), self.devices.ports_ssp());
                         new_ws = Some((Box::<Nets>::default(), ssp));
                     }
                 } else {  // first click
@@ -126,6 +126,7 @@ impl Schematic {
                     let ssv = *ssp1 - *ssp0;
                     self.nets.move_selected(ssv);
                     self.devices.move_selected(ssv);
+                    self.nets.prune(self.devices.ports_ssp());
                     self.state = SchematicState::Idle;
                 } else {
                     let ssp: euclid::Point2D<_, _> = curpos_vsp.round().cast().cast_unit();
@@ -261,7 +262,7 @@ impl Schematic {
 
     pub fn delete_selected(&mut self) {
         if let SchematicState::Idle = self.state {
-            self.nets.delete_selected_from_persistent();
+            self.nets.delete_selected_from_persistent(self.devices.ports_ssp());
             self.devices.delete_selected();
         }
     }
