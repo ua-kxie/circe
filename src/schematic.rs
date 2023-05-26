@@ -55,7 +55,7 @@ impl Schematic {
         self.clear_tentatives();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
         for d in self.devices.iter() {
-            if d.borrow().bounds().intersects(&vsb_p) {
+            if d.borrow().bounds().cast().cast_unit().intersects(&vsb_p) {
                 d.borrow_mut().tentative = true;
             }
         }
@@ -80,7 +80,7 @@ impl Schematic {
             }
         }
     }
-    pub fn select_next_by_vspoint(&mut self, curpos_vsp: VSPoint) {
+    pub fn tentative_next_by_vspoint(&mut self, curpos_vsp: VSPoint) {
         let mut skip = self.selskip;
         self.tentative_by_vspoint(curpos_vsp, &mut skip)
     }
@@ -88,14 +88,18 @@ impl Schematic {
         self.nets.tentatives_to_selected();
         self.devices.tentatives_to_selected();
     }
+    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+        self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
+    }
     pub fn left_click_down(&mut self, curpos_vsp: VSPoint) {
-        match &mut self.state {
+        let mut state = self.state.clone();
+        match &mut state {
             SchematicState::Wiring(opt_ws) => {
                 let ssp = curpos_vsp.round().cast().cast_unit();
                 let mut new_ws = None;
                 if let Some((g, prev_ssp)) = opt_ws {  // subsequent click
                     if ssp == *prev_ssp { 
-                    } else if self.nets.occupies_ssp(ssp) {
+                    } else if self.occupies_ssp(ssp) {
                         self.nets.merge(g.as_ref());
                         new_ws = None;
                     } else {
@@ -105,7 +109,8 @@ impl Schematic {
                 } else {  // first click
                     new_ws = Some((Box::<Nets>::default(), ssp));
                 }
-                *opt_ws = new_ws;
+                // *opt_ws = new_ws;
+                self.state = SchematicState::Wiring(new_ws);
             },
             SchematicState::Idle => {
                 self.tentatives_to_selected();

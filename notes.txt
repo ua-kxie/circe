@@ -1,13 +1,12 @@
 todo:
 
 - immediate:
-    terminate line seg on wiring to a port
+    rework move feature - first enter move mode, then click once to define start, click again to define end
 
     move some logic into main (?)
     unify draw/stroke interface
     (tech debt)
-    handling events:
-    match state, then event
+    rework events handling
 
     named nets, canvas text
 

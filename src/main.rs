@@ -92,7 +92,7 @@ impl Application for Circe {
                 self.schematic.enter_wiring_mode();
             },
             Msg::Cycle(vsp) => {
-                self.schematic.select_next_by_vspoint(vsp);
+                self.schematic.tentative_next_by_vspoint(vsp);
             },
             Msg::Test => {
                 self.schematic.key_test();
