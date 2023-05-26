@@ -34,7 +34,7 @@ pub fn main() -> iced::Result {
 
 struct Circe {
     zoom_scale: f32,
-    curpos_ssp: Option<SSPoint>,
+    curpos_ssp: SSPoint,
 
     active_cache: Cache,
     passive_cache: Cache,
@@ -43,7 +43,7 @@ struct Circe {
 
 #[derive(Debug, Clone)]
 enum Msg {
-    NewCurpos(Option<SSPoint>),
+    NewCurpos(SSPoint),
     NewZoom(f32),
 }
 
@@ -57,7 +57,7 @@ impl Application for Circe {
         (
             Circe {
                 zoom_scale: 10.0,  // would be better to get this from the viewport on startup
-                curpos_ssp: None,
+                curpos_ssp: SSPoint::origin(),
 
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
@@ -121,15 +121,13 @@ impl canvas::Program<Msg> for Circe {
         // match (sttup.0.state, sttup.1.state, event) {
         //     ViewportState::None
         // }
+
         match (state, event, curpos) {
             // clicking
             (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
-                if let Some(vsp) = viewport.curpos_vsp() {
-                    sttup.1.left_click_down(vsp);
-                    self.active_cache.clear();
-                    self.passive_cache.clear();
-                }
-
+                sttup.1.left_click_down(viewport.curpos_vsp());
+                self.active_cache.clear();
+                self.passive_cache.clear();
             }
             (_, Event::Mouse(ButtonReleased(Left)), _) => {
                 sttup.1.left_click_up();
@@ -185,17 +183,13 @@ impl canvas::Program<Msg> for Circe {
                         sttup.1.enter_wiring_mode();
                     },
                     (_, iced::keyboard::KeyCode::R, 0, _) => {
-                        if let Some(ssp) = viewport.curpos_ssp(){
-                            sttup.1.key_r(ssp);
-                            self.active_cache.clear();
-                        }
+                        sttup.1.key_r(viewport.curpos_ssp());
+                        self.active_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::C, 0, _) => {
-                        if let Some(vsp) = viewport.curpos_vsp(){
-                            sttup.1.tentative_next_by_vspoint(vsp);
-                            self.active_cache.clear();
-                            self.passive_cache.clear();
-                        }
+                        sttup.1.tentative_next_by_vspoint(viewport.curpos_vsp());
+                        self.active_cache.clear();
+                        self.passive_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::T, 0, _) => {
                         sttup.1.key_test();
@@ -226,14 +220,16 @@ impl canvas::Program<Msg> for Circe {
             }
 
             (vstate, Event::Mouse(mouse::Event::CursorMoved { .. }), opt_csp) => {
-                let opt_csp = opt_csp.map(|p| Point::from(p).into());
-                self.active_cache.clear();
-                if let ViewportState::Panning = vstate {
-                    self.passive_cache.clear();
+                if let Some(csp) = cursor.position_in(&bounds) {
+                    let csp: CSPoint = Point::from(csp).into();
+                    self.active_cache.clear();
+                    if let ViewportState::Panning = vstate {
+                        self.passive_cache.clear();
+                    }
+                    viewport.curpos_update(csp);
+                    sttup.1.curpos_update(viewport.curpos_vsp(), viewport.curpos_ssp());
+                    msg = Some(Msg::NewCurpos(viewport.curpos_ssp()));
                 }
-                viewport.curpos_update(opt_csp);
-                sttup.1.curpos_update(viewport.curpos_vs_ss());
-                msg = Some(Msg::NewCurpos(viewport.curpos_vs_ss().map(|x| x.1)))
             }
             _ => {}
         }
@@ -314,14 +310,14 @@ mod infobar {
     use crate::transforms::SSPoint;
 
     pub struct InfoBar {
-        curpos_ssp: Option<SSPoint>,
+        curpos_ssp: SSPoint,
         zoom_scale: f32,
         // net_name: Option<&'a str>,
     }
     
     impl InfoBar {
         pub fn new(
-            curpos_ssp: Option<SSPoint>,
+            curpos_ssp: SSPoint,
             zoom_scale: f32,
         ) -> Self {
             Self {
@@ -332,7 +328,7 @@ mod infobar {
     }
 
     pub fn infobar(
-        curpos_ssp: Option<SSPoint>,
+        curpos_ssp: SSPoint,
         zoom_scale: f32,
     ) -> InfoBar {
         InfoBar::new(curpos_ssp, zoom_scale)
@@ -351,11 +347,7 @@ mod infobar {
         }
         fn view(&self, _state: &Self::State) -> Element<(), Renderer> {
             let str_ssp;
-            if let Some(ssp) = self.curpos_ssp {
-                str_ssp = format!("x: {}; y: {}", ssp.x, ssp.y);
-            } else {
-                str_ssp = String::from("");
-            }
+            str_ssp = format!("x: {}; y: {}", self.curpos_ssp.x, self.curpos_ssp.y);
 
             row![
                 text(str_ssp).size(16).height(16).vertical_alignment(alignment::Vertical::Center),
@@ -375,15 +367,3 @@ mod infobar {
         }
     }
 }
-// draw for all states in interaction_stack -
-// wire snapping -
-// wire persisting -
-
-// port placement
-// device serialization, along with wire and port geometry
-
-// device placement and saving, gnd, vdd, ideal res
-// netlisting
-// running simulations
-// wires move, wire/geometry move just one end
-// floating nets/ports highlight

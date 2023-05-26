@@ -32,7 +32,7 @@ pub struct Viewport {
     transform: VCTransform, 
     scale: f32,
 
-    curpos: Option<(CSPoint, VSPoint, SSPoint)>,
+    curpos: (CSPoint, VSPoint, SSPoint),
 }
 
 impl Default for Viewport {
@@ -43,7 +43,7 @@ impl Default for Viewport {
             transform: VCTransform::default().pre_scale(10., 10.).then_scale(1., -1.), 
             scale: 10.0,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
 
-            curpos: None,
+            curpos: (CSPoint::origin(), VSPoint::origin(), SSPoint::origin()),
         }
     }
 }
@@ -51,6 +51,18 @@ impl Default for Viewport {
 impl Viewport {
     const MAX_SCALING: f32 = 100.0;  // most zoomed in - every 100 pixel is 1
     const MIN_SCALING: f32 = 1.;  // most zoomed out - every pixel is 1
+
+    pub fn curpos_csp(&self) -> CSPoint {
+        self.curpos.0
+    }
+
+    pub fn curpos_vsp(&self) -> VSPoint {
+        self.curpos.1
+    }
+
+    pub fn curpos_ssp(&self) -> SSPoint {
+        self.curpos.2
+    }
 
     fn bounds_transform(csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
         let mut vct = VCTransform::identity();
@@ -67,21 +79,7 @@ impl Viewport {
     pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
         (self.transform, self.scale) = Viewport::bounds_transform(csb, vsb);
         // recalculate cursor in viewport, or it will be wrong until cursor is moved
-        if let Some((csp, ..)) = self.curpos {
-            self.curpos_update(Some(csp));
-        }
-    }
-
-    pub fn curpos_ssp(&self) -> Option<SSPoint> {
-        self.curpos.map(|tup| tup.2)
-    }
-
-    pub fn curpos_vsp(&self) -> Option<VSPoint> {
-        self.curpos.map(|tup| tup.1)
-    }
-
-    pub fn curpos_vs_ss(&self) -> Option<(VSPoint, SSPoint)> {
-        self.curpos.map(|tup| (tup.1, tup.2))
+        self.curpos_update(self.curpos.0);
     }
 
     pub fn cv_transform(&self) -> CVTransform {
@@ -100,60 +98,52 @@ impl Viewport {
         1. / self.scale
     }
 
-    pub fn curpos_update(&mut self, opt_csp: Option<CSPoint>) {
-        if let Some(csp1) = opt_csp {
-            let vsp1 = self.cv_transform().transform_point(csp1);
-            let ssp1: SSPoint = vsp1.round().cast().cast_unit();
-            match &mut self.state {
-                ViewportState::Panning => {
-                    if let Some((csp0, _vsp0, _ssp0)) = self.curpos {
-                        let v = self.cv_transform().transform_vector(csp1 - csp0);
-                        self.transform = self.vc_transform().pre_translate(v);
-                    }
-                },
-                ViewportState::NewView(vsp_origin, vsp_other) => {
-                    if (*vsp_origin - vsp1).length() > 10. {
-                        *vsp_other = vsp1; 
-                    } else {
-                        *vsp_other = *vsp_origin; 
-                    }
+    pub fn curpos_update(&mut self, csp1: CSPoint) {
+        let vsp1 = self.cv_transform().transform_point(csp1);
+        let ssp1: SSPoint = vsp1.round().cast().cast_unit();
+        match &mut self.state {
+            ViewportState::Panning => {
+                let v = self.cv_transform().transform_vector(csp1 - self.curpos.0);
+                self.transform = self.vc_transform().pre_translate(v);
+            },
+            ViewportState::NewView(vsp_origin, vsp_other) => {
+                if (*vsp_origin - vsp1).length() > 10. {
+                    *vsp_other = vsp1; 
+                } else {
+                    *vsp_other = *vsp_origin; 
                 }
-                ViewportState::None => {
-                    // todo?
-                },
             }
-            self.curpos = Some((csp1, vsp1, ssp1));
-        } else {
-            self.curpos = None;
+            ViewportState::None => {
+                // todo?
+            },
         }
+        self.curpos = (csp1, vsp1, ssp1);
     }
 
     pub fn zoom(&mut self, scale: f32) {
-        if let Some((csp, vsp, _)) = self.curpos {
-            let scaled_transform = self.transform.then_scale(scale, scale);
+        let (csp, vsp, _) = self.curpos;
+        let scaled_transform = self.transform.then_scale(scale, scale);
 
-            let mut new_transform;  // transform with applied scale and translated to maintain p_viewport position
-            let scaled_determinant = scaled_transform.determinant().abs();
-            if scaled_determinant < Viewport::MIN_SCALING * Viewport::MIN_SCALING {  // minimum scale
-                let clamped_scale = Viewport::MIN_SCALING / self.vc_scale();
-                new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
-            } else if scaled_determinant <= Viewport::MAX_SCALING * Viewport::MAX_SCALING {  // adjust scale
-                new_transform = scaled_transform;
-            } else {  // maximum scale
-                let clamped_scale = Viewport::MAX_SCALING / self.vc_scale();
-                new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
-            }
-            let csp1 = new_transform.transform_point(vsp);  // translate based on cursor location
-            let translation = csp - csp1;
-            new_transform = new_transform.then_translate(translation);
-
-            self.transform = new_transform;
-            self.scale = self.transform.determinant().abs().sqrt();
+        let mut new_transform;  // transform with applied scale and translated to maintain p_viewport position
+        let scaled_determinant = scaled_transform.determinant().abs();
+        if scaled_determinant < Viewport::MIN_SCALING * Viewport::MIN_SCALING {  // minimum scale
+            let clamped_scale = Viewport::MIN_SCALING / self.vc_scale();
+            new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
+        } else if scaled_determinant <= Viewport::MAX_SCALING * Viewport::MAX_SCALING {  // adjust scale
+            new_transform = scaled_transform;
+        } else {  // maximum scale
+            let clamped_scale = Viewport::MAX_SCALING / self.vc_scale();
+            new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
         }
+        let csp1 = new_transform.transform_point(vsp);  // translate based on cursor location
+        let translation = csp - csp1;
+        new_transform = new_transform.then_translate(translation);
+
+        self.transform = new_transform;
+        self.scale = self.transform.determinant().abs().sqrt();
     }
 
     pub fn draw_cursor(&self, frame: &mut Frame) {
-        if let Some((_csp, _vsp, ssp)) = self.curpos {
             let cursor_stroke = || -> Stroke {
                 Stroke {
                     width: 1.0,
@@ -163,12 +153,11 @@ impl Viewport {
                 }
             };
             let curdim = 5.0;
-            let csp = self.vc_transform().transform_point(ssp.cast().cast_unit());
+            let csp = self.vc_transform().transform_point(self.curpos.2.cast().cast_unit());
             let csp_topleft = csp - Vector2D::from([curdim/2.; 2]);
             let s = iced::Size::from([curdim, curdim]);
             let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
             frame.stroke(&c, cursor_stroke());
-        }
     }
 
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {

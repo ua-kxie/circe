@@ -141,37 +141,35 @@ impl Schematic {
             self.state = SchematicState::Idle;
         }
     }
-    pub fn curpos_update(&mut self, opt_curpos: Option<(VSPoint, SSPoint)>) {
-        if let Some((vsp, ssp)) = opt_curpos {
-            let mut skip = self.selskip.saturating_sub(1);
-            self.tentative_by_vspoint(vsp, &mut skip);
-            self.selskip = skip;
+    pub fn curpos_update(&mut self, vsp: VSPoint, ssp: SSPoint) {
+        let mut skip = self.selskip.saturating_sub(1);
+        self.tentative_by_vspoint(vsp, &mut skip);
+        self.selskip = skip;
 
-            let mut tmpst = self.state.clone();
-            match &mut tmpst {
-                SchematicState::Wiring(opt_ws) => {
-                    if let Some((g, prev_ssp)) = opt_ws {
-                        g.as_mut().clear();
-                        g.route(*prev_ssp, ssp);
-                    }
-                },
-                SchematicState::Idle => {
-                },
-                SchematicState::DevicePlacement(di) => {
-                    di.set_translation(ssp);
-                },
-                SchematicState::Selecting(vsb) => {
-                    vsb.max = vsp;
-                    self.tentatives_by_vsbox(&vsb);
-                },
-                SchematicState::Moving(opt_pts) => {
-                    if let Some((_ssp0, ssp1)) = opt_pts {
-                        *ssp1 = ssp;
-                    }
-                },
-            };
-            self.state = tmpst;
-        }
+        let mut tmpst = self.state.clone();
+        match &mut tmpst {
+            SchematicState::Wiring(opt_ws) => {
+                if let Some((g, prev_ssp)) = opt_ws {
+                    g.as_mut().clear();
+                    g.route(*prev_ssp, ssp);
+                }
+            },
+            SchematicState::Idle => {
+            },
+            SchematicState::DevicePlacement(di) => {
+                di.set_translation(ssp);
+            },
+            SchematicState::Selecting(vsb) => {
+                vsb.max = vsp;
+                self.tentatives_by_vsbox(&vsb);
+            },
+            SchematicState::Moving(opt_pts) => {
+                if let Some((_ssp0, ssp1)) = opt_pts {
+                    *ssp1 = ssp;
+                }
+            },
+        };
+        self.state = tmpst;
     }
 
     pub fn draw_active(
