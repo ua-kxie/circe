@@ -118,10 +118,11 @@ impl canvas::Program<Msg> for Circe {
         let mut msg = None;
 
         if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
-            let (msg0, clear_active, clear_passive) = sttup.0.events_handler(event, curpos_csp, bounds);
+            let (msg0, clear_active0, clear_passive0) = sttup.0.events_handler(event, curpos_csp, bounds);
+            let (clear_active1, clear_passive1) = sttup.1.events_handler(event, sttup.0.curpos_ssp());
             msg = msg0;
-            if clear_active { self.active_cache.clear() }
-            if clear_passive { self.passive_cache.clear() }
+            if clear_active0 || clear_active1 { self.active_cache.clear() }
+            if clear_passive0 || clear_passive1 { self.passive_cache.clear() }
         }
 
         // match (sttup.0.state, sttup.1.state, event) {
@@ -129,74 +130,9 @@ impl canvas::Program<Msg> for Circe {
         // }
 
         match (vstate, event, curpos) {
-            // clicking
-            (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
-                sttup.1.left_click_down(sttup.0.curpos_vsp());
-                self.active_cache.clear();
-                self.passive_cache.clear();
-            }
-            (_, Event::Mouse(ButtonReleased(Left)), _) => {
-                sttup.1.left_click_up();
-                self.active_cache.clear();
-                self.passive_cache.clear();
-            }
-
-            // panning
-            (_, Event::Mouse(ButtonPressed(Middle)), Some(p)) => {
-                sttup.0.state = ViewportState::Panning(Point::from(p).into());
-            }
-            (ViewportState::Panning(_), Event::Mouse(ButtonReleased(Middle)), _) => {
-                sttup.0.state = ViewportState::None;
-            }
-
-            // new view
-            (_, Event::Mouse(ButtonPressed(Right)), Some(p)) => {
-                let csp: CSPoint = Point::from(p).into();
-                let vsp = sttup.0.cv_transform().transform_point(csp);
-                sttup.0.state = ViewportState::NewView(vsp, vsp);
-            }
-            (ViewportState::NewView(vsp0, vsp1), Event::Mouse(ButtonReleased(Right)), _) => {
-                if vsp1 != vsp0 {
-                    sttup.0.display_bounds(
-                        CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
-                        VSBox::from_points([vsp0, vsp1])
-                    );
-                }
-                msg = Some(Msg::NewZoom(sttup.0.vc_scale()));
-                sttup.0.state = ViewportState::None;
-                self.passive_cache.clear();
-                self.active_cache.clear();
-            }
-
-            // zooming
-            (_, Event::Mouse(WheelScrolled{delta}), Some(p)) => { match delta {
-                mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => { 
-                    self.active_cache.clear();
-                    self.passive_cache.clear();
-                    let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                    sttup.0.zoom(scale);
-                }}
-                msg = Some(Msg::NewZoom(sttup.0.vc_scale()));
-            }
-
             // keys
             (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
                 match (vstate, key_code, modifiers.bits(), curpos) {
-                    (_, iced::keyboard::KeyCode::M, 0, _) => {
-                        sttup.1.move_();
-                    },
-                    (_, iced::keyboard::KeyCode::W, 0, _) => {
-                        sttup.1.enter_wiring_mode();
-                    },
-                    (_, iced::keyboard::KeyCode::R, 0, _) => {
-                        sttup.1.key_r(sttup.0.curpos_ssp());
-                        self.active_cache.clear();
-                    },
-                    (_, iced::keyboard::KeyCode::C, 0, _) => {
-                        sttup.1.tentative_next_by_vspoint(sttup.0.curpos_vsp());
-                        self.active_cache.clear();
-                        self.passive_cache.clear();
-                    },
                     (_, iced::keyboard::KeyCode::T, 0, _) => {
                         sttup.1.key_test();
                         self.active_cache.clear();
@@ -211,30 +147,12 @@ impl canvas::Program<Msg> for Circe {
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
-                    (_, iced::keyboard::KeyCode::Escape, 0, _) => {
-                        sttup.1.esc();
-                        self.active_cache.clear();
-                        self.passive_cache.clear();
-                    },
-                    (_, iced::keyboard::KeyCode::Delete, 0, _) => {
-                        sttup.1.delete_selected();
-                        self.active_cache.clear();
-                        self.passive_cache.clear();
-                    },
                     _ => {},
                 }
             }
-
-            (vstate, Event::Mouse(mouse::Event::CursorMoved { .. }), opt_csp) => {
-                if let Some(csp) = opt_csp {
-                    let csp: CSPoint = Point::from(csp).into();
-                    self.active_cache.clear();
-                    sttup.0.curpos_update(csp);
-                    sttup.1.curpos_update(sttup.0.curpos_vsp(), sttup.0.curpos_ssp());
-                    msg = Some(Msg::NewCurpos(sttup.0.curpos_ssp()));
-                }
+            (vstate, Event::Mouse(iced::mouse::Event::CursorMoved { position }), Some(p)) => {
+                sttup.0.curpos_update(Point::from(p).into());
             }
-            (vstate, Event::Mouse(mouse::Event::CursorLeft), opt_csp) => {}
             _ => {}
         }
         if msg.is_some() {

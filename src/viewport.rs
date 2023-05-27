@@ -8,7 +8,7 @@ use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransfo
 use euclid::{Vector2D, Rect, Size2D};
 
 use iced::widget::canvas::{
-    stroke, LineCap, Path, Stroke, LineDash, Frame, Text,
+    stroke, LineCap, Path, Stroke, LineDash, Frame, Text, Event,
 };
 
 use iced::{Color};
@@ -27,7 +27,6 @@ impl Default for ViewportState {
 }
 
 pub struct Viewport {
-    // preview: PSchematic,
     pub state: ViewportState,
     transform: VCTransform, 
     scale: f32,
@@ -38,7 +37,6 @@ pub struct Viewport {
 impl Default for Viewport {
     fn default() -> Self {
         Viewport { 
-            // preview: PSchematic::default(),
             state: Default::default(),
             transform: VCTransform::default().pre_scale(10., 10.).then_scale(1., -1.), 
             scale: 10.0,  // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
@@ -63,16 +61,29 @@ impl Viewport {
         let mut clear_passive = false;
         let mut state = self.state.clone();
         match (&mut state, event) {
+            // zooming
+            (
+                ViewportState::None, 
+                Event::Mouse(iced::mouse::Event::WheelScrolled{delta})
+            ) => { match delta {
+                iced::mouse::ScrollDelta::Lines { y, .. } | iced::mouse::ScrollDelta::Pixels { y, .. } => { 
+                    let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
+                    self.zoom(scale);
+                }}
+                msg = Some(crate::Msg::NewZoom(self.vc_scale()));
+                clear_active = true;
+                clear_passive = true;
+            },
             // panning
             (
                 ViewportState::None, 
-                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle))
+                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle))
             ) => {
                 state = ViewportState::Panning(curpos_csp);
             },
             (
                 ViewportState::Panning(csp_prev), 
-                iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved { .. })
+                Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 self.pan(self.cv_transform().transform_vector(curpos_csp - *csp_prev));
                 *csp_prev = curpos_csp;
@@ -81,21 +92,21 @@ impl Viewport {
             },
             (
                 ViewportState::Panning(_), 
-                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle))
+                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle))
             ) => {
                 state = ViewportState::None;
             },
             // newview
             (
                 ViewportState::None, 
-                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right))
+                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right))
             ) => {
                 let vsp = self.cv_transform().transform_point(curpos_csp);
                 state = ViewportState::NewView(vsp, vsp);
             },
             (
                 ViewportState::NewView(vsp0, vsp1), 
-                iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved { .. })
+                Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 let vsp_now = self.cv_transform().transform_point(curpos_csp);
                 if (vsp_now - *vsp0).length() > 10. {
@@ -107,7 +118,7 @@ impl Viewport {
             },
             (
                 ViewportState::NewView(vsp0, vsp1), 
-                iced::widget::canvas::Event::Keyboard(iced::keyboard::Event::KeyPressed { key_code, modifiers })
+                Event::Keyboard(iced::keyboard::Event::KeyPressed { key_code, modifiers })
             ) => {
                 match (key_code, modifiers.bits()) {
                     (iced::keyboard::KeyCode::Escape, 0) => {
@@ -119,7 +130,7 @@ impl Viewport {
             },
             (
                 ViewportState::NewView(vsp0, vsp1), 
-                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Right))
+                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Right))
             ) => {
                 if vsp1 != vsp0 {
                     self.display_bounds(
