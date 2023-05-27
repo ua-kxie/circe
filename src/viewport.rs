@@ -52,6 +52,96 @@ impl Viewport {
     const MAX_SCALING: f32 = 100.0;  // most zoomed in - every 100 pixel is 1
     const MIN_SCALING: f32 = 1.;  // most zoomed out - every pixel is 1
 
+    pub fn events_handler(
+        &mut self, 
+        event: iced::widget::canvas::Event, 
+        curpos_csp: CSPoint, 
+        bounds: iced::Rectangle
+    ) -> (Option<crate::Msg>, bool, bool) {
+        let mut msg = None;
+        let mut clear_active = false;
+        let mut clear_passive = false;
+        let mut state = self.state.clone();
+        match (&mut state, event) {
+            // panning
+            (
+                ViewportState::None, 
+                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle))
+            ) => {
+                state = ViewportState::Panning(curpos_csp);
+            },
+            (
+                ViewportState::Panning(csp_prev), 
+                iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved { .. })
+            ) => {
+                self.pan(self.cv_transform().transform_vector(curpos_csp - *csp_prev));
+                *csp_prev = curpos_csp;
+                clear_active = true;
+                clear_passive = true;
+            },
+            (
+                ViewportState::Panning(_), 
+                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle))
+            ) => {
+                state = ViewportState::None;
+            },
+            // newview
+            (
+                ViewportState::None, 
+                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right))
+            ) => {
+                let vsp = self.cv_transform().transform_point(curpos_csp);
+                state = ViewportState::NewView(vsp, vsp);
+            },
+            (
+                ViewportState::NewView(vsp0, vsp1), 
+                iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved { .. })
+            ) => {
+                let vsp_now = self.cv_transform().transform_point(curpos_csp);
+                if (vsp_now - *vsp0).length() > 10. {
+                    *vsp1 = vsp_now;
+                } else {
+                    *vsp1 = *vsp0;
+                }
+                clear_active = true;
+            },
+            (
+                ViewportState::NewView(vsp0, vsp1), 
+                iced::widget::canvas::Event::Keyboard(iced::keyboard::Event::KeyPressed { key_code, modifiers })
+            ) => {
+                match (key_code, modifiers.bits()) {
+                    (iced::keyboard::KeyCode::Escape, 0) => {
+                        state = ViewportState::None;
+                        clear_active = true;
+                    },
+                    _ => {},
+                }
+            },
+            (
+                ViewportState::NewView(vsp0, vsp1), 
+                iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Right))
+            ) => {
+                if vsp1 != vsp0 {
+                    self.display_bounds(
+                        CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
+                        VSBox::from_points([vsp0, vsp1])
+                    );
+                }
+                msg = Some(crate::Msg::NewZoom(self.vc_scale()));
+                state = ViewportState::None;
+                clear_active = true;
+                clear_passive = true;
+            },
+            _ => {},
+        }
+        self.state = state;
+        (
+            msg,
+            clear_active,
+            clear_passive,
+        )
+    }
+
     pub fn curpos_csp(&self) -> CSPoint {
         self.curpos.0
     }

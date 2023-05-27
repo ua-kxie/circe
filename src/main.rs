@@ -42,7 +42,7 @@ struct Circe {
 }
 
 #[derive(Debug, Clone)]
-enum Msg {
+pub enum Msg {
     NewCurpos(SSPoint),
     NewZoom(f32),
 }
@@ -116,6 +116,13 @@ impl canvas::Program<Msg> for Circe {
         let curpos = cursor.position_in(&bounds);
         let vstate = sttup.0.state.clone();
         let mut msg = None;
+
+        if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
+            let (msg0, clear_active, clear_passive) = sttup.0.events_handler(event, curpos_csp, bounds);
+            msg = msg0;
+            if clear_active { self.active_cache.clear() }
+            if clear_passive { self.passive_cache.clear() }
+        }
 
         // match (sttup.0.state, sttup.1.state, event) {
         //     ViewportState::None
@@ -225,24 +232,6 @@ impl canvas::Program<Msg> for Circe {
                     sttup.0.curpos_update(csp);
                     sttup.1.curpos_update(sttup.0.curpos_vsp(), sttup.0.curpos_ssp());
                     msg = Some(Msg::NewCurpos(sttup.0.curpos_ssp()));
-
-                    match vstate {
-                        ViewportState::Panning(csp0) => {
-                            let v = sttup.0.cv_transform().transform_vector(csp - csp0);
-                            sttup.0.pan(v);
-                            sttup.0.state = ViewportState::Panning(csp);
-                            self.passive_cache.clear();
-                        },
-                        ViewportState::NewView(vsp0, vsp1) => {
-                            let vsp_now = sttup.0.curpos_vsp();
-                            if (vsp_now - vsp0).length() > 10. {
-                                sttup.0.state = ViewportState::NewView(vsp0, vsp_now);
-                            } else {
-                                sttup.0.state = ViewportState::NewView(vsp0, vsp0);
-                            }
-                        }, 
-                        ViewportState::None => {},
-                    }
                 }
             }
             (vstate, Event::Mouse(mouse::Event::CursorLeft), opt_csp) => {}
