@@ -98,8 +98,6 @@ impl Application for Circe {
     }
 }
 
-use mouse::Event::*;
-use mouse::Button::*;
 use viewport::Viewport;
 
 impl canvas::Program<Msg> for Circe {
@@ -116,18 +114,6 @@ impl canvas::Program<Msg> for Circe {
         let curpos = cursor.position_in(&bounds);
         let vstate = sttup.0.state.clone();
         let mut msg = None;
-
-        if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
-            let (msg0, clear_active0, clear_passive0) = sttup.0.events_handler(event, curpos_csp, bounds);
-            let (clear_active1, clear_passive1) = sttup.1.events_handler(event, sttup.0.curpos_ssp());
-            msg = msg0;
-            if clear_active0 || clear_active1 { self.active_cache.clear() }
-            if clear_passive0 || clear_passive1 { self.passive_cache.clear() }
-        }
-
-        // match (sttup.0.state, sttup.1.state, event) {
-        //     ViewportState::None
-        // }
 
         match (vstate, event, curpos) {
             // keys
@@ -150,11 +136,17 @@ impl canvas::Program<Msg> for Circe {
                     _ => {},
                 }
             }
-            (vstate, Event::Mouse(iced::mouse::Event::CursorMoved { position }), Some(p)) => {
-                sttup.0.curpos_update(Point::from(p).into());
-            }
             _ => {}
         }
+        
+        if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
+            let (msg0, clear_passive0) = sttup.0.events_handler(event, curpos_csp, bounds);
+            let clear_passive1 = sttup.1.events_handler(event, sttup.0.curpos_vsp(), sttup.0.curpos_ssp());
+            msg = msg0;
+            self.active_cache.clear();
+            if clear_passive0 || clear_passive1 { self.passive_cache.clear() }
+        }
+
         if msg.is_some() {
             (event::Status::Captured, msg)
         } else {

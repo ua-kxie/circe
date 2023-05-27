@@ -55,15 +55,16 @@ impl Viewport {
         event: iced::widget::canvas::Event, 
         curpos_csp: CSPoint, 
         bounds: iced::Rectangle
-    ) -> (Option<crate::Msg>, bool, bool) {
+    ) -> (Option<crate::Msg>, bool) {
+        self.curpos_update(curpos_csp);
+
         let mut msg = None;
-        let mut clear_active = false;
         let mut clear_passive = false;
         let mut state = self.state.clone();
         match (&mut state, event) {
             // zooming
             (
-                ViewportState::None, 
+                _, 
                 Event::Mouse(iced::mouse::Event::WheelScrolled{delta})
             ) => { match delta {
                 iced::mouse::ScrollDelta::Lines { y, .. } | iced::mouse::ScrollDelta::Pixels { y, .. } => { 
@@ -71,7 +72,6 @@ impl Viewport {
                     self.zoom(scale);
                 }}
                 msg = Some(crate::Msg::NewZoom(self.vc_scale()));
-                clear_active = true;
                 clear_passive = true;
             },
             // panning
@@ -87,7 +87,6 @@ impl Viewport {
             ) => {
                 self.pan(self.cv_transform().transform_vector(curpos_csp - *csp_prev));
                 *csp_prev = curpos_csp;
-                clear_active = true;
                 clear_passive = true;
             },
             (
@@ -114,7 +113,6 @@ impl Viewport {
                 } else {
                     *vsp1 = *vsp0;
                 }
-                clear_active = true;
             },
             (
                 ViewportState::NewView(vsp0, vsp1), 
@@ -123,7 +121,6 @@ impl Viewport {
                 match (key_code, modifiers.bits()) {
                     (iced::keyboard::KeyCode::Escape, 0) => {
                         state = ViewportState::None;
-                        clear_active = true;
                     },
                     _ => {},
                 }
@@ -140,7 +137,6 @@ impl Viewport {
                 }
                 msg = Some(crate::Msg::NewZoom(self.vc_scale()));
                 state = ViewportState::None;
-                clear_active = true;
                 clear_passive = true;
             },
             _ => {},
@@ -148,7 +144,6 @@ impl Viewport {
         self.state = state;
         (
             msg,
-            clear_active,
             clear_passive,
         )
     }

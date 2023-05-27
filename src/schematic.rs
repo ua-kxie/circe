@@ -80,9 +80,10 @@ impl Schematic {
             }
         }
     }
-    pub fn tentative_next_by_vspoint(&mut self, curpos_ssp: SSPoint) {
+    pub fn tentative_next_by_vspoint(&mut self, curpos_vsp: VSPoint) {
         let mut skip = self.selskip;
-        self.tentative_by_vspoint(curpos_ssp.cast().cast_unit(), &mut skip)
+        self.tentative_by_vspoint(curpos_vsp, &mut skip);
+        self.selskip = skip;
     }
     fn tentatives_to_selected(&mut self) {
         self.nets.tentatives_to_selected();
@@ -91,43 +92,6 @@ impl Schematic {
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
     }
-    pub fn left_click_up(&mut self) {
-        if let SchematicState::Selecting(_) = self.state {
-            self.tentatives_to_selected();
-            self.state = SchematicState::Idle;
-        }
-    }
-    pub fn curpos_update(&mut self, vsp: VSPoint, ssp: SSPoint) {
-        let mut skip = self.selskip.saturating_sub(1);
-        self.tentative_by_vspoint(vsp, &mut skip);
-        self.selskip = skip;
-
-        let mut tmpst = self.state.clone();
-        match &mut tmpst {
-            SchematicState::Wiring(opt_ws) => {
-                if let Some((g, prev_ssp)) = opt_ws {
-                    g.as_mut().clear();
-                    g.route(*prev_ssp, ssp);
-                }
-            },
-            SchematicState::Idle => {
-            },
-            SchematicState::DevicePlacement(di) => {
-                di.set_translation(ssp);
-            },
-            SchematicState::Selecting(ssb) => {
-                ssb.max = vsp.round().cast().cast_unit();
-                self.tentatives_by_vsbox(&ssb.cast().cast_unit());
-            },
-            SchematicState::Moving(opt_pts) => {
-                if let Some((_ssp0, ssp1)) = opt_pts {
-                    *ssp1 = ssp;
-                }
-            },
-        };
-        self.state = tmpst;
-    }
-
     pub fn draw_active(
         &self, 
         vct: VCTransform,
@@ -138,10 +102,8 @@ impl Schematic {
         self.devices.draw_preview(vct, vcscale, frame);
 
         match &self.state {
-            SchematicState::Wiring(ws) => {
-                if let Some((net, ..)) = ws {
-                    net.as_ref().draw_preview(vct, vcscale, frame);
-                }
+            SchematicState::Wiring(Some((net, ..))) => {
+                net.as_ref().draw_preview(vct, vcscale, frame);
             },
             SchematicState::Idle => {
             },
@@ -157,13 +119,12 @@ impl Schematic {
                 let size = Size::new(csb.width(), csb.height());
                 frame.fill_rectangle(Point::from(csb.min).into(), size, f);
             },
-            SchematicState::Moving(opt_pts) => {
-                if let Some((ssp0, ssp1)) = opt_pts {
-                    let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
-                    self.nets.draw_selected_preview(vct_c, vcscale, frame);
-                    self.devices.draw_selected_preview(vct_c, vcscale, frame);
-                }
+            SchematicState::Moving(Some((ssp0, ssp1))) => {
+                let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
+                self.nets.draw_selected_preview(vct_c, vcscale, frame);
+                self.devices.draw_selected_preview(vct_c, vcscale, frame);
             },
+            _ => {},
         }
     }
 
@@ -220,36 +181,30 @@ impl Schematic {
             self.devices.delete_selected();
         }
     }
-    pub fn esc(&mut self) {
-        match &mut self.state {
-            SchematicState::Idle => {
-                self.clear_selected();
-            }
-            _ => {
-                self.state = SchematicState::Idle;
-            }
-        }
-    }
     pub fn key_test(&mut self) {
         self.nets.tt();
     }
 
     pub fn events_handler(
         &mut self, 
-        event: iced::widget::canvas::Event, 
+        event: Event, 
+        curpos_vsp: VSPoint,
         curpos_ssp: SSPoint, 
-    ) -> (bool, bool) {
-        // let mut msg = None;
-        let mut clear_active = false;
+    ) -> bool {
+        if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
+            let mut skip = self.selskip.saturating_sub(1);
+            self.tentative_by_vspoint(curpos_vsp, &mut skip);
+            self.selskip = skip;
+        }
         let mut clear_passive = false;
         let mut state = self.state.clone();
         match (&mut state, event) {
             // wiring
             (
                 _, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::M, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::W, modifiers})
             ) => {
-                self.state = SchematicState::Wiring(None);
+                state = SchematicState::Wiring(None);
             },
             (
                 SchematicState::Wiring(Some((g, prev_ssp))), 
@@ -276,8 +231,7 @@ impl Schematic {
                 } else {  // first click
                     new_ws = Some((Box::<Nets>::default(), ssp));
                 }
-                self.state = SchematicState::Wiring(new_ws);
-                clear_active = true;
+                state = SchematicState::Wiring(new_ws);
                 clear_passive = true;
             },
             // selecting
@@ -286,7 +240,7 @@ impl Schematic {
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
                 self.tentatives_to_selected();
-                self.state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
             },
             (
                 SchematicState::Selecting(ssb), 
@@ -295,35 +249,39 @@ impl Schematic {
                 ssb.max = curpos_ssp;
                 self.tentatives_by_vsbox(&ssb.cast().cast_unit());
             },
+            (
+                SchematicState::Selecting(_), 
+                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left))
+            ) => {
+                self.tentatives_to_selected();
+                state = SchematicState::Idle;
+                clear_passive = true;
+            },
             // device placement
             (
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                self.state = SchematicState::DevicePlacement(self.devices.place_res(curpos_ssp));
-                clear_active = true;
+                state = SchematicState::DevicePlacement(self.devices.place_res(curpos_ssp));
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 di.set_translation(curpos_ssp);
-                clear_active = true;
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
                 di.rotate(true);
-                clear_active = true;
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
                 self.devices.push(di.clone());
-                self.state = SchematicState::Idle;
-                clear_active = true;
+                state = SchematicState::Idle;
                 clear_passive = true;
             },
             // moving
@@ -331,7 +289,7 @@ impl Schematic {
                 _, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::M, modifiers})
             ) => {
-                self.state = SchematicState::Moving(None);
+                state = SchematicState::Moving(None);
             },
             (
                 SchematicState::Moving(Some((_ssp0, ssp1))),
@@ -348,10 +306,11 @@ impl Schematic {
                     self.nets.move_selected(ssv);
                     self.devices.move_selected(ssv);
                     self.nets.prune(self.devices.ports_ssp());
-                    self.state = SchematicState::Idle;
+                    state = SchematicState::Idle;
+                    clear_passive = true;
                 } else {
                     let ssp: euclid::Point2D<_, _> = curpos_ssp;
-                    self.state = SchematicState::Moving(Some((ssp, ssp)));
+                    state = SchematicState::Moving(Some((ssp, ssp)));
                 }
             },
             // esc
@@ -362,33 +321,31 @@ impl Schematic {
                 match st {
                     SchematicState::Idle => {
                         self.clear_selected();
-                        clear_active = true;
+                        clear_passive = true;
                     }
                     _ => {
-                        self.state = SchematicState::Idle;
-                        clear_active = true;
+                        state = SchematicState::Idle;
                     }
                 }
             },
             // delete
             (
                 SchematicState::Idle, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Escape, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Delete, modifiers})
             ) => {
                 self.delete_selected();
-                clear_active = true;
                 clear_passive = true;
             },
             // cycle
             (
                 SchematicState::Idle, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Escape, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers})
             ) => {
-                self.tentative_next_by_vspoint(curpos_ssp);
-                clear_active = true;
+                self.tentative_next_by_vspoint(curpos_vsp);
             },
             _ => {},
         }
-        (clear_active, clear_passive)
+        self.state = state;
+        clear_passive
     }
 }
