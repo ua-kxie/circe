@@ -24,7 +24,7 @@ use infobar::infobar;
 pub fn main() -> iced::Result {
     Circe::run(Settings {
         window: iced::window::Settings {
-             size: (350, 350), 
+             size: (500, 500), 
              ..iced::window::Settings::default()
             },
         antialiasing: true,
@@ -114,18 +114,17 @@ impl canvas::Program<Msg> for Circe {
     ) -> (event::Status, Option<Msg>) {
         
         let curpos = cursor.position_in(&bounds);
-        let state = sttup.0.state.clone();
-        let mut viewport = &mut sttup.0;
+        let vstate = sttup.0.state.clone();
         let mut msg = None;
 
         // match (sttup.0.state, sttup.1.state, event) {
         //     ViewportState::None
         // }
 
-        match (state, event, curpos) {
+        match (vstate, event, curpos) {
             // clicking
             (_, Event::Mouse(ButtonPressed(Left)), Some(_)) => {
-                sttup.1.left_click_down(viewport.curpos_vsp());
+                sttup.1.left_click_down(sttup.0.curpos_vsp());
                 self.active_cache.clear();
                 self.passive_cache.clear();
             }
@@ -136,28 +135,28 @@ impl canvas::Program<Msg> for Circe {
             }
 
             // panning
-            (_, Event::Mouse(ButtonPressed(Middle)), Some(_)) => {
-                viewport.state = ViewportState::Panning;
+            (_, Event::Mouse(ButtonPressed(Middle)), Some(p)) => {
+                sttup.0.state = ViewportState::Panning(Point::from(p).into());
             }
-            (ViewportState::Panning, Event::Mouse(ButtonReleased(Middle)), _) => {
-                viewport.state = ViewportState::None;
+            (ViewportState::Panning(_), Event::Mouse(ButtonReleased(Middle)), _) => {
+                sttup.0.state = ViewportState::None;
             }
 
             // new view
             (_, Event::Mouse(ButtonPressed(Right)), Some(p)) => {
                 let csp: CSPoint = Point::from(p).into();
-                let vsp = viewport.cv_transform().transform_point(csp);
-                viewport.state = ViewportState::NewView(vsp, vsp);
+                let vsp = sttup.0.cv_transform().transform_point(csp);
+                sttup.0.state = ViewportState::NewView(vsp, vsp);
             }
             (ViewportState::NewView(vsp0, vsp1), Event::Mouse(ButtonReleased(Right)), _) => {
                 if vsp1 != vsp0 {
-                    viewport.display_bounds(
+                    sttup.0.display_bounds(
                         CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
                         VSBox::from_points([vsp0, vsp1])
                     );
                 }
-                msg = Some(Msg::NewZoom(viewport.vc_scale()));
-                viewport.state = ViewportState::None;
+                msg = Some(Msg::NewZoom(sttup.0.vc_scale()));
+                sttup.0.state = ViewportState::None;
                 self.passive_cache.clear();
                 self.active_cache.clear();
             }
@@ -168,9 +167,9 @@ impl canvas::Program<Msg> for Circe {
                     self.active_cache.clear();
                     self.passive_cache.clear();
                     let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                    viewport.zoom(scale);
+                    sttup.0.zoom(scale);
                 }}
-                msg = Some(Msg::NewZoom(viewport.vc_scale()));
+                msg = Some(Msg::NewZoom(sttup.0.vc_scale()));
             }
 
             // keys
@@ -183,11 +182,11 @@ impl canvas::Program<Msg> for Circe {
                         sttup.1.enter_wiring_mode();
                     },
                     (_, iced::keyboard::KeyCode::R, 0, _) => {
-                        sttup.1.key_r(viewport.curpos_ssp());
+                        sttup.1.key_r(sttup.0.curpos_ssp());
                         self.active_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::C, 0, _) => {
-                        sttup.1.tentative_next_by_vspoint(viewport.curpos_vsp());
+                        sttup.1.tentative_next_by_vspoint(sttup.0.curpos_vsp());
                         self.active_cache.clear();
                         self.passive_cache.clear();
                     },
@@ -198,7 +197,7 @@ impl canvas::Program<Msg> for Circe {
                     },
                     (_, iced::keyboard::KeyCode::F, 0, _) => {
                         let vsb = sttup.1.bounding_box().inflate(5., 5.);
-                        viewport.display_bounds(
+                        sttup.0.display_bounds(
                             CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
                             vsb,
                         );
@@ -220,17 +219,33 @@ impl canvas::Program<Msg> for Circe {
             }
 
             (vstate, Event::Mouse(mouse::Event::CursorMoved { .. }), opt_csp) => {
-                if let Some(csp) = cursor.position_in(&bounds) {
+                if let Some(csp) = opt_csp {
                     let csp: CSPoint = Point::from(csp).into();
                     self.active_cache.clear();
-                    if let ViewportState::Panning = vstate {
-                        self.passive_cache.clear();
+                    sttup.0.curpos_update(csp);
+                    sttup.1.curpos_update(sttup.0.curpos_vsp(), sttup.0.curpos_ssp());
+                    msg = Some(Msg::NewCurpos(sttup.0.curpos_ssp()));
+
+                    match vstate {
+                        ViewportState::Panning(csp0) => {
+                            let v = sttup.0.cv_transform().transform_vector(csp - csp0);
+                            sttup.0.pan(v);
+                            sttup.0.state = ViewportState::Panning(csp);
+                            self.passive_cache.clear();
+                        },
+                        ViewportState::NewView(vsp0, vsp1) => {
+                            let vsp_now = sttup.0.curpos_vsp();
+                            if (vsp_now - vsp0).length() > 10. {
+                                sttup.0.state = ViewportState::NewView(vsp0, vsp_now);
+                            } else {
+                                sttup.0.state = ViewportState::NewView(vsp0, vsp0);
+                            }
+                        }, 
+                        ViewportState::None => {},
                     }
-                    viewport.curpos_update(csp);
-                    sttup.1.curpos_update(viewport.curpos_vsp(), viewport.curpos_ssp());
-                    msg = Some(Msg::NewCurpos(viewport.curpos_ssp()));
                 }
             }
+            (vstate, Event::Mouse(mouse::Event::CursorLeft), opt_csp) => {}
             _ => {}
         }
         if msg.is_some() {
@@ -287,7 +302,7 @@ impl canvas::Program<Msg> for Circe {
     ) -> mouse::Interaction {
         if cursor.is_over(&bounds) {
             match (&sttup.0.state, &sttup.1.state) {
-                (ViewportState::Panning, _) => mouse::Interaction::Grabbing,
+                (ViewportState::Panning(_), _) => mouse::Interaction::Grabbing,
                 (ViewportState::None, SchematicState::Idle) => mouse::Interaction::default(),
                 (ViewportState::None, SchematicState::Wiring(_)) => mouse::Interaction::Crosshair,
                 (ViewportState::None, SchematicState::DevicePlacement(_)) => mouse::Interaction::ResizingHorizontally,

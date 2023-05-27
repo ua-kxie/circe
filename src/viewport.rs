@@ -15,7 +15,7 @@ use iced::{Color};
 
 #[derive(Clone, Debug)]
 pub enum ViewportState {
-    Panning,
+    Panning(CSPoint),
     NewView(VSPoint, VSPoint),
     None,
 }
@@ -82,6 +82,10 @@ impl Viewport {
         self.curpos_update(self.curpos.0);
     }
 
+    pub fn pan(&mut self, v: Vector2D<f32, ViewportSpace>) {
+        self.transform = self.transform.pre_translate(v);
+    }
+
     pub fn cv_transform(&self) -> CVTransform {
         self.transform.inverse().unwrap()
     }
@@ -101,22 +105,22 @@ impl Viewport {
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
         let ssp1: SSPoint = vsp1.round().cast().cast_unit();
-        match &mut self.state {
-            ViewportState::Panning => {
-                let v = self.cv_transform().transform_vector(csp1 - self.curpos.0);
-                self.transform = self.vc_transform().pre_translate(v);
-            },
-            ViewportState::NewView(vsp_origin, vsp_other) => {
-                if (*vsp_origin - vsp1).length() > 10. {
-                    *vsp_other = vsp1; 
-                } else {
-                    *vsp_other = *vsp_origin; 
-                }
-            }
-            ViewportState::None => {
-                // todo?
-            },
-        }
+        // match &mut self.state {
+        //     ViewportState::Panning => {
+        //         let v = self.cv_transform().transform_vector(csp1 - self.curpos.0);
+        //         self.transform = self.vc_transform().pre_translate(v);
+        //     },
+        //     ViewportState::NewView(vsp_origin, vsp_other) => {
+        //         if (*vsp_origin - vsp1).length() > 10. {
+        //             *vsp_other = vsp1; 
+        //         } else {
+        //             *vsp_other = *vsp_origin; 
+        //         }
+        //     }
+        //     ViewportState::None => {
+        //         // todo?
+        //     },
+        // }
         self.curpos = (csp1, vsp1, ssp1);
     }
 
@@ -144,20 +148,20 @@ impl Viewport {
     }
 
     pub fn draw_cursor(&self, frame: &mut Frame) {
-            let cursor_stroke = || -> Stroke {
-                Stroke {
-                    width: 1.0,
-                    style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
-                    line_cap: LineCap::Round,
-                    ..Stroke::default()
-                }
-            };
-            let curdim = 5.0;
-            let csp = self.vc_transform().transform_point(self.curpos.2.cast().cast_unit());
-            let csp_topleft = csp - Vector2D::from([curdim/2.; 2]);
-            let s = iced::Size::from([curdim, curdim]);
-            let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
-            frame.stroke(&c, cursor_stroke());
+        let cursor_stroke = || -> Stroke {
+            Stroke {
+                width: 1.0,
+                style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
+                line_cap: LineCap::Round,
+                ..Stroke::default()
+            }
+        };
+        let curdim = 5.0;
+        let csp = self.vc_transform().transform_point(self.curpos.2.cast().cast_unit());
+        let csp_topleft = csp - Vector2D::from([curdim/2.; 2]);
+        let s = iced::Size::from([curdim, curdim]);
+        let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
+        frame.stroke(&c, cursor_stroke());
     }
 
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
