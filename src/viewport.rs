@@ -105,22 +105,6 @@ impl Viewport {
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
         let ssp1: SSPoint = vsp1.round().cast().cast_unit();
-        // match &mut self.state {
-        //     ViewportState::Panning => {
-        //         let v = self.cv_transform().transform_vector(csp1 - self.curpos.0);
-        //         self.transform = self.vc_transform().pre_translate(v);
-        //     },
-        //     ViewportState::NewView(vsp_origin, vsp_other) => {
-        //         if (*vsp_origin - vsp1).length() > 10. {
-        //             *vsp_other = vsp1; 
-        //         } else {
-        //             *vsp_other = *vsp_origin; 
-        //         }
-        //     }
-        //     ViewportState::None => {
-        //         // todo?
-        //     },
-        // }
         self.curpos = (csp1, vsp1, ssp1);
     }
 
@@ -173,7 +157,12 @@ impl Viewport {
             ..Default::default()
         };
         frame.fill_text(a);
-        fn draw_grid_w_spacing(spacing: f32, bb_viewport: VSBox, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+
+        fn draw_grid_w_spacing(spacing: f32, bb_canvas: CSBox, vct: VCTransform, cvt: CVTransform, frame: &mut Frame, stroke: Stroke) {
+            let bb_viewport = cvt.outer_transformed_box(&bb_canvas);
+            let v = ((bb_viewport.min / spacing).round() * spacing) - bb_viewport.min;
+            let bb_viewport = bb_viewport.translate(v);
+
             let v = bb_viewport.max - bb_viewport.min;
             for col in 0..=(v.x.ceil() / spacing) as u32 {
                 let csp0 = bb_viewport.min + Vector2D::from([col as f32 * spacing, 0.0]);
@@ -187,13 +176,10 @@ impl Viewport {
         }
         let coarse_grid_threshold: f32 = 2.0;
         let fine_grid_threshold: f32 = 6.0;
+
         if self.vc_scale() > coarse_grid_threshold {
             // draw coarse grid
             let spacing = 16.;
-            let bb_viewport = self.cv_transform().outer_transformed_box(&bb_canvas);
-
-            let v = ((bb_viewport.min / spacing).round() * spacing) - bb_viewport.min;
-            let bb_viewport = bb_viewport.translate(v);
 
             let grid_stroke = Stroke {
                 width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
@@ -205,18 +191,15 @@ impl Viewport {
 
             draw_grid_w_spacing(
                 spacing, 
-                bb_viewport, 
+                bb_canvas, 
                 self.vc_transform(), 
+                self.cv_transform(),
                 frame, 
                 grid_stroke,
             );
 
             if self.vc_scale() > fine_grid_threshold {  // draw fine grid if sufficiently zoomed in
                 let spacing = 2.;
-                let bb_viewport = self.cv_transform().outer_transformed_box(&bb_canvas);
-                
-                let v = ((bb_viewport.min / spacing).round() * spacing) - bb_viewport.min;
-                let bb_viewport = bb_viewport.translate(v);
         
                 let grid_stroke = Stroke {
                     width: 1.0,
@@ -228,8 +211,9 @@ impl Viewport {
         
                 draw_grid_w_spacing(
                     spacing, 
-                    bb_viewport, 
+                    bb_canvas, 
                     self.vc_transform(), 
+                    self.cv_transform(),
                     frame, 
                     grid_stroke,
                 );
