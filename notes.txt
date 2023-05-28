@@ -5,6 +5,8 @@ todo:
     (tech debt)
 
     named nets, canvas text
+    
+    schematic saving/loading (serde)
 
 - medium term:
     add gnd, voltage source devices (g, v)
@@ -12,8 +14,6 @@ todo:
     generate netlist
     device parameters
     feed netlist to NgSpice simulator
-
-    schematic saving/loading (serde)
 
     nets highlighting/color cycling
 

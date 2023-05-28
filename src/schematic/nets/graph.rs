@@ -54,7 +54,7 @@ impl Nets {
                 for e in colliding_edges {
                     self.graph.remove_edge(e.0, e.1);
                     self.graph.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
-                    self.graph.add_edge(e.0, *v, NetEdge{src: e.1.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
+                    self.graph.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
                 }
             }
         }
@@ -79,7 +79,7 @@ impl Nets {
                 _ => {}
             }
         }
-        for v in extra_vertices {  // bisect edges
+        for v in extra_vertices {  // bisect edges with ports
             let mut colliding_edges = vec![];
             for e in self.graph.all_edges() {
                 if e.2.occupies_ssp(v) {
@@ -90,7 +90,7 @@ impl Nets {
                 for e in colliding_edges {
                     self.graph.remove_edge(e.0, e.1);
                     self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
-                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
+                    self.graph.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
                 }
             }
         }
