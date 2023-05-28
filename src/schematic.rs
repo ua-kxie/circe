@@ -65,25 +65,29 @@ impl Schematic {
             }
         }
     }
-    pub fn tentative_by_vspoint(&mut self, vsp: VSPoint, skip: &mut usize) {
+    pub fn tentative_by_vspoint(&mut self, vsp: VSPoint, skip: &mut usize) -> Option<String> {
         self.clear_tentatives();
         if let Some(be) = self.selectable(vsp, skip) {
             match be {
                 BaseElement::NetEdge(e) => {
+                    let netname = e.label.borrow().clone();
                     let mut netedge = e.clone();
                     netedge.tentative = true;
                     self.nets.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
+                    Some(netname)
                 },
                 BaseElement::Device(d) => {
                     d.borrow_mut().tentative = true;
+                    None
                 },
             }
-        }
+        } else {None}
     }
-    pub fn tentative_next_by_vspoint(&mut self, curpos_vsp: VSPoint) {
+    pub fn tentative_next_by_vspoint(&mut self, curpos_vsp: VSPoint) -> Option<String> {
         let mut skip = self.selskip;
-        self.tentative_by_vspoint(curpos_vsp, &mut skip);
+        let s = self.tentative_by_vspoint(curpos_vsp, &mut skip);
         self.selskip = skip;
+        s
     }
     fn tentatives_to_selected(&mut self) {
         self.nets.tentatives_to_selected();
@@ -191,13 +195,16 @@ impl Schematic {
         curpos_vsp: VSPoint,
         curpos_ssp: SSPoint, 
     ) -> (Option<crate::Msg>, bool) {
+        let mut msg = None;
+        let mut clear_passive = false;
+
         if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
             let mut skip = self.selskip.saturating_sub(1);
-            self.tentative_by_vspoint(curpos_vsp, &mut skip);
+            let s = self.tentative_by_vspoint(curpos_vsp, &mut skip);
             self.selskip = skip;
+            msg = Some(crate::Msg::NetName(s));
         }
-        let msg = None;
-        let mut clear_passive = false;
+
         let mut state = self.state.clone();
         match (&mut state, event) {
             // wiring
@@ -342,7 +349,8 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers})
             ) => {
-                self.tentative_next_by_vspoint(curpos_vsp);
+                let s = self.tentative_next_by_vspoint(curpos_vsp);
+                msg = Some(crate::Msg::NetName(s));
             },
             _ => {},
         }

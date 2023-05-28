@@ -35,6 +35,7 @@ pub fn main() -> iced::Result {
 struct Circe {
     zoom_scale: f32,
     curpos_ssp: SSPoint,
+    net_name: String,
 
     active_cache: Cache,
     passive_cache: Cache,
@@ -45,6 +46,7 @@ struct Circe {
 pub enum Msg {
     NewCurpos(SSPoint),
     NewZoom(f32),
+    NetName(Option<String>),
 }
 
 impl Application for Circe {
@@ -58,6 +60,7 @@ impl Application for Circe {
             Circe {
                 zoom_scale: 10.0,  // would be better to get this from the viewport on startup
                 curpos_ssp: SSPoint::origin(),
+                net_name: String::from(""),
 
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
@@ -79,6 +82,13 @@ impl Application for Circe {
             Msg::NewZoom(value) => {
                 self.zoom_scale = value
             },
+            Msg::NetName(opts) => {
+                if let Some(s) = opts {
+                    self.net_name = s;
+                } else {
+                    self.net_name.clear();
+                }
+            },
         }
         Command::none()
     }
@@ -87,7 +97,7 @@ impl Application for Circe {
         let canvas = canvas(self as &Self)
             .width(Length::Fill)
             .height(Length::Fill);
-        let infobar = infobar(self.curpos_ssp, self.zoom_scale);
+        let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
 
         column![
             canvas,
@@ -223,17 +233,19 @@ mod infobar {
     pub struct InfoBar {
         curpos_ssp: SSPoint,
         zoom_scale: f32,
-        // net_name: Option<&'a str>,
+        net_name: String,
     }
     
     impl InfoBar {
         pub fn new(
             curpos_ssp: SSPoint,
             zoom_scale: f32,
+            net_name: String,
         ) -> Self {
             Self {
                 curpos_ssp,
                 zoom_scale,
+                net_name,
             }
         }
     }
@@ -241,8 +253,9 @@ mod infobar {
     pub fn infobar(
         curpos_ssp: SSPoint,
         zoom_scale: f32,
+        net_name: String,
     ) -> InfoBar {
-        InfoBar::new(curpos_ssp, zoom_scale)
+        InfoBar::new(curpos_ssp, zoom_scale, net_name)
     }
 
     impl<Message> Component<Message, Renderer> for InfoBar {
@@ -252,7 +265,7 @@ mod infobar {
         fn update(
             &mut self,
             _state: &mut Self::State,
-            event: (),
+            _event: (),
         ) -> Option<Message> {
             None
         }
@@ -263,6 +276,7 @@ mod infobar {
             row![
                 text(str_ssp).size(16).height(16).vertical_alignment(alignment::Vertical::Center),
                 text(&format!("{:04.1}", self.zoom_scale)).size(16).height(16).vertical_alignment(alignment::Vertical::Center),
+                text(&self.net_name).size(16).height(16).vertical_alignment(alignment::Vertical::Center),
             ]
             .spacing(10)
             .into()
