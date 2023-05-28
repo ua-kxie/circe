@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::transforms::{SSPoint, VCTransform, SchematicSpace};
 use euclid::{Point2D, Vector2D};
 use iced::widget::canvas::Frame;
@@ -12,52 +15,65 @@ pub use edge::NetEdge;
 
 use super::Drawable;
 
+type Label = Rc<RefCell<String>>;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SchematicNetLabel {
+    label: String,
+    // other stuff for drawing on schematic, being edited from schematic
+} 
 #[derive(Debug, Clone)]
-pub struct Nets(pub Box<GraphMap<NetVertex, NetEdge, petgraph::Undirected>>);
+pub struct Nets{
+    pub graph: Box<GraphMap<NetVertex, NetEdge, petgraph::Undirected>>,
+    autogen_stack: Vec<Label>,
+}
 
 impl Default for Nets {
     fn default() -> Self {
-        Nets(Box::new(GraphMap::new()))
+        Nets{
+            graph: Box::new(GraphMap::new()),
+            autogen_stack: vec![Label::new(RefCell::new(String::from("test_net_name")))],
+        }
     }
 }
 
 impl Nets {
     pub fn clear(&mut self) {
-        self.0.clear();
+        self.graph.clear();
     }
     pub fn prune(&mut self, extra_vertices: Vec<SSPoint>) {  // extra vertices to add, e.g. ports
-        let all_vertices: Vec<NetVertex> = self.0.nodes().collect();
+        let all_vertices: Vec<NetVertex> = self.graph.nodes().collect();
         for v in &all_vertices {  // bisect edges
             let mut colliding_edges = vec![];
-            for e in self.0.all_edges() {
+            for e in self.graph.all_edges() {
                 if e.2.occupies_ssp(v.0) {
                     colliding_edges.push((e.0, e.1));
                 }
             }
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
-                    self.0.remove_edge(e.0, e.1);
-                    self.0.add_edge(e.0, *v, NetEdge::new_with_coords(e.0.0, v.0));
-                    self.0.add_edge(e.0, *v, NetEdge::new_with_coords(e.1.0, v.0));
+                    self.graph.remove_edge(e.0, e.1);
+                    self.graph.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
+                    self.graph.add_edge(e.0, *v, NetEdge{src: e.1.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
                 }
             }
         }
         for v in all_vertices {  // delete redundant vertices
             let mut connected_vertices = vec![];
-            for e in self.0.edges(v) {
+            for e in self.graph.edges(v) {
                 connected_vertices.push(if e.0 == v { e.1 } else { e.0 });
             }
             match connected_vertices.len() {
                 0 => {
-                    self.0.remove_node(v);
+                    self.graph.remove_node(v);
                 }
                 2 => {
                     let src = connected_vertices[0];
                     let dst = connected_vertices[1];
-                    let ew = NetEdge::new_with_coords(src.0, dst.0);
+                    let ew = NetEdge{src: src.0, dst: dst.0, label: self.autogen_stack[0].clone(), ..Default::default()};
                     if ew.occupies_ssp(v.0) {
-                        self.0.remove_node(v);
-                        self.0.add_edge(src, dst, ew);
+                        self.graph.remove_node(v);
+                        self.graph.add_edge(src, dst, ew);
                     }
                 }
                 _ => {}
@@ -65,22 +81,22 @@ impl Nets {
         }
         for v in extra_vertices {  // bisect edges
             let mut colliding_edges = vec![];
-            for e in self.0.all_edges() {
+            for e in self.graph.all_edges() {
                 if e.2.occupies_ssp(v) {
                     colliding_edges.push((e.0, e.1));
                 }
             }
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
-                    self.0.remove_edge(e.0, e.1);
-                    self.0.add_edge(e.0, NetVertex(v), NetEdge::new_with_coords(e.0.0, v));
-                    self.0.add_edge(e.1, NetVertex(v), NetEdge::new_with_coords(e.1.0, v));
+                    self.graph.remove_edge(e.0, e.1);
+                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
+                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
                 }
             }
         }
     }
     pub fn edge_occupies_ssp(&self, ssp: SSPoint) -> bool {
-        for (_, _, edge) in self.0.all_edges() {
+        for (_, _, edge) in self.graph.all_edges() {
             if edge.occupies_ssp(ssp) {  // does not include endpoints
                 return true;
             }
@@ -88,7 +104,7 @@ impl Nets {
         false
     }
     pub fn vertex_occupies_ssp(&self, ssp: SSPoint) -> bool {
-        for v in self.0.nodes() {
+        for v in self.graph.nodes() {
             if v.occupies_ssp(ssp) {
                 return true;
             }
@@ -105,67 +121,67 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge::new_with_coords_preview(src, dst));
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
             },
             (_x, 0) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge::new_with_coords_preview(src, dst));
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
             },
             (_x, y) => {
                 let corner = Point2D::new(src.x, src.y + y);
-                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge::new_with_coords_preview(src, corner));
-                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge::new_with_coords_preview(corner, dst));
+                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
+                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst: dst, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
             }
         }
     }
     pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
-        for edge in other.0.all_edges() {
-            self.0.add_edge(edge.0, edge.1, edge.2.clone());  // adding edges also add nodes if they do not already exist
+        for edge in other.graph.all_edges() {
+            self.graph.add_edge(edge.0, edge.1, edge.2.clone());  // adding edges also add nodes if they do not already exist
         }
         self.prune(extra_vertices);
     }
     pub fn tentatives_to_selected(&mut self) {
-        for e in self.0.all_edges_mut().filter(|e| e.2.tentative) {
+        for e in self.graph.all_edges_mut().filter(|e| e.2.tentative) {
             e.2.selected = true;
             e.2.tentative = false;
         }
     }
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         let mut tmp = vec![];
-        for e in self.0.all_edges().filter(|e| e.2.selected) {
+        for e in self.graph.all_edges().filter(|e| e.2.selected) {
             tmp.push((e.0, e.1));
         }
         for e in tmp {
-            self.0.remove_edge(e.0, e.1);
+            self.graph.remove_edge(e.0, e.1);
             let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.0.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge::new_with_coords(ssp0, ssp1));
+            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: self.autogen_stack[0].clone(), ..Default::default()});
         }
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for e in self.0.all_edges().filter(|e| e.2.selected) {
+        for e in self.graph.all_edges().filter(|e| e.2.selected) {
             e.2.draw_preview(vct, vcscale, frame);
         }
     }
     pub fn tt(&self) {
-        let a = tarjan_scc(&*self.0);  // this finds the unconnected components 
+        let a = tarjan_scc(&*self.graph);  // this finds the unconnected components 
         dbg!(a);
     }
     pub fn clear_selected(&mut self) {
-        for e in self.0.all_edges_mut() {
+        for e in self.graph.all_edges_mut() {
             e.2.selected = false;
         }
     }
     pub fn clear_tentatives(&mut self) {
-        for e in self.0.all_edges_mut() {
+        for e in self.graph.all_edges_mut() {
             e.2.tentative = false;
         }
     }
     pub fn delete_selected_from_persistent(&mut self, extra_vertices: Vec<SSPoint>) {
         let mut tmp = vec![];
-        for e in self.0.all_edges().filter(|e| e.2.selected) {
+        for e in self.graph.all_edges().filter(|e| e.2.selected) {
             tmp.push((e.0, e.1));
         }
         for e in tmp {
-            self.0.remove_edge(e.0, e.1);
+            self.graph.remove_edge(e.0, e.1);
         }
         self.prune(extra_vertices);
     }
@@ -173,16 +189,16 @@ impl Nets {
 
 impl Drawable for Nets {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        for (_, _, edge) in self.0.all_edges() {
+        for (_, _, edge) in self.graph.all_edges() {
             edge.draw_persistent(vct, vcscale, frame)
         }
-        for vertex in self.0.nodes() {
+        for vertex in self.graph.nodes() {
             vertex.draw_persistent(vct, vcscale, frame)
         }
     }
 
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        for (_, _, edge) in self.0.all_edges() {
+        for (_, _, edge) in self.graph.all_edges() {
             if edge.selected {
                 edge.draw_selected(vct, vcscale, frame)
             }
@@ -190,7 +206,7 @@ impl Drawable for Nets {
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        for (_, _, edge) in self.0.all_edges().filter(|e| e.2.tentative) {
+        for (_, _, edge) in self.graph.all_edges().filter(|e| e.2.tentative) {
             edge.draw_preview(vct, vcscale, frame)
         }
     }

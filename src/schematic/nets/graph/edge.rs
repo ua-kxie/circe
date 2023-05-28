@@ -2,12 +2,12 @@ use crate::{
     transforms::{
         VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace
     }, 
-    schematic::nets::{Drawable, Selectable, Label, SchematicNetLabel}
+    schematic::nets::{Drawable, Selectable}
 };
 use euclid::{Point2D, Box2D, Vector2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 
-use std::{cell::{Cell, RefCell}, rc::Rc};
+use super::{Label, SchematicNetLabel};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 // pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
@@ -16,17 +16,11 @@ pub struct NetEdge {
     pub dst: SSPoint,
     pub tentative: bool,
     pub selected: bool,
-    label: Option<Label>,
-    schematic_net_label: Option<SchematicNetLabel>,
+    pub label: Label,
+    pub schematic_net_label: Option<SchematicNetLabel>,
 }
 
 impl NetEdge {
-    pub fn new_with_coords(src: SSPoint, dst: SSPoint) -> Self {
-        NetEdge{src, dst, ..Default::default()}
-    }
-    pub fn new_with_coords_preview(src: SSPoint, dst: SSPoint) -> Self {
-        NetEdge{src, dst, tentative:true, ..Default::default()}
-    }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         let v = self.dst - self.src;
         if v.x == 0 {

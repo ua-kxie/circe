@@ -59,7 +59,7 @@ impl Schematic {
                 d.borrow_mut().tentative = true;
             }
         }
-        for e in self.nets.0.all_edges_mut() {
+        for e in self.nets.graph.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
                 e.2.tentative = true;
             }
@@ -72,7 +72,7 @@ impl Schematic {
                 BaseElement::NetEdge(e) => {
                     let mut netedge = e.clone();
                     netedge.tentative = true;
-                    self.nets.0.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
+                    self.nets.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
                 },
                 BaseElement::Device(d) => {
                     d.borrow_mut().tentative = true;
@@ -141,7 +141,7 @@ impl Schematic {
     }
 
     pub fn bounding_box(&self) -> VSBox {
-        let bbn = VSBox::from_points(self.nets.0.nodes().map(|x| x.0.cast().cast_unit()));
+        let bbn = VSBox::from_points(self.nets.graph.nodes().map(|x| x.0.cast().cast_unit()));
         let bbi = self.devices.bounding_box();
         bbn.union(&bbi)
     }
@@ -149,7 +149,7 @@ impl Schematic {
     fn selectable(&self, curpos_vsp: VSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
             let mut count = 0;
-            for e in self.nets.0.all_edges() {
+            for e in self.nets.graph.all_edges() {
                 if e.2.collision_by_vsp(curpos_vsp) {
                     count += 1;
                     if count > *skip {
