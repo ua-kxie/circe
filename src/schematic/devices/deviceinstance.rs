@@ -100,6 +100,11 @@ impl DeviceInstance {
 }
 
 impl Selectable for DeviceInstance {
+    fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
+        let mut ab = self.instance_bounds.clone();
+        ab.set_size(ab.size() + Size2D::<i16, SchematicSpace>::new(1,1));
+        ab.contains(curpos_ssp)
+    }
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool {
         self.instance_bounds.contains(curpos_vsp.round().cast().cast_unit())
     }

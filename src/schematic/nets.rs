@@ -3,7 +3,7 @@ use std::{rc::Rc, cell::RefCell};
 
 pub use graph::Nets;
 
-use crate::transforms::{VSPoint, VSBox, VCTransform, SchematicSpace};
+use crate::transforms::{VSPoint, VSBox, VCTransform, SchematicSpace, SSPoint};
 use iced::widget::canvas::Frame;
 
 use flagset::flags;
@@ -45,6 +45,7 @@ use flagset::flags;
 pub trait Selectable {
     // collision with point, selection box
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool;
+    fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool;
     fn contained_by_vsb(&self, selbox: VSBox) -> bool;
     fn collision_by_vsb(&self, selbox: VSBox) -> bool;
 }

@@ -65,9 +65,9 @@ impl Schematic {
             }
         }
     }
-    pub fn tentative_by_vspoint(&mut self, vsp: VSPoint, skip: &mut usize) -> Option<String> {
+    pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
         self.clear_tentatives();
-        if let Some(be) = self.selectable(vsp, skip) {
+        if let Some(be) = self.selectable(ssp, skip) {
             match be {
                 BaseElement::NetEdge(e) => {
                     let netname = e.label.borrow().clone();
@@ -83,9 +83,9 @@ impl Schematic {
             }
         } else {None}
     }
-    pub fn tentative_next_by_vspoint(&mut self, curpos_vsp: VSPoint) -> Option<String> {
+    pub fn tentative_next_by_vspoint(&mut self, curpos_ssp: SSPoint) -> Option<String> {
         let mut skip = self.selskip;
-        let s = self.tentative_by_vspoint(curpos_vsp, &mut skip);
+        let s = self.tentative_by_sspoint(curpos_ssp, &mut skip);
         self.selskip = skip;
         s
     }
@@ -150,11 +150,11 @@ impl Schematic {
         bbn.union(&bbi)
     }
 
-    fn selectable(&self, curpos_vsp: VSPoint, skip: &mut usize) -> Option<BaseElement> {
+    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
             let mut count = 0;
             for e in self.nets.graph.all_edges() {
-                if e.2.collision_by_vsp(curpos_vsp) {
+                if e.2.collision_by_ssp(curpos_ssp) {
                     count += 1;
                     if count > *skip {
                         *skip = count;
@@ -163,7 +163,7 @@ impl Schematic {
                 }
             }
             for d in self.devices.iter() {
-                if d.borrow().collision_by_vsp(curpos_vsp) {
+                if d.borrow().collision_by_ssp(curpos_ssp) {
                     count += 1;
                     if count > *skip {
                         *skip = count;
@@ -200,7 +200,7 @@ impl Schematic {
 
         if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
             let mut skip = self.selskip.saturating_sub(1);
-            let s = self.tentative_by_vspoint(curpos_vsp, &mut skip);
+            let s = self.tentative_by_sspoint(curpos_ssp, &mut skip);
             self.selskip = skip;
             msg = Some(crate::Msg::NetName(s));
         }
@@ -349,7 +349,7 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers})
             ) => {
-                let s = self.tentative_next_by_vspoint(curpos_vsp);
+                let s = self.tentative_next_by_vspoint(curpos_ssp);
                 msg = Some(crate::Msg::NetName(s));
             },
             _ => {},

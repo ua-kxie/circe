@@ -29,6 +29,9 @@ impl Ord for NetVertex {
 }
 
 impl Selectable for NetVertex {
+    fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
+        false
+    }
     fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool {
         let bb: VSBox = Box2D::new(self.0, self.0).cast().cast_unit();
         bb.inflate(0.5, 0.5).contains(curpos_vsp)
