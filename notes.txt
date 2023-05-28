@@ -8,15 +8,18 @@ todo:
 
 - medium term:
     add gnd, voltage source devices (g, v)
+    schematic checking - mark floating nets, ports
     generate netlist
     device parameters
     feed netlist to NgSpice simulator
 
+    schematic saving/loading (serde)
+
+    nets highlighting/color cycling
+
     device/wire copy/paste
 
 - long term:
-    schematic saving/loading (serde)
-
     device designer, device saving/loading, device libraries
 
     bypass iced and tesellate with lyon directly
@@ -27,8 +30,3 @@ todo:
     wiring pathfinder
 
     grabbing (moves devices while keeping wire connections)
-
-notes about selections:
-    storing elements in a state enum works well enough when there is one
-    would it work well for a vec? - try
-    parallel schematic for selected elements?

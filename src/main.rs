@@ -121,7 +121,6 @@ impl canvas::Program<Msg> for Circe {
                 match (vstate, key_code, modifiers.bits(), curpos) {
                     (_, iced::keyboard::KeyCode::T, 0, _) => {
                         sttup.1.key_test();
-                        self.active_cache.clear();
                         self.passive_cache.clear();
                     },
                     (_, iced::keyboard::KeyCode::F, 0, _) => {
@@ -130,7 +129,6 @@ impl canvas::Program<Msg> for Circe {
                             CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
                             vsb,
                         );
-                        self.active_cache.clear();
                         self.passive_cache.clear();
                     },
                     _ => {},
@@ -141,12 +139,11 @@ impl canvas::Program<Msg> for Circe {
         
         if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
             let (msg0, clear_passive0) = sttup.0.events_handler(event, curpos_csp, bounds);
-            let clear_passive1 = sttup.1.events_handler(event, sttup.0.curpos_vsp(), sttup.0.curpos_ssp());
-            msg = msg0;
-            self.active_cache.clear();
+            let (msg1, clear_passive1) = sttup.1.events_handler(event, sttup.0.curpos_vsp(), sttup.0.curpos_ssp());
+            msg = msg0.or(msg1);
             if clear_passive0 || clear_passive1 { self.passive_cache.clear() }
         }
-
+        self.active_cache.clear();
         if msg.is_some() {
             (event::Status::Captured, msg)
         } else {

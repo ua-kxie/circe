@@ -37,8 +37,8 @@ impl Nets {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.0.remove_edge(e.0, e.1);
-                    self.0.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, ..Default::default()});
-                    self.0.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, ..Default::default()});
+                    self.0.add_edge(e.0, *v, NetEdge::new_with_coords(e.0.0, v.0));
+                    self.0.add_edge(e.0, *v, NetEdge::new_with_coords(e.1.0, v.0));
                 }
             }
         }
@@ -54,7 +54,7 @@ impl Nets {
                 2 => {
                     let src = connected_vertices[0];
                     let dst = connected_vertices[1];
-                    let ew = NetEdge{src: src.0, dst: dst.0, ..Default::default()};
+                    let ew = NetEdge::new_with_coords(src.0, dst.0);
                     if ew.occupies_ssp(v.0) {
                         self.0.remove_node(v);
                         self.0.add_edge(src, dst, ew);
@@ -73,8 +73,8 @@ impl Nets {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.0.remove_edge(e.0, e.1);
-                    self.0.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, ..Default::default()});
-                    self.0.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, ..Default::default()});
+                    self.0.add_edge(e.0, NetVertex(v), NetEdge::new_with_coords(e.0.0, v));
+                    self.0.add_edge(e.1, NetVertex(v), NetEdge::new_with_coords(e.1.0, v));
                 }
             }
         }
@@ -105,15 +105,15 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, ..Default::default()});
+                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge::new_with_coords_preview(src, dst));
             },
             (_x, 0) => {
-                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, ..Default::default()});
+                self.0.add_edge(NetVertex(src), NetVertex(dst), NetEdge::new_with_coords_preview(src, dst));
             },
             (_x, y) => {
                 let corner = Point2D::new(src.x, src.y + y);
-                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, ..Default::default()});
-                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, tentative: true, ..Default::default()});
+                self.0.add_edge(NetVertex(src), NetVertex(corner), NetEdge::new_with_coords_preview(src, corner));
+                self.0.add_edge(NetVertex(corner), NetVertex(dst), NetEdge::new_with_coords_preview(corner, dst));
             }
         }
     }
@@ -137,7 +137,7 @@ impl Nets {
         for e in tmp {
             self.0.remove_edge(e.0, e.1);
             let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.0.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, ..Default::default()});
+            self.0.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge::new_with_coords(ssp0, ssp1));
         }
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
@@ -147,6 +147,7 @@ impl Nets {
     }
     pub fn tt(&self) {
         let a = tarjan_scc(&*self.0);  // this finds the unconnected components 
+        dbg!(a);
     }
     pub fn clear_selected(&mut self) {
         for e in self.0.all_edges_mut() {

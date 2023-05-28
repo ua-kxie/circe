@@ -190,12 +190,13 @@ impl Schematic {
         event: Event, 
         curpos_vsp: VSPoint,
         curpos_ssp: SSPoint, 
-    ) -> bool {
+    ) -> (Option<crate::Msg>, bool) {
         if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
             let mut skip = self.selskip.saturating_sub(1);
             self.tentative_by_vspoint(curpos_vsp, &mut skip);
             self.selskip = skip;
         }
+        let msg = None;
         let mut clear_passive = false;
         let mut state = self.state.clone();
         match (&mut state, event) {
@@ -346,6 +347,6 @@ impl Schematic {
             _ => {},
         }
         self.state = state;
-        clear_passive
+        (msg, clear_passive)
     }
 }
