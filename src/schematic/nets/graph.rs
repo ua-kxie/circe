@@ -77,7 +77,43 @@ impl Nets {
     pub fn clear(&mut self) {
         self.graph.clear();
     }
+    fn nodes_to_edge_nodes(&self, vn: Vec<NetVertex>) -> Vec<(NetVertex, NetVertex)> {
+        let mut set = HashSet::<SSPoint>::new();
+        let mut ret = vec![];
+        for n in vn {
+            for e in self.graph.edges(n) {
+                if !set.contains(&e.1.0) {ret.push((e.0, e.1))}  // if dst has already been iterated through, the edge was already accounted for
+            }
+            set.insert(n.0);  // note that the source has been iterated through
+        }
+        ret
+    }
+    fn unify_labels(&mut self, ven: Vec<(NetVertex, NetVertex)>) {
+        let mut label = None;
+        for tup in &ven {
+            if let Some(ew) = self.graph.edge_weight(tup.0, tup.1) {
+                if ew.label.is_some() {
+                    label = ew.label.clone();
+                    break
+                }
+            }
+        }
+        if label.is_none() {
+            label = Some(self.label_manager.new_label());
+        }
+        for tup in ven {
+            if let Some(ew) = self.graph.edge_weight_mut(tup.0, tup.1) {
+                ew.label = label.clone();
+            }
+        }
+    }
     pub fn prune(&mut self, extra_vertices: Vec<SSPoint>) {  // extra vertices to add, e.g. ports
+        // assign net names
+        let vvn = tarjan_scc(&*self.graph);  // this finds the unconnected components 
+        for vn in vvn {
+            let ve = self.nodes_to_edge_nodes(vn);
+            self.unify_labels(ve);
+        }
         let all_vertices: Vec<NetVertex> = self.graph.nodes().collect();
         for v in &all_vertices {  // bisect edges
             let mut colliding_edges = vec![];
@@ -89,8 +125,8 @@ impl Nets {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.graph.remove_edge(e.0, e.1);
-                    self.graph.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, label: e.2, ..Default::default()});
-                    self.graph.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, label: Some(self.label_manager.new_label()), ..Default::default()});
+                    self.graph.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, label: e.2.clone(), ..Default::default()});
+                    self.graph.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, label: e.2, ..Default::default()});
                 }
             }
         }
@@ -120,14 +156,14 @@ impl Nets {
             let mut colliding_edges = vec![];
             for e in self.graph.all_edges() {
                 if e.2.occupies_ssp(v) {
-                    colliding_edges.push((e.0, e.1));
+                    colliding_edges.push((e.0, e.1, e.2.label.clone()));
                 }
             }
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.graph.remove_edge(e.0, e.1);
-                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, label: Some(self.label_manager.new_label()), ..Default::default()});
-                    self.graph.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: Some(self.label_manager.new_label()), ..Default::default()});
+                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, label: e.2.clone(), ..Default::default()});
+                    self.graph.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: e.2, ..Default::default()});
                 }
             }
         }
@@ -173,7 +209,7 @@ impl Nets {
     pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
         for edge in other.graph.all_edges() {
             let mut ew = edge.2.clone();
-            ew.label = Some(self.label_manager.new_label());
+            // ew.label = Some(self.label_manager.new_label());
             self.graph.add_edge(edge.0, edge.1, ew);  // adding edges also add nodes if they do not already exist
         }
         self.prune(extra_vertices);
