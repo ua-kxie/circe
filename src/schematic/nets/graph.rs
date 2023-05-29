@@ -157,21 +157,23 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, ..Default::default()});
             },
             (_x, 0) => {
-                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, ..Default::default()});
             },
             (_x, y) => {
                 let corner = Point2D::new(src.x, src.y + y);
-                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
-                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, ..Default::default()});
+                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, tentative: true, ..Default::default()});
             }
         }
     }
     pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
         for edge in other.graph.all_edges() {
-            self.graph.add_edge(edge.0, edge.1, edge.2.clone());  // adding edges also add nodes if they do not already exist
+            let mut ew = edge.2.clone();
+            ew.label = Some(self.label_manager.new_label());
+            self.graph.add_edge(edge.0, edge.1, ew);  // adding edges also add nodes if they do not already exist
         }
         self.prune(extra_vertices);
     }
@@ -184,12 +186,12 @@ impl Nets {
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         let mut tmp = vec![];
         for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            tmp.push((e.0, e.1));
+            tmp.push((e.0, e.1, e.2.label.clone()));
         }
         for e in tmp {
             self.graph.remove_edge(e.0, e.1);
             let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: Some(self.label_manager.new_label()), ..Default::default()});
+            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.2, ..Default::default()});
         }
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
