@@ -4,23 +4,27 @@ todo:
     unify draw/stroke interface
     (tech debt)
 
-    named nets, canvas text
+    add device modal window
+    add gnd, voltage source devices (g, v)
+    generate netlist
+    device parameters
     
     schematic saving/loading (serde)
 
 - medium term:
-    add gnd, voltage source devices (g, v)
-    schematic checking - mark floating nets, ports
-    generate netlist
-    device parameters
-    feed netlist to NgSpice simulator
 
-    nets highlighting/color cycling
+    schematic checking - mark floating nets, ports
+
+    feed netlist to NgSpice simulator
 
     device/wire copy/paste
 
 - long term:
+
     device designer, device saving/loading, device libraries
+    
+    custom net names
+    nets highlighting/color cycling
 
     bypass iced and tesellate with lyon directly
     drawing/stroke culling
@@ -28,5 +32,4 @@ todo:
     additive/subtractive selection - waiting on better modifiers support
 
     wiring pathfinder
-
     grabbing (moves devices while keeping wire connections)

@@ -23,6 +23,8 @@ right click drag to zoom to area
 
 left click drag for area select
 
+unconnected wires have unique names
+
 
 Target application is EDA schematic capture
 
