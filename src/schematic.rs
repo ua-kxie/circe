@@ -1,7 +1,7 @@
 mod nets;
 mod devices;
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, ops::Deref};
 
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
 use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox};
@@ -70,11 +70,11 @@ impl Schematic {
         if let Some(be) = self.selectable(ssp, skip) {
             match be {
                 BaseElement::NetEdge(e) => {
-                    let netname = e.label.borrow().clone();
                     let mut netedge = e.clone();
+                    let netname = e.label.map(|x| x.as_ref().clone());
                     netedge.tentative = true;
                     self.nets.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
-                    Some(netname)
+                    netname
                 },
                 BaseElement::Device(d) => {
                     d.borrow_mut().tentative = true;

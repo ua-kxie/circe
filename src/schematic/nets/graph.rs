@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::transforms::{SSPoint, VCTransform, SchematicSpace};
@@ -17,6 +18,41 @@ use super::Drawable;
 
 type Label = Rc<RefCell<String>>;
 
+#[derive(Clone, Debug, Default, PartialOrd, PartialEq, Eq, Hash)]
+struct Label0 {
+    name: String,
+}
+
+impl Label0 {
+    fn new_with_ord(ord: usize) -> Label0 {
+        Label0{name: format!("net_{}", ord)}
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+struct LabelManager {
+    wm: usize,
+    labels: HashSet<Rc<String>>,
+}
+
+impl LabelManager {
+    fn new_label(&mut self) -> Rc<String> {
+        // create a new unique label, store it, return it
+        loop {
+            self.wm += 1;
+            let l = format!("net_{}", self.wm);
+            if !self.labels.contains(&l) {
+                self.labels.insert(Rc::new(l.clone()));
+                break self.labels.get(&Rc::new(l)).unwrap().clone()
+            }
+        }
+    }
+    fn get_label(&mut self, s: String) -> Rc<String> {
+        self.labels.insert(Rc::new(s.clone()));
+        self.labels.get(&Rc::new(s)).unwrap().clone()
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SchematicNetLabel {
     label: String,
@@ -25,14 +61,14 @@ pub struct SchematicNetLabel {
 #[derive(Debug, Clone)]
 pub struct Nets{
     pub graph: Box<GraphMap<NetVertex, NetEdge, petgraph::Undirected>>,
-    autogen_stack: Vec<Label>,
+    label_manager: LabelManager,
 }
 
 impl Default for Nets {
     fn default() -> Self {
         Nets{
             graph: Box::new(GraphMap::new()),
-            autogen_stack: vec![Label::new(RefCell::new(String::from("test_net_name")))],
+            label_manager: LabelManager::default(),
         }
     }
 }
@@ -53,8 +89,8 @@ impl Nets {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.graph.remove_edge(e.0, e.1);
-                    self.graph.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
-                    self.graph.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, label: self.autogen_stack[0].clone(), ..Default::default()});
+                    self.graph.add_edge(e.0, *v, NetEdge{src: e.0.0, dst: v.0, label: Some(self.label_manager.new_label()), ..Default::default()});
+                    self.graph.add_edge(e.1, *v, NetEdge{src: e.1.0, dst: v.0, label: Some(self.label_manager.new_label()), ..Default::default()});
                 }
             }
         }
@@ -70,7 +106,7 @@ impl Nets {
                 2 => {
                     let src = connected_vertices[0];
                     let dst = connected_vertices[1];
-                    let ew = NetEdge{src: src.0, dst: dst.0, label: self.autogen_stack[0].clone(), ..Default::default()};
+                    let ew = NetEdge{src: src.0, dst: dst.0, label: Some(self.label_manager.new_label()), ..Default::default()};
                     if ew.occupies_ssp(v.0) {
                         self.graph.remove_node(v);
                         self.graph.add_edge(src, dst, ew);
@@ -89,8 +125,8 @@ impl Nets {
             if !colliding_edges.is_empty() {
                 for e in colliding_edges {
                     self.graph.remove_edge(e.0, e.1);
-                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
-                    self.graph.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: self.autogen_stack[0].clone(), ..Default::default()});
+                    self.graph.add_edge(e.0, NetVertex(v), NetEdge{src: e.0.0, dst: v, label: Some(self.label_manager.new_label()), ..Default::default()});
+                    self.graph.add_edge(e.1, NetVertex(v), NetEdge{src: e.1.0, dst: v, label: Some(self.label_manager.new_label()), ..Default::default()});
                 }
             }
         }
@@ -121,15 +157,15 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
             },
             (_x, 0) => {
-                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
             },
             (_x, y) => {
                 let corner = Point2D::new(src.x, src.y + y);
-                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
-                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst: dst, tentative: true, label: self.autogen_stack[0].clone(), ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
+                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, tentative: true, label: Some(self.label_manager.new_label()), ..Default::default()});
             }
         }
     }
@@ -153,7 +189,7 @@ impl Nets {
         for e in tmp {
             self.graph.remove_edge(e.0, e.1);
             let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: self.autogen_stack[0].clone(), ..Default::default()});
+            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: Some(self.label_manager.new_label()), ..Default::default()});
         }
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {

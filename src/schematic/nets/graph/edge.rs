@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     transforms::{
         VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace, SSBox, SchematicSpace
@@ -16,7 +18,7 @@ pub struct NetEdge {
     pub dst: SSPoint,
     pub tentative: bool,
     pub selected: bool,
-    pub label: Label,
+    pub label: Option<Rc<String>>,
     pub schematic_net_label: Option<SchematicNetLabel>,
 }
 
