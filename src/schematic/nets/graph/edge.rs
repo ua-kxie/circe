@@ -39,14 +39,7 @@ impl NetEdge {
 impl Selectable for NetEdge {
     fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
         let v = self.dst - self.src;
-        if v.x == 0 {
-            let mut ab = SSBox::from_points([  // from pts instead of new to guarantee positive sized box
-                self.src, 
-                self.dst
-            ]);
-            ab.set_size(ab.size() + Size2D::<i16, SchematicSpace>::new(1, 1));
-            ab.contains(curpos_ssp)
-        } else if v.y == 0 {
+        if v.x == 0 || v.y == 0 {
             let mut ab = SSBox::from_points([  // from pts instead of new to guarantee positive sized box
                 self.src, 
                 self.dst

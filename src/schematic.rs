@@ -23,7 +23,7 @@ pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
     DevicePlacement(DeviceInstance),
-    Selecting(SSBox),
+    Selecting(VSBox),
     Moving(Option<(SSPoint, SSPoint)>),
 }
 
@@ -116,7 +116,7 @@ impl Schematic {
             },
             SchematicState::Selecting(vsb) => {
                 let f = canvas::Fill {
-                    style: canvas::Style::Solid(if vsb.height() > 0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
+                    style: canvas::Style::Solid(if vsb.height() > 0.0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
                     ..canvas::Fill::default()
                 };
                 let csb = vct.outer_transformed_box(&vsb.cast().cast_unit());
@@ -248,14 +248,14 @@ impl Schematic {
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
                 self.tentatives_to_selected();
-                state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                state = SchematicState::Selecting(VSBox::new(curpos_vsp, curpos_vsp));
             },
             (
-                SchematicState::Selecting(ssb), 
+                SchematicState::Selecting(vsb), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                ssb.max = curpos_ssp;
-                self.tentatives_by_vsbox(&ssb.cast().cast_unit());
+                vsb.max = curpos_vsp;
+                self.tentatives_by_vsbox(&vsb);
             },
             (
                 SchematicState::Selecting(_), 
