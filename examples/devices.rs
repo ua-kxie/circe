@@ -1,5 +1,6 @@
 use core::fmt;
 use std::{rc::Rc, collections::HashSet, hash::{Hash, Hasher}, cell::RefCell};
+use euclid::default::Transform2D;
 
 // device
 //  type
@@ -43,10 +44,6 @@ trait SpiceDevice {
     }
 }
 
-enum ParamR {
-    Value(f32),
-}
-
 struct Interactable {
     bounds: usize,
     tentative: bool,
@@ -59,49 +56,87 @@ impl Interactable {
     }
 }
 struct Identifier {
-    id_prefix: &'static [char; 1],  // prefix which determines device type in NgSpice
-    id: usize,  // this can be whatever - changed to whatever whenever and used to generate Id if custom is None
-    custom: Option<String>,  // if some, is set by the user - must use this as is for id
+    id_prefix: &'static [char],  // prefix which determines device type in NgSpice
+    id: usize,  // avoid changing - otherwise, 
+    custom: Option<String>,  // if some, is set by the user - must use this as is for id - if multiple instances have same, both should be highlighted
+    // changing the id will break outputs which reference the old id. Otherwise it can be changed
+    // 1. how to catch and highlight duplicates
+    // 2. how to know id should not be changed (that it is referenced)
 }
+/*
+duplicates:
+    create hashset, for every identifier insert. if duplicate, save in second hashset
+    every key in second hashset has duplicates
+    iterate through devices and highlight every device with id which matches a key in second hashset
+
+immutable identifier:
+    abuse rwlock? references take read lock
+    if mutation is desired, must acquire write lock - e.g. no read locks. 
+ */
 impl Identifier {
     pub fn ng_id(&self) -> String {
         let mut ret = String::new();
         for c in self.id_prefix {
             ret.push(*c);
         }
-        if let Some(s) = self.custom {
-            ret.push_str(&s);
+        if let Some(s) = &self.custom {
+            ret.push_str(s);
         } else {
             ret.push_str(&format!("{}", self.id));
         }
         ret
     }
 }
-const R: [char; 1] = ['R'];
-struct DeviceR {
+impl PartialEq for Identifier {
+    fn eq(&self, other: &Self) -> bool {
+        self.ng_id().eq(&other.ng_id())
+    }
+}
+impl Hash for Identifier {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.ng_id().hash(state);
+    }
+}
+const PREFIX_R: [char; 1] = ['R'];
+struct Graphics <T> {
+    // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
+    pts: Vec<Vec<euclid::default::Point2D<f32>>>,
+    marker: core::marker::PhantomData<T>,
+}
+
+struct R;
+struct SingleValue <T> {
+    value: f32,
+    marker: core::marker::PhantomData<T>,
+}
+enum Param <T> {
+    Value(SingleValue<T>),
+}
+struct Device <T> {
     id: Identifier,
-    graphics: Rc<GraphicsR>,  // contains ports, bounds - can be edited, but contents of GraphicsR cannot be edited (from schematic editor)
-    params: ParamR,
-    transform: usize,
     interactable: Interactable,
+    transform: Transform2D<f32>,
+    graphics: Rc<Graphics<T>>,  // contains ports, bounds - can be edited, but contents of GraphicsR cannot be edited (from schematic editor)
+    params: Param<T>,
 }
 
 trait DeviceType {
-    type T: DeviceType + Eq + Hash;
+    type T: DeviceType;
 
     fn new(id: usize) -> Self::T;
 }
-struct DeviceSet <T> where T: Hash + Eq + DeviceType {
-    set: HashSet<Rc<T>>, 
+struct DeviceSet <T> where T: DeviceType {
+    vec: Vec<Rc<RefCell<T>>>, 
     wm: usize,
 }
-impl<T> DeviceSet<T> where T: Hash + Eq + DeviceType<T=T> {
-    fn new_instance(&mut self) -> Rc<T> {
+impl<T> DeviceSet<T> where T: DeviceType<T=T> {
+    fn new_instance(&mut self) -> Rc<RefCell<T>> {
         self.wm += 1;
-        let t = Rc::new(T::new(self.wm));
-        self.set.insert(t);
+        let t = Rc::new(RefCell::new(T::new(self.wm)));
+        self.vec.push(t.clone());
         t
     }
+
 }
 // refcell doesnt impl Hash due to mutability...
 // - make Rc<DeviceInstance{id: usize, RefCell<other stuff>}>
