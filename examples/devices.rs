@@ -136,7 +136,6 @@ impl<T> DeviceSet<T> where T: DeviceType<T=T> {
         self.vec.push(t.clone());
         t
     }
-
 }
 // refcell doesnt impl Hash due to mutability...
 // - make Rc<DeviceInstance{id: usize, RefCell<other stuff>}>
