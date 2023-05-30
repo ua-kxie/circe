@@ -11,7 +11,7 @@ use iced::{executor, Size};
 use iced::widget::canvas::{
     Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, column};
+use iced::widget::{canvas, column, row, button};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme,
@@ -98,12 +98,14 @@ impl Application for Circe {
             .width(Length::Fill)
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
-
-        column![
-            canvas,
-            infobar,
+        row![
+            button("placeholder"),
+            column![
+                canvas,
+                infobar,
+            ]
+            .width(Length::Fill),
         ]
-        .width(Length::Fill)
         .into()
     }
 }
@@ -125,26 +127,23 @@ impl canvas::Program<Msg> for Circe {
         let vstate = sttup.0.state.clone();
         let mut msg = None;
 
-        match (vstate, event, curpos) {
+        if let Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}) = event {
             // keys
-            (vstate, Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}), curpos) => { 
-                match (vstate, key_code, modifiers.bits(), curpos) {
-                    (_, iced::keyboard::KeyCode::T, 0, _) => {
-                        sttup.1.key_test();
-                        self.passive_cache.clear();
-                    },
-                    (_, iced::keyboard::KeyCode::F, 0, _) => {
-                        let vsb = sttup.1.bounding_box().inflate(5., 5.);
-                        sttup.0.display_bounds(
-                            CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
-                            vsb,
-                        );
-                        self.passive_cache.clear();
-                    },
-                    _ => {},
-                }
+            match (vstate, key_code, modifiers.bits(), curpos) {
+                (_, iced::keyboard::KeyCode::T, 0, _) => {
+                    sttup.1.key_test();
+                    self.passive_cache.clear();
+                },
+                (_, iced::keyboard::KeyCode::F, 0, _) => {
+                    let vsb = sttup.1.bounding_box().inflate(5., 5.);
+                    sttup.0.display_bounds(
+                        CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
+                        vsb,
+                    );
+                    self.passive_cache.clear();
+                },
+                _ => {},
             }
-            _ => {}
         }
         
         if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {

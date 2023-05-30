@@ -4,10 +4,10 @@ todo:
     unify draw/stroke interface
     (tech debt)
 
-    add device modal window
     add gnd, voltage source devices (g, v)
-    generate netlist
     device parameters
+    side panel device parameters edit
+    generate netlist
     
     schematic saving/loading (serde)
 
