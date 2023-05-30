@@ -22,6 +22,8 @@ todo:
 - long term:
 
     device designer, device saving/loading, device libraries
+
+    logging
     
     custom net names
     nets highlighting/color cycling

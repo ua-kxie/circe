@@ -4,9 +4,13 @@ mod devicetype;
 mod deviceinstance;
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher};
-use euclid::{Vector2D, Transform2D};
+use euclid::{Vector2D, Transform2D, Angle};
 use iced::widget::canvas::Frame;
 use std::hash::Hash;
+
+use crate::transforms::{ViewportSpace, Point};
+
+use iced::{widget::canvas::{Stroke, stroke, LineCap, path::Builder, self, LineDash}, Color, Size};
 
 use crate::{
     schematic::nets::{Drawable},
@@ -89,6 +93,7 @@ struct Graphics <T> {
     // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
     pts: Vec<Vec<VSPoint>>,
     ports: Vec<devicetype::Port>,
+    bounds: SSBox,
     marker: core::marker::PhantomData<T>,
 }
 impl<T> Graphics<T> {
@@ -111,6 +116,7 @@ impl<T> Graphics<T> {
                 Port {name: "+", offset: SSPoint::new(0, 3)},
                 Port {name: "-", offset: SSPoint::new(0, -3)},
             ], 
+            bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
             marker: core::marker::PhantomData 
         }
     }
@@ -131,6 +137,7 @@ impl<T> Graphics<T> {
             ports: vec![
                 Port {name: "gnd", offset: SSPoint::new(0, 2)}
             ], 
+            bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
             marker: core::marker::PhantomData 
         }
     }
@@ -181,23 +188,202 @@ impl <T> Device<T> {
         }
     }
 }
+trait DeviceExt {
+    fn tentatives_to_selected(&mut self);
+    fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>);
+    fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn clear_selected(&mut self);
+    fn clear_tentatives(&mut self);
+
+    fn ports_ssp(&self) -> Vec<SSPoint>;
+    fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool;
+    fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke);
+    fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke);
+    fn bounds(&self) -> &SSBox;
+    fn set_translation(&mut self, v: SSPoint);
+    fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>);
+    fn rotate(&mut self, cw: bool);
+}
+impl <T> DeviceExt for Device<T> {
+    fn tentatives_to_selected(&mut self) {
+        self.interactable.selected = self.interactable.tentative;
+        self.interactable.tentative = false;
+    }
+    fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+        self.pre_translate(ssv.cast_unit());
+        self.interactable.selected = false;
+    }
+    fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        todo!()
+    }
+    fn clear_selected(&mut self) {
+        self.interactable.selected = false;
+    }
+    fn clear_tentatives(&mut self) {
+        self.interactable.tentative = false;
+    }
+    
+    fn ports_ssp(&self) -> Vec<SSPoint> {
+        self.graphics.ports.iter().map(|p| self.transform.transform_point(p.offset)).collect()
+    }   
+    fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
+        for p in self.graphics.ports {
+            if self.transform.transform_point(p.offset) == ssp {
+                return true;
+            }
+        }
+        return false;
+    }
+    fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+        let mut path_builder = Builder::new();
+        let vsb = self.interactable.bounds.cast().cast_unit();
+        let csb = vct.outer_transformed_box(&vsb);
+        let size = Size::new(csb.width(), csb.height());
+        path_builder.rectangle(Point::from(csb.min).into(), size);
+        frame.stroke(&path_builder.build(), stroke);    
+    }
+    fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
+        // let mut path_builder = Builder::new();
+        for v1 in &self.graphics.pts {
+            // there's a bug where dashed stroke can draw a solid line across a move
+            // path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
+            let mut path_builder = Builder::new();
+            for v0 in v1 {
+                path_builder.line_to(Point::from(vct_composite.transform_point(*v0)).into());
+            }
+            frame.stroke(&path_builder.build(), stroke.clone());
+        }
+    }
+    fn bounds(&self) -> &SSBox {
+        &self.interactable.bounds
+    }
+    fn set_translation(&mut self, v: SSPoint) {
+        self.transform.m31 = v.x;
+        self.transform.m32 = v.y;
+        self.interactable.bounds = self.transform.outer_transformed_box(&self.graphics.bounds);
+    }
+    fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+        self.transform = self.transform.pre_translate(ssv);
+        self.interactable.bounds = self.transform.outer_transformed_box(&self.graphics.bounds); //self.device_type.as_ref().get_bounds().cast().cast_unit()
+    }
+    fn rotate(&mut self, cw: bool) {
+        if cw {
+            self.transform = self.transform.cast::<f32>().pre_rotate(Angle::frac_pi_2()).cast();
+        } else {
+            self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
+        }
+        self.interactable.bounds = self.transform.cast().outer_transformed_box(&self.graphics.bounds.cast().cast_unit());
+    }
+}
+const STROKE_WIDTH: f32 = 0.1;
+impl <T> Drawable for Device<T> {
+    const SOLDER_DIAMETER: f32 = 0.25;
+
+    const WIRE_WIDTH: f32 = 0.05;
+
+    const ZOOM_THRESHOLD: f32 = 5.0;
+
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        let stroke = Stroke {
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
+            style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 0.0)),
+            line_cap: LineCap::Square,
+            ..Stroke::default()
+        };
+        let vct_composite = self.transform.cast()
+        .with_destination::<ViewportSpace>()
+        .with_source::<ViewportSpace>()
+        .then(&vct);
+        // self.stroke_bounds(vct, frame, stroke.clone());
+        self.stroke_symbol(vct_composite, frame, stroke.clone());
+        
+        for p in self.graphics.ports {
+            p.draw_persistent(vct_composite, vcscale, frame)
+        }
+    }
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        let stroke = Stroke {
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.) / 2.0,
+            style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
+            line_cap: LineCap::Round,
+            ..Stroke::default()
+        };
+        self.stroke_bounds(vct, frame, stroke.clone());
+        // self.stroke_ports(vct, frame, stroke.clone());
+        let vct_composite = self.transform.cast()
+        .with_destination::<ViewportSpace>()
+        .with_source::<ViewportSpace>()
+        .then(&vct);
+        self.stroke_symbol(vct_composite, frame, stroke.clone());
+        for p in self.graphics.ports {
+            p.draw_selected(vct_composite, vcscale, frame)
+        }
+    }
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        let stroke = Stroke {
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
+            style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
+            line_cap: LineCap::Butt,
+            line_dash: LineDash{segments: &[3. * (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0)], offset: 0},
+            ..Stroke::default()
+        };
+        let vct_composite = self.transform.cast()
+        .with_destination::<ViewportSpace>()
+        .with_source::<ViewportSpace>()
+        .then(&vct);
+        self.stroke_bounds(vct, frame, stroke.clone());
+        self.stroke_symbol(vct_composite, frame, stroke.clone());
+        for p in self.graphics.ports {
+            p.draw_preview(vct_composite, vcscale, frame)
+        }
+    }
+}
 struct DeviceSet <T> where T: DeviceType<T> {
     vec: Vec<Rc<RefCell<Device<T>>>>, 
     wm: usize,
-    graphics: Vec<Rc<Graphics<T>>>,
+    graphics_resources: Vec<Rc<Graphics<T>>>,
 }
 impl<T> DeviceSet<T> where T: DeviceType<T> {
     fn new_instance(&mut self) -> Rc<RefCell<Device<T>>> {
         self.wm += 1;
-        let t = Rc::new(RefCell::new(Device::<T>::new_with_ord(self.wm, self.graphics[0])));
+        let t = Rc::new(RefCell::new(Device::<T>::new_with_ord(self.wm, self.graphics_resources[0])));
         self.vec.push(t.clone());
         t
     }
     fn new() -> Self {
-        DeviceSet { vec: vec![], wm: 0, graphics: vec![Rc::new(T::default_graphics())] }
+        DeviceSet { vec: vec![], wm: 0, graphics_resources: vec![Rc::new(T::default_graphics())] }
     }
 }
 
+impl <T> IntoIterator for DeviceSet<T> where T: DeviceType<T> {
+    type Item = Rc<RefCell<dyn DeviceExt>>;
+
+    type IntoIter = DeviceIterator<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        DeviceIterator {
+            set: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct DeviceIterator<T> where T: DeviceType<T> {
+    set: DeviceSet<T>,
+    index: usize,
+}
+
+impl<T> Iterator for DeviceIterator<T> where T: DeviceType<T> {
+    type Item = Rc<RefCell<dyn DeviceExt>>;
+    fn next(&mut self) -> Option<Rc<RefCell<dyn DeviceExt>>> {
+        let mut result;
+        if self.index >= self.set.vec.len() {
+            result = self.set.vec[self.index];
+        } else {return None}
+        self.index += 1;
+        Some(result)
+    }
+}
 pub struct Devices {
     set_r: DeviceSet<R>,
     set_gnd: DeviceSet<Gnd>,
@@ -211,19 +397,17 @@ impl Default for Devices {
 
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in &self.devices_vec {
+        for d in &self.set_r.vec {
             d.borrow().draw_persistent(vct, vcscale, frame);
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in &self.devices_vec {
-            if d.borrow().selected {
-                d.borrow().draw_selected(vct, vcscale, frame);
-            }
+        for d in self.set_r.vec.iter().filter(|&d| d.borrow().interactable.selected) {
+            d.borrow().draw_selected(vct, vcscale, frame);
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative) {
+        for d in self.set_r.vec.iter().filter(|&d| d.borrow().interactable.tentative) {
             d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
@@ -231,63 +415,81 @@ impl Drawable for Devices {
 
 impl Devices {
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
-        self.devices_vec.iter().flat_map(|d| d.borrow().ports_ssp()).collect()
+        self.set_gnd.vec.iter().flat_map(|d| d.borrow().ports_ssp())
+        .chain(self.set_r.vec.iter().flat_map(|d| d.borrow().ports_ssp()))
+        .collect()
+    }
+    fn test(&self) -> Rc<RefCell<dyn DeviceExt>> {
+        let a = self.set_gnd.vec[0];
+        a
     }
     pub fn tentatives_to_selected(&mut self) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().tentative) {
-            d.borrow_mut().selected = true;
-            d.borrow_mut().tentative = false;
+        for d in 
+        self.set_gnd.into_iter()
+        .chain(self.set_r.into_iter())
+        {
+            d.borrow_mut().tentatives_to_selected();
         }
     }
     pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected) {
-            d.borrow_mut().pre_translate(ssv.cast_unit());
-            d.borrow_mut().selected = false;
+        for d in 
+        self.set_gnd.into_iter()
+        .chain(self.set_r.into_iter())
+        {
+            d.borrow_mut().move_selected(ssv);
         }
+        // for d in self.set_gnd.vec.iter().filter(|&d| d.borrow().interactable.selected) {
+        //     d.borrow_mut().pre_translate(ssv.cast_unit());
+        //     d.borrow_mut().interactable.selected = false;
+        // }
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.devices_vec.iter().filter(|&d| d.borrow().selected) {
-            d.borrow().draw_preview(vct, vcscale, frame);
-        }
+        todo!();
     }
     pub fn clear_selected(&mut self) {
-        for d in &self.devices_vec {
-            d.borrow_mut().selected = false;
+        for d in 
+        self.set_gnd.into_iter()
+        .chain(self.set_r.into_iter())
+        {
+            d.borrow_mut().clear_selected();
         }
     }
     pub fn clear_tentatives(&mut self) {
-        for d in &self.devices_vec {
-            d.borrow_mut().tentative = false;
+        for d in 
+        self.set_gnd.into_iter()
+        .chain(self.set_r.into_iter())
+        {
+            d.borrow_mut().clear_tentatives();
         }
     }
     pub fn bounding_box(&self) -> VSBox {
-        let pts = self.devices_vec.iter().flat_map(|d| [d.borrow().bounds().min, d.borrow().bounds().max].into_iter());
+        let pts = self.set_gnd.into_iter()
+        .chain(self.set_r.into_iter())
+        .flat_map(
+            |d| 
+            [d.borrow().bounds().min, d.borrow().bounds().max].into_iter()
+        );
         SSBox::from_points(pts).cast().cast_unit()
     }
-    pub fn push(&mut self, di: DeviceInstance) {
-        self.devices_vec.push(Rc::new(di.into()));
-    }
-    pub fn iter(&self) -> std::slice::Iter<Rc<RefCell<DeviceInstance>>> {
-        self.devices_vec.iter()
-    }
-    pub fn place_res(&mut self, ssp: SSPoint) -> DeviceInstance {
-        DeviceInstance::new_res(ssp, self.res.clone())
-    }
     pub fn delete_selected(&mut self) {
-        self.devices_vec = self.devices_vec.iter().filter_map(|e| {
-            if !e.borrow().selected {Some(e.clone())} else {None}
-        }).collect()
+        self.set_gnd.vec = self.set_gnd.vec.iter().filter_map(|e| {
+            if !e.borrow().interactable.selected {Some(e.clone())} else {None}
+        }).collect();
+        self.set_r.vec = self.set_r.vec.iter().filter_map(|e| {
+            if !e.borrow().interactable.selected {Some(e.clone())} else {None}
+        }).collect();
     }
     fn new() -> Self {
-        Devices { devices_vec: vec![], res: Rc::new(DeviceType::new_res()) }
+        Devices::default()
     }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        for d in &self.devices_vec {
-            if d.borrow().ports_occupy_ssp(ssp) {
-                return true;
-            }
+        for d in 
+        self.set_gnd.into_iter()
+        .chain(self.set_r.into_iter())
+        {
+            if d.borrow().ports_occupy_ssp(ssp) {return true}
         }
-        return false;
+        false
     }
 }
 
