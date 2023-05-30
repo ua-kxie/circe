@@ -52,11 +52,14 @@ fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) 
     let c = Path::line(p, p,);
     frame.stroke(&c, stroke);
 }
+const SOLDER_DIAMETER: f32 = 0.25;
+const WIRE_WIDTH: f32 = 0.05;
+const ZOOM_THRESHOLD: f32 = 5.0;
 
 impl Drawable for NetVertex {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = <NetVertex as Drawable>::SOLDER_DIAMETER;
-        let zoom_thshld = <NetVertex as Drawable>::ZOOM_THRESHOLD;
+        let solder_dia = self::SOLDER_DIAMETER;
+        let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 1.0)),
@@ -66,8 +69,8 @@ impl Drawable for NetVertex {
         draw_with(self.0, vct, frame, wire_stroke);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = <NetVertex as Drawable>::SOLDER_DIAMETER;
-        let zoom_thshld = <NetVertex as Drawable>::ZOOM_THRESHOLD;
+        let solder_dia = self::SOLDER_DIAMETER;
+        let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
@@ -77,8 +80,8 @@ impl Drawable for NetVertex {
         draw_with(self.0, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let solder_dia = <NetVertex as Drawable>::SOLDER_DIAMETER;
-        let zoom_thshld = <NetVertex as Drawable>::ZOOM_THRESHOLD;
+        let solder_dia = self::SOLDER_DIAMETER;
+        let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
             width: (solder_dia * vcscale).max(solder_dia * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),

@@ -54,7 +54,7 @@ impl Schematic {
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
         self.clear_tentatives();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
-        for d in self.devices.iter() {
+        for d in self.devices.iter_device_traits() {
             if d.borrow().bounds().cast().cast_unit().intersects(&vsb_p) {
                 d.borrow_mut().tentative = true;
             }

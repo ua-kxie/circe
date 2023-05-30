@@ -116,10 +116,14 @@ fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, st
     frame.stroke(&c, stroke);
 }
 
+const SOLDER_DIAMETER: f32 = 0.25;
+const WIRE_WIDTH: f32 = 0.05;
+const ZOOM_THRESHOLD: f32 = 5.0;
+
 impl Drawable for NetEdge {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
-        let zoom_thshld = <NetEdge as Drawable>::ZOOM_THRESHOLD;
+        let wire_width = self::WIRE_WIDTH;
+        let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
             width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 1.0)),
@@ -133,8 +137,8 @@ impl Drawable for NetEdge {
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
-        let zoom_thshld = <NetEdge as Drawable>::ZOOM_THRESHOLD;
+        let wire_width = self::WIRE_WIDTH;
+        let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
             width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
@@ -144,8 +148,8 @@ impl Drawable for NetEdge {
         draw_with(self.src, self.dst, vct, frame, wire_stroke);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = <NetEdge as Drawable>::WIRE_WIDTH;
-        let zoom_thshld = <NetEdge as Drawable>::ZOOM_THRESHOLD;
+        let wire_width = self::WIRE_WIDTH;
+        let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
             width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
