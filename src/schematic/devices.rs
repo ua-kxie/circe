@@ -24,11 +24,8 @@ use self::devicetype::Port;
 // pub use self::deviceinstance::DeviceInstance;
 // use self::devicetype::DeviceType;
 
-trait SpiceDevice {
-    fn SpiceLine(&self) -> String;
-}
-#[derive(Debug)]
-struct Interactable {
+#[derive(Debug, Clone, Copy)]
+pub struct Interactable {
     bounds: SSBox,
     tentative: bool,
     selected: bool,
@@ -37,9 +34,6 @@ struct Interactable {
 impl Interactable {
     fn new() -> Self {
         Interactable { bounds: SSBox::default(), tentative: false, selected: false }
-    }
-    fn curpos_moved_ssp(&self, curpos_ssp: usize) {
-
     }
 }
 #[derive(Debug)]
@@ -215,6 +209,8 @@ impl <T> Device<T> {
 }
 
 pub trait DeviceExt: Drawable {
+    fn get_interactable(&self) -> Interactable;
+    fn get_transform(&self) -> Transform2D<i16, SchematicSpace, SchematicSpace>;
     fn set_tentative(&mut self);
     fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn tentative_by_vsb(&mut self, vsb: &VSBox);
@@ -233,6 +229,12 @@ pub trait DeviceExt: Drawable {
     fn rotate(&mut self, cw: bool);
 }
 impl <T> DeviceExt for Device<T> {
+    fn get_interactable(&self) -> Interactable {
+        self.interactable
+    }
+    fn get_transform(&self) -> Transform2D<i16, SchematicSpace, SchematicSpace> {
+        self.transform
+    }
     fn set_tentative(&mut self) {
         self.interactable.tentative = true;
     }
@@ -270,7 +272,7 @@ impl <T> DeviceExt for Device<T> {
                 return true;
             }
         }
-        return false;
+        false
     }
     fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
         let mut path_builder = Builder::new();
@@ -398,23 +400,38 @@ pub struct Devices {
 
 impl Default for Devices {
     fn default() -> Self {
-        Devices::new()
+        Devices{ set_r: DeviceSet::new(), set_gnd: DeviceSet::new() }
     }
 }
 
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in &self.set_r.vec {
+        for d in self.iter_device_traits() {
+            let vct = d.borrow().get_transform()
+            .cast()
+            .with_destination::<ViewportSpace>()
+            .with_source::<ViewportSpace>()
+            .then(&vct);
             d.borrow().draw_persistent(vct, vcscale, frame);
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.set_r.vec.iter().filter(|&d| d.borrow().interactable.selected) {
+        for d in self.iter_device_traits().iter().filter(|&d| d.borrow().get_interactable().selected) {
+            let vct = d.borrow().get_transform()
+            .cast()
+            .with_destination::<ViewportSpace>()
+            .with_source::<ViewportSpace>()
+            .then(&vct);
             d.borrow().draw_selected(vct, vcscale, frame);
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.set_r.vec.iter().filter(|&d| d.borrow().interactable.tentative) {
+        for d in self.iter_device_traits().iter().filter(|&d| d.borrow().get_interactable().tentative) {
+            let vct = d.borrow().get_transform()
+            .cast()
+            .with_destination::<ViewportSpace>()
+            .with_source::<ViewportSpace>()
+            .then(&vct);
             d.borrow().draw_preview(vct, vcscale, frame);
         }
     }
@@ -476,9 +493,6 @@ impl Devices {
         self.set_r.vec = self.set_r.vec.iter().filter_map(|e| {
             if !e.borrow().interactable.selected {Some(e.clone())} else {None}
         }).collect();
-    }
-    fn new() -> Self {
-        Devices::default()
     }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         for d in self.iter_device_traits() {

@@ -56,9 +56,6 @@ impl Schematic {
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
         for d in self.devices.iter_device_traits() {
             d.borrow_mut().tentative_by_vsb(&vsb_p);
-            // if d.borrow().vsb().intersects(&vsb_p) {
-            //     d.borrow_mut().interactabtentative = true;
-            // }
         }
         for e in self.nets.graph.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {

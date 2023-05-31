@@ -24,7 +24,7 @@ use infobar::infobar;
 pub fn main() -> iced::Result {
     Circe::run(Settings {
         window: iced::window::Settings {
-             size: (500, 500), 
+             size: (600, 500), 
              ..iced::window::Settings::default()
             },
         antialiasing: true,
