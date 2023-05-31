@@ -1,7 +1,7 @@
 mod nets;
 mod devices;
 
-use std::{rc::Rc, cell::RefCell, ops::Deref};
+use std::{rc::Rc, cell::RefCell, ops::Deref, hash::Hash, collections::HashSet};
 
 use euclid::Size2D;
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
@@ -12,10 +12,30 @@ use iced::{widget::canvas::{
 }, Size, Color};
 use self::devices::{Devices, DeviceExt};
 
+
 #[derive(Clone)]
 pub enum BaseElement {
     NetEdge(NetEdge),
     Device(Rc<RefCell<dyn DeviceExt>>),
+}
+
+impl PartialEq for BaseElement {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::NetEdge(l0), Self::NetEdge(r0)) => *l0 == *r0,
+            (Self::Device(l0), Self::Device(r0)) => by_address::ByAddress(l0) == by_address::ByAddress(r0),
+            _ => false,
+        }
+    }
+}
+
+impl std::hash::Hash for BaseElement {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            BaseElement::NetEdge(e) => {e.hash(state)},
+            BaseElement::Device(d) => {by_address::ByAddress(d).hash(state)},
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -40,6 +60,7 @@ pub struct Schematic {
     pub state: SchematicState,
 
     selskip: usize,
+    selected: HashSet<BaseElement>,
 }
 
 impl Schematic {
@@ -108,9 +129,6 @@ impl Schematic {
                 net.as_ref().draw_preview(vct, vcscale, frame);
             },
             SchematicState::Idle => {
-            },
-            SchematicState::DevicePlacement(di) => {
-                di.borrow().draw_preview(vct, vcscale, frame);
             },
             SchematicState::Selecting(vsb) => {
                 let f = canvas::Fill {
@@ -271,6 +289,14 @@ impl Schematic {
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
                 let d = self.devices.place_res();
+                d.borrow_mut().set_translation(curpos_ssp);
+                state = SchematicState::DevicePlacement(d);
+            },
+            (
+                SchematicState::Idle, 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
+            ) => {
+                let d = self.devices.place_gnd();
                 d.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },

@@ -2,13 +2,14 @@
 // device Id, net at port, ground net '0', device voltage 0
 mod devicetype;
 mod deviceinstance;
+use devicetype::Graphics;
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher};
 use euclid::{Vector2D, Transform2D, Angle};
 use iced::widget::canvas::Frame;
 use std::hash::Hash;
 
-use crate::transforms::{ViewportSpace, Point};
+use crate::transforms::{ViewportSpace, Point, CanvasSpace};
 
 use iced::{widget::canvas::{Stroke, stroke, LineCap, path::Builder, self, LineDash}, Color, Size};
 
@@ -18,11 +19,6 @@ use crate::{
         SSPoint, VSBox, VCTransform, SchematicSpace, SSBox, VSPoint
     }, 
 };
-
-use self::devicetype::Port;
-
-// pub use self::deviceinstance::DeviceInstance;
-// use self::devicetype::DeviceType;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Interactable {
@@ -83,80 +79,7 @@ impl Hash for Identifier {
     }
 }
 const PREFIX_R: [char; 1] = ['R'];
-#[derive(Debug)]
-struct Graphics <T> {
-    // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
-    pts: Vec<Vec<VSPoint>>,
-    ports: Vec<devicetype::Port>,
-    bounds: SSBox,
-    marker: core::marker::PhantomData<T>,
-}
-impl<T> Graphics<T> {
-    fn default_r() -> Self {
-        Graphics { 
-            pts: vec![
-                vec![
-                    VSPoint::new(0., 3.),
-                    VSPoint::new(0., -3.),
-                ],
-                vec![
-                    VSPoint::new(-1., 2.),
-                    VSPoint::new(-1., -2.),
-                    VSPoint::new(1., -2.),
-                    VSPoint::new(1., 2.),
-                    VSPoint::new(-1., 2.),
-                ],
-            ],
-            ports: vec![
-                Port {name: "+", offset: SSPoint::new(0, 3)},
-                Port {name: "-", offset: SSPoint::new(0, -3)},
-            ], 
-            bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
-            marker: core::marker::PhantomData 
-        }
-    }
-    fn default_gnd() -> Self {
-        Graphics { 
-            pts: vec![
-                vec![
-                    VSPoint::new(0., 2.),
-                    VSPoint::new(0., -1.)
-                ],
-                vec![
-                    VSPoint::new(0., -2.),
-                    VSPoint::new(1., -1.),
-                    VSPoint::new(-1., -1.),
-                    VSPoint::new(0., -2.),
-                ],
-            ],
-            ports: vec![
-                Port {name: "gnd", offset: SSPoint::new(0, 2)}
-            ], 
-            bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
-            marker: core::marker::PhantomData 
-        }
-    }
-    fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        let mut path_builder = Builder::new();
-        let vsb = self.bounds.cast().cast_unit();
-        let csb = vct.outer_transformed_box(&vsb);
-        let size = Size::new(csb.width(), csb.height());
-        path_builder.rectangle(Point::from(csb.min).into(), size);
-        frame.stroke(&path_builder.build(), stroke);    
-    }
-    fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        // let mut path_builder = Builder::new();
-        for v1 in &self.pts {
-            // there's a bug where dashed stroke can draw a solid line across a move
-            // path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
-            let mut path_builder = Builder::new();
-            for v0 in v1 {
-                path_builder.line_to(Point::from(vct_composite.transform_point(*v0)).into());
-            }
-            frame.stroke(&path_builder.build(), stroke.clone());
-        }
-    }
-}
+
 trait DeviceType <T> {
     fn default_graphics() -> Graphics<T>;
 }
@@ -227,6 +150,7 @@ pub trait DeviceExt: Drawable {
     fn set_translation(&mut self, v: SSPoint);
     fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>);
     fn rotate(&mut self, cw: bool);
+    fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace>;
 }
 impl <T> DeviceExt for Device<T> {
     fn get_interactable(&self) -> Interactable {
@@ -264,10 +188,10 @@ impl <T> DeviceExt for Device<T> {
     }
     
     fn ports_ssp(&self) -> Vec<SSPoint> {
-        self.graphics.ports.iter().map(|p| self.transform.transform_point(p.offset)).collect()
+        self.graphics.ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
     }   
     fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
-        for p in &self.graphics.ports {
+        for p in self.graphics.ports() {
             if self.transform.transform_point(p.offset) == ssp {
                 return true;
             }
@@ -275,24 +199,10 @@ impl <T> DeviceExt for Device<T> {
         false
     }
     fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        let mut path_builder = Builder::new();
-        let vsb = self.interactable.bounds.cast().cast_unit();
-        let csb = vct.outer_transformed_box(&vsb);
-        let size = Size::new(csb.width(), csb.height());
-        path_builder.rectangle(Point::from(csb.min).into(), size);
-        frame.stroke(&path_builder.build(), stroke);    
+        self.graphics.stroke_bounds(vct, frame, stroke);
     }
-    fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        // let mut path_builder = Builder::new();
-        for v1 in &self.graphics.pts {
-            // there's a bug where dashed stroke can draw a solid line across a move
-            // path_builder.move_to(Point::from(vct_composite.transform_point(v1[0])).into());
-            let mut path_builder = Builder::new();
-            for v0 in v1 {
-                path_builder.line_to(Point::from(vct_composite.transform_point(*v0)).into());
-            }
-            frame.stroke(&path_builder.build(), stroke.clone());
-        }
+    fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+        self.graphics.stroke_symbol(vct, frame, stroke);
     }
     fn bounds(&self) -> &SSBox {
         &self.interactable.bounds
@@ -300,11 +210,11 @@ impl <T> DeviceExt for Device<T> {
     fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
-        self.interactable.bounds = self.transform.outer_transformed_box(&self.graphics.bounds);
+        self.interactable.bounds = self.transform.outer_transformed_box(self.graphics.bounds());
     }
     fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         self.transform = self.transform.pre_translate(ssv);
-        self.interactable.bounds = self.transform.outer_transformed_box(&self.graphics.bounds); //self.device_type.as_ref().get_bounds().cast().cast_unit()
+        self.interactable.bounds = self.transform.outer_transformed_box(self.graphics.bounds()); //self.device_type.as_ref().get_bounds().cast().cast_unit()
     }
     fn rotate(&mut self, cw: bool) {
         if cw {
@@ -312,7 +222,14 @@ impl <T> DeviceExt for Device<T> {
         } else {
             self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
         }
-        self.interactable.bounds = self.transform.cast().outer_transformed_box(&self.graphics.bounds.cast().cast_unit());
+        self.interactable.bounds = self.transform.cast().outer_transformed_box(&self.graphics.bounds().clone().cast().cast_unit());
+    }
+    fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
+        self.transform
+        .cast()
+        .with_destination::<ViewportSpace>()
+        .with_source::<ViewportSpace>()
+        .then(&vct)
     }
 }
 impl <T> Drawable for Device<T> {
@@ -326,50 +243,7 @@ impl <T> Drawable for Device<T> {
         self.graphics.draw_preview(vct, vcscale, frame);
     }
 }
-const STROKE_WIDTH: f32 = 0.1;
-impl <T> Drawable for Graphics<T> {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
-            style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 0.0)),
-            line_cap: LineCap::Square,
-            ..Stroke::default()
-        };
-        // self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
-        for p in &self.ports {
-            p.draw_persistent(vct, vcscale, frame)
-        }
-    }
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.) / 2.0,
-            style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
-            line_cap: LineCap::Round,
-            ..Stroke::default()
-        };
-        self.stroke_bounds(vct, frame, stroke.clone());
-        // self.stroke_ports(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
-        for p in &self.ports {
-            p.draw_selected(vct, vcscale, frame)
-        }
-    }
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
-            style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
-            line_cap: LineCap::Butt,
-            line_dash: LineDash{segments: &[3. * (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0)], offset: 0},
-            ..Stroke::default()
-        };
-        self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
-        for p in &self.ports {
-            p.draw_preview(vct, vcscale, frame)
-        }
-    }
-}
+
 struct DeviceSet <T> where T: DeviceType<T> {
     vec: Vec<Rc<RefCell<Device<T>>>>, 
     wm: usize,
@@ -388,9 +262,6 @@ impl<T> DeviceSet<T> where T: DeviceType<T> + 'static {
     fn devices_traits(&self) -> Vec<Rc<RefCell<dyn DeviceExt>>> {
         self.vec.iter().map(|x| x.clone() as Rc<RefCell<dyn DeviceExt>>).collect()
     }
-    fn drawable_traits(&self) -> Vec<Rc<RefCell<dyn Drawable>>> {
-        self.vec.iter().map(|x| x.clone() as Rc<RefCell<dyn Drawable>>).collect()
-    }
 }
 
 pub struct Devices {
@@ -407,32 +278,20 @@ impl Default for Devices {
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in self.iter_device_traits() {
-            let vct = d.borrow().get_transform()
-            .cast()
-            .with_destination::<ViewportSpace>()
-            .with_source::<ViewportSpace>()
-            .then(&vct);
-            d.borrow().draw_persistent(vct, vcscale, frame);
+            let vct_c = d.borrow().compose_transform(vct);
+            d.borrow().draw_persistent(vct_c, vcscale, frame);
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in self.iter_device_traits().iter().filter(|&d| d.borrow().get_interactable().selected) {
-            let vct = d.borrow().get_transform()
-            .cast()
-            .with_destination::<ViewportSpace>()
-            .with_source::<ViewportSpace>()
-            .then(&vct);
-            d.borrow().draw_selected(vct, vcscale, frame);
+            let vct_c = d.borrow().compose_transform(vct);
+            d.borrow().draw_selected(vct_c, vcscale, frame);
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in self.iter_device_traits().iter().filter(|&d| d.borrow().get_interactable().tentative) {
-            let vct = d.borrow().get_transform()
-            .cast()
-            .with_destination::<ViewportSpace>()
-            .with_source::<ViewportSpace>()
-            .then(&vct);
-            d.borrow().draw_preview(vct, vcscale, frame);
+            let vct_c = d.borrow().compose_transform(vct);
+            d.borrow().draw_preview(vct_c, vcscale, frame);
         }
     }
 }
@@ -440,6 +299,9 @@ impl Drawable for Devices {
 impl Devices {
     pub fn place_res(&mut self) -> Rc<RefCell<dyn DeviceExt>> {
         self.set_r.new_instance()
+    }
+    pub fn place_gnd(&mut self) -> Rc<RefCell<dyn DeviceExt>> {
+        self.set_gnd.new_instance()
     }
     pub fn iter_device_traits(&self) -> Vec<Rc<RefCell<dyn DeviceExt>>> {
         [

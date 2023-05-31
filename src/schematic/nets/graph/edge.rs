@@ -11,7 +11,7 @@ use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Col
 
 use super::{Label, SchematicNetLabel};
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default)]
 // pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
 pub struct NetEdge {
     pub src: SSPoint,
@@ -20,6 +20,19 @@ pub struct NetEdge {
     pub selected: bool,
     pub label: Option<Rc<String>>,
     pub schematic_net_label: Option<SchematicNetLabel>,
+}
+
+impl PartialEq for NetEdge {
+    fn eq(&self, other: &Self) -> bool {
+        self.src == other.src && self.dst == other.dst
+    }
+}
+
+impl std::hash::Hash for NetEdge {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.src.hash(state);
+        self.dst.hash(state);
+    }
 }
 
 impl NetEdge {
