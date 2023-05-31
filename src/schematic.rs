@@ -16,7 +16,7 @@ use self::devices::{Devices, DeviceExt, RcRDevice};
 #[derive(Clone)]
 pub enum BaseElement {
     NetEdge(NetEdge),
-    Device(Rc<RefCell<dyn DeviceExt>>),
+    Device(RcRDevice),
 }
 
 impl PartialEq for BaseElement {
@@ -94,7 +94,7 @@ impl Schematic {
                     netname
                 },
                 BaseElement::Device(d) => {
-                    d.borrow_mut().set_tentative();
+                    d.0.borrow_mut().set_tentative();
                     None
                 },
             }
@@ -179,7 +179,9 @@ impl Schematic {
                     }
                 }
             }
-            self.devices.selectable(curpos_ssp, skip, &mut count);
+            if let Some(d) = self.devices.selectable(curpos_ssp, skip, &mut count) {
+                return Some(BaseElement::Device(d));
+            }
             if count == 0 {
                 *skip = count;
                 return None;

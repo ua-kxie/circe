@@ -79,20 +79,17 @@ impl Default for Devices {
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.set {
-            let vct_c = d.0.borrow().compose_transform(vct);
-            d.0.borrow().draw_persistent(vct_c, vcscale, frame);
+            d.0.borrow().draw_persistent(vct, vcscale, frame);
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in self.set.iter().filter(|&d| d.0.borrow().get_interactable().selected) {
-            let vct_c = d.0.borrow().compose_transform(vct);
-            d.0.borrow().draw_selected(vct_c, vcscale, frame);
+            d.0.borrow().draw_selected(vct, vcscale, frame);
         }
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in self.set.iter().filter(|&d| d.0.borrow().get_interactable().tentative) {
-            let vct_c = d.0.borrow().compose_transform(vct);
-            d.0.borrow().draw_preview(vct_c, vcscale, frame);
+            d.0.borrow().draw_preview(vct, vcscale, frame);
         }
     }
 }
