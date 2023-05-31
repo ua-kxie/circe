@@ -10,7 +10,7 @@ use iced::widget::canvas::event::{self, Event};
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
-use self::devices::{Devices, DeviceExt};
+use self::devices::{Devices, DeviceExt, RcRDevice};
 
 
 #[derive(Clone)]
@@ -42,7 +42,7 @@ impl std::hash::Hash for BaseElement {
 pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
-    DevicePlacement(Rc<RefCell<dyn DeviceExt>>),
+    DevicePlacement(RcRDevice),
     Selecting(VSBox),
     Moving(Option<(SSPoint, SSPoint)>),
 }
@@ -75,9 +75,7 @@ impl Schematic {
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
         self.clear_tentatives();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
-        for d in self.devices.iter_device_traits() {
-            d.borrow_mut().tentative_by_vsb(&vsb_p);
-        }
+        self.devices.tentatives_by_vsbox(vsb);
         for e in self.nets.graph.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
                 e.2.tentative = true;
@@ -130,6 +128,9 @@ impl Schematic {
             },
             SchematicState::Idle => {
             },
+            SchematicState::DevicePlacement(d) => {
+                d.0.borrow().draw_preview(vct, vcscale, frame);
+            }
             SchematicState::Selecting(vsb) => {
                 let f = canvas::Fill {
                     style: canvas::Style::Solid(if vsb.height() > 0.0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
@@ -178,17 +179,7 @@ impl Schematic {
                     }
                 }
             }
-            for d in self.devices.iter_device_traits() {
-                let mut ssb = d.borrow().bounds().clone();
-                ssb.set_size(ssb.size() + Size2D::<i16, SchematicSpace>::new(1, 1));
-                if ssb.contains(curpos_ssp) {
-                    count += 1;
-                    if count > *skip {
-                        *skip = count;
-                        return Some(BaseElement::Device(d.clone()));
-                    }
-                }
-            }
+            self.devices.selectable(curpos_ssp, skip, &mut count);
             if count == 0 {
                 *skip = count;
                 return None;
@@ -288,34 +279,35 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                let d = self.devices.place_res();
-                d.borrow_mut().set_translation(curpos_ssp);
+                let d = self.devices.new_res();
+                d.0.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
             ) => {
-                let d = self.devices.place_gnd();
-                d.borrow_mut().set_translation(curpos_ssp);
+                let d = self.devices.new_gnd();
+                d.0.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                di.borrow_mut().set_translation(curpos_ssp);
+                di.0.borrow_mut().set_translation(curpos_ssp);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                di.borrow_mut().rotate(true);
+                di.0.borrow_mut().rotate(true);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
+                self.devices.insert(di.clone());
                 state = SchematicState::Idle;
                 clear_passive = true;
             },

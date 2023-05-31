@@ -72,53 +72,90 @@ impl Hash for Identifier {
 }
 const PREFIX_R: [char; 1] = ['R'];
 
-pub trait DeviceType <T> {
-    fn default_graphics() -> Graphics<T>;
+pub trait DeviceType  {
+    fn default_graphics() -> Graphics;
 }
 #[derive(Debug)]
-pub struct R;
-impl <T> DeviceType<T> for R {
-    fn default_graphics() -> Graphics<T> {
-        Graphics::default_r()
+pub struct R {
+    params: ParamR,
+    graphics: Rc<Graphics>,
+}
+impl R {
+    pub fn new_w_graphics(graphics: Rc<Graphics>) -> R {
+        R {params: ParamR::default(), graphics}
     }
 }
 #[derive(Debug)]
-pub struct Gnd;
-impl <T> DeviceType<T> for Gnd {
-    fn default_graphics() -> Graphics<T> {
-        Graphics::default_gnd()
+pub struct Gnd {
+    params: ParamGnd,
+    graphics: Rc<Graphics>,
+}
+impl Gnd {
+    pub fn new_w_graphics(graphics: Rc<Graphics>) -> Gnd {
+        Gnd {params: ParamGnd::default(), graphics}
     }
 }
 #[derive(Debug)]
-pub struct SingleValue <T> {
+pub struct SingleValue  {
     value: f32,
-    marker: core::marker::PhantomData<T>,
 }
-impl <T> SingleValue<T> {
-    fn new() -> Self {
-        SingleValue { value: 0.0, marker: core::marker::PhantomData }
+impl SingleValue {
+    fn new(value: f32) -> Self {
+        SingleValue { value }
     }
 }
 #[derive(Debug)]
-pub enum Param <T> {
-    Value(SingleValue<T>),
+pub enum ParamR  {
+    Value(SingleValue),
+}
+impl Default for ParamR {
+    fn default() -> Self {
+        ParamR::Value(SingleValue::new(1000.0))
+    }
+}
+
+#[derive(Debug)]
+pub enum ParamGnd  {
+    None,
+}
+impl Default for ParamGnd {
+    fn default() -> Self {
+        ParamGnd::None
+    }
 }
 #[derive(Debug)]
-pub struct Device <T> {
+pub enum DeviceClass {
+    Gnd(Gnd),
+    R(R),
+}
+impl DeviceClass {
+    fn graphics(&self) -> &Rc<Graphics> {
+        match self {
+            DeviceClass::Gnd(x) => &x.graphics,
+            DeviceClass::R(x) => &x.graphics,
+        }
+    }
+}
+#[derive(Debug)]
+pub struct Device  {
     id: Identifier,
     interactable: Interactable,
     transform: Transform2D<i16, SchematicSpace, SchematicSpace>,
-    graphics: Rc<Graphics<T>>,  // contains ports, bounds - can be edited, but contents of GraphicsR cannot be edited (from schematic editor)
-    params: Param<T>,
+    class: DeviceClass,
 }
-impl <T> Device<T> {
-    pub fn new_with_ord(ord: usize, graphics: Rc<Graphics<T>>) -> Self {
+impl Device {
+    pub fn set_ord(&mut self, ord: usize) {
+        self.id.id = ord;
+    }
+    pub fn class(&self) -> &DeviceClass {
+        &self.class
+    }
+    pub fn new_with_ord_class(ord: usize, class: DeviceClass) -> Self {
         Device { 
             id: Identifier::new_with_ord(ord), 
             interactable: Interactable::new(), 
             transform: Transform2D::identity(), 
-            graphics, 
-            params: Param::Value(SingleValue::<T>::new())
+            class,
         }
     }
 }
@@ -144,7 +181,7 @@ pub trait DeviceExt: Drawable {
     fn rotate(&mut self, cw: bool);
     fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace>;
 }
-impl <T> DeviceExt for Device<T> {
+impl  DeviceExt for Device {
     fn get_interactable(&self) -> Interactable {
         self.interactable
     }
@@ -180,10 +217,10 @@ impl <T> DeviceExt for Device<T> {
     }
     
     fn ports_ssp(&self) -> Vec<SSPoint> {
-        self.graphics.ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
+        self.class.graphics().ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
     }   
     fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
-        for p in self.graphics.ports() {
+        for p in self.class.graphics().ports() {
             if self.transform.transform_point(p.offset) == ssp {
                 return true;
             }
@@ -191,10 +228,10 @@ impl <T> DeviceExt for Device<T> {
         false
     }
     fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        self.graphics.stroke_bounds(vct, frame, stroke);
+        self.class.graphics().stroke_bounds(vct, frame, stroke);
     }
     fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        self.graphics.stroke_symbol(vct, frame, stroke);
+        self.class.graphics().stroke_symbol(vct, frame, stroke);
     }
     fn bounds(&self) -> &SSBox {
         &self.interactable.bounds
@@ -202,11 +239,11 @@ impl <T> DeviceExt for Device<T> {
     fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
-        self.interactable.bounds = self.transform.outer_transformed_box(self.graphics.bounds());
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
     fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         self.transform = self.transform.pre_translate(ssv);
-        self.interactable.bounds = self.transform.outer_transformed_box(self.graphics.bounds()); //self.device_type.as_ref().get_bounds().cast().cast_unit()
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds()); //self.device_type.as_ref().get_bounds().cast().cast_unit()
     }
     fn rotate(&mut self, cw: bool) {
         if cw {
@@ -214,7 +251,7 @@ impl <T> DeviceExt for Device<T> {
         } else {
             self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
         }
-        self.interactable.bounds = self.transform.cast().outer_transformed_box(&self.graphics.bounds().clone().cast().cast_unit());
+        self.interactable.bounds = self.transform.cast().outer_transformed_box(&self.class.graphics().bounds().clone().cast().cast_unit());
     }
     fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform
@@ -224,15 +261,18 @@ impl <T> DeviceExt for Device<T> {
         .then(&vct)
     }
 }
-impl <T> Drawable for Device<T> {
+impl  Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.graphics.draw_persistent(vct, vcscale, frame);
+        let vct_c = self.compose_transform(vct);
+        self.class.graphics().draw_persistent(vct_c, vcscale, frame);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.graphics.draw_selected(vct, vcscale, frame);
+        let vct_c = self.compose_transform(vct);
+        self.class.graphics().draw_selected(vct_c, vcscale, frame);
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.graphics.draw_preview(vct, vcscale, frame);
+        let vct_c = self.compose_transform(vct);
+        self.class.graphics().draw_preview(vct_c, vcscale, frame);
     }
 }
 

@@ -73,14 +73,13 @@ impl Drawable for Port {
 
 const STROKE_WIDTH: f32 = 0.1;
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Graphics <T> {
+pub struct Graphics {
     // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
     pts: Vec<Vec<VSPoint>>,
     ports: Vec<Port>,
     bounds: SSBox,
-    marker: core::marker::PhantomData<T>,
 }
-impl<T> Graphics<T> {
+impl Graphics {
     pub fn bounds(&self) -> &SSBox {
         &self.bounds
     }
@@ -107,7 +106,6 @@ impl<T> Graphics<T> {
                 Port {name: "-", offset: SSPoint::new(0, -3)},
             ], 
             bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
-            marker: core::marker::PhantomData 
         }
     }
     pub fn default_gnd() -> Self {
@@ -128,7 +126,6 @@ impl<T> Graphics<T> {
                 Port {name: "gnd", offset: SSPoint::new(0, 2)}
             ], 
             bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
-            marker: core::marker::PhantomData 
         }
     }
     pub fn stroke_bounds(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
@@ -152,7 +149,7 @@ impl<T> Graphics<T> {
         }
     }
 }
-impl <T> Drawable for Graphics<T> {
+impl  Drawable for Graphics {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
