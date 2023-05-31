@@ -3,26 +3,26 @@ mod devices;
 
 use std::{rc::Rc, cell::RefCell, ops::Deref};
 
+use euclid::Size2D;
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox};
-use devices::DeviceInstance;
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace};
 use iced::widget::canvas::event::{self, Event};
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
-use self::devices::Devices;
+use self::devices::{Devices, DeviceExt};
 
 #[derive(Clone)]
 pub enum BaseElement {
     NetEdge(NetEdge),
-    Device(Rc<RefCell<DeviceInstance>>),
+    Device(Rc<RefCell<dyn DeviceExt>>),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
-    DevicePlacement(DeviceInstance),
+    DevicePlacement(Rc<RefCell<dyn DeviceExt>>),
     Selecting(VSBox),
     Moving(Option<(SSPoint, SSPoint)>),
 }
@@ -55,9 +55,10 @@ impl Schematic {
         self.clear_tentatives();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
         for d in self.devices.iter_device_traits() {
-            if d.borrow().bounds().cast().cast_unit().intersects(&vsb_p) {
-                d.borrow_mut().tentative = true;
-            }
+            d.borrow_mut().tentative_by_vsb(&vsb_p);
+            // if d.borrow().vsb().intersects(&vsb_p) {
+            //     d.borrow_mut().interactabtentative = true;
+            // }
         }
         for e in self.nets.graph.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
@@ -77,7 +78,7 @@ impl Schematic {
                     netname
                 },
                 BaseElement::Device(d) => {
-                    d.borrow_mut().tentative = true;
+                    d.borrow_mut().set_tentative();
                     None
                 },
             }
@@ -112,7 +113,7 @@ impl Schematic {
             SchematicState::Idle => {
             },
             SchematicState::DevicePlacement(di) => {
-                di.draw_preview(vct, vcscale, frame);
+                di.borrow().draw_preview(vct, vcscale, frame);
             },
             SchematicState::Selecting(vsb) => {
                 let f = canvas::Fill {
@@ -162,8 +163,10 @@ impl Schematic {
                     }
                 }
             }
-            for d in self.devices.iter() {
-                if d.borrow().collision_by_ssp(curpos_ssp) {
+            for d in self.devices.iter_device_traits() {
+                let mut ssb = d.borrow().bounds().clone();
+                ssb.set_size(ssb.size() + Size2D::<i16, SchematicSpace>::new(1, 1));
+                if ssb.contains(curpos_ssp) {
                     count += 1;
                     if count > *skip {
                         *skip = count;
@@ -270,25 +273,26 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                state = SchematicState::DevicePlacement(self.devices.place_res(curpos_ssp));
+                let d = self.devices.place_res();
+                d.borrow_mut().set_translation(curpos_ssp);
+                state = SchematicState::DevicePlacement(d);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                di.set_translation(curpos_ssp);
+                di.borrow_mut().set_translation(curpos_ssp);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                di.rotate(true);
+                di.borrow_mut().rotate(true);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                self.devices.push(di.clone());
                 state = SchematicState::Idle;
                 clear_passive = true;
             },
