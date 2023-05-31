@@ -103,22 +103,41 @@ impl <T> SingleValue<T> {
 pub enum Param <T> {
     Value(SingleValue<T>),
 }
-#[derive(Debug)]
-pub struct Device <T> {
-    id: Identifier,
-    interactable: Interactable,
-    transform: Transform2D<i16, SchematicSpace, SchematicSpace>,
+struct DeviceKind<T> {
     graphics: Rc<Graphics<T>>,  // contains ports, bounds - can be edited, but contents of GraphicsR cannot be edited (from schematic editor)
     params: Param<T>,
 }
-impl <T> Device<T> {
-    pub fn new_with_ord(ord: usize, graphics: Rc<Graphics<T>>) -> Self {
+impl <T> DeviceKind<T> {
+    fn new(graphics: Rc<Graphics<T>>) -> Self {
+        DeviceKind { graphics, params: Param::Value(0.0) }
+    }
+}
+enum DeviceClass {
+    Gnd(DeviceKind<Gnd>),
+    R(DeviceKind<R>),
+}
+#[derive(Debug)]
+pub struct Device {
+    id: Identifier,
+    interactable: Interactable,
+    transform: Transform2D<i16, SchematicSpace, SchematicSpace>,
+    class: DeviceClass,
+}
+impl Device {
+    pub fn new_gnd_with_ord(ord: usize, graphics: Rc<Graphics<Gnd>>) -> Self {
         Device { 
             id: Identifier::new_with_ord(ord), 
             interactable: Interactable::new(), 
             transform: Transform2D::identity(), 
-            graphics, 
-            params: Param::Value(SingleValue::<T>::new())
+            class: DeviceClass::Gnd(DeviceKind::new(graphics)),
+        }
+    }
+    pub fn new_r_with_ord(ord: usize, graphics: Rc<Graphics<R>>) -> Self {
+        Device { 
+            id: Identifier::new_with_ord(ord), 
+            interactable: Interactable::new(), 
+            transform: Transform2D::identity(), 
+            class: DeviceClass::R(DeviceKind::new(graphics)),
         }
     }
 }
@@ -144,7 +163,7 @@ pub trait DeviceExt: Drawable {
     fn rotate(&mut self, cw: bool);
     fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace>;
 }
-impl <T> DeviceExt for Device<T> {
+impl DeviceExt for Device {
     fn get_interactable(&self) -> Interactable {
         self.interactable
     }
@@ -224,7 +243,7 @@ impl <T> DeviceExt for Device<T> {
         .then(&vct)
     }
 }
-impl <T> Drawable for Device<T> {
+impl Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.graphics.draw_persistent(vct, vcscale, frame);
     }

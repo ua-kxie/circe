@@ -19,28 +19,28 @@ use crate::{
 
 use by_address::ByAddress;
 
-pub struct RcRDevice <T> (Rc<RefCell<Device<T>>>);
+pub struct RcRDevice(Rc<RefCell<Device>>);
 
-impl <T> PartialEq for RcRDevice<T> {
+impl PartialEq for RcRDevice {
     fn eq(&self, other: &Self) -> bool {
         ByAddress(self.0.clone()) == ByAddress(other.0.clone())
     }
 }
 
-impl <T> std::hash::Hash for RcRDevice<T> {
+impl std::hash::Hash for RcRDevice {
     fn hash<H: Hasher>(&self, state: &mut H) {
         ByAddress(self.0.clone()).hash(state);
     }
 }
 
 struct DeviceSet <T> where T: DeviceType<T> {
-    set: HashSet<RcRDevice<T>>, 
+    set: HashSet<RcRDevice>, 
     wm: usize,
     graphics_resources: Vec<Rc<Graphics<T>>>,
 }
 impl<T> DeviceSet<T> where T: DeviceType<T> + 'static {
-    fn new_instance(&mut self) -> Rc<RefCell<Device<T>>> {
-        Rc::new(RefCell::new(Device::<T>::new_with_ord(self.wm, self.graphics_resources[0].clone())))
+    fn new_instance(&mut self) -> Rc<RefCell<Device>> {
+        Rc::new(RefCell::new(Device::new_with_ord(self.wm, self.graphics_resources[0].clone())))
     }
     fn new() -> Self {
         DeviceSet { set: HashSet::new(), wm: 0, graphics_resources: vec![Rc::new(T::default_graphics())] }
