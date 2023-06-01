@@ -14,7 +14,7 @@ use crate::{
 use std::hash::Hash;
 #[derive(Debug, Clone, Copy)]
 pub struct Interactable {
-    pub bounds: SSBox,
+    bounds: SSBox,
     pub tentative: bool,
     pub selected: bool,
 }
@@ -22,6 +22,13 @@ pub struct Interactable {
 impl Interactable {
     fn new() -> Self {
         Interactable { bounds: SSBox::default(), tentative: false, selected: false }
+    }
+    fn set_bounds(&mut self, ssb: SSBox) {
+        // self.bounds = SSBox::from_points([ssb.min, ssb.max]);  // ensures that bounds has positive
+        self.bounds = ssb;
+    }
+    fn get_bounds(&self) -> SSBox {
+        self.bounds
     }
 }
 #[derive(Debug)]
@@ -197,7 +204,7 @@ impl  DeviceExt for Device {
         }
     }
     fn tentative_by_vsb(&mut self, vsb: &VSBox) {
-        if self.interactable.bounds.cast().cast_unit().intersects(vsb) {
+        if self.interactable.get_bounds().cast().cast_unit().intersects(vsb) {
             self.interactable.tentative = true;
         }
     }
@@ -239,11 +246,11 @@ impl  DeviceExt for Device {
     fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
-        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
+        self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds()));
     }
     fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         self.transform = self.transform.pre_translate(ssv);
-        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds()); //self.device_type.as_ref().get_bounds().cast().cast_unit()
+        self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds())); //self.device_type.as_ref().get_bounds().cast().cast_unit()
     }
     fn rotate(&mut self, cw: bool) {
         if cw {
@@ -251,7 +258,7 @@ impl  DeviceExt for Device {
         } else {
             self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
         }
-        self.interactable.bounds = self.transform.cast().outer_transformed_box(&self.class.graphics().bounds().clone().cast().cast_unit());
+        self.interactable.set_bounds(self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit()));
     }
     fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform

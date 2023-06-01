@@ -117,8 +117,20 @@ impl Devices {
         }
         None
     }
+    pub fn tentatives(&self) -> impl Iterator<Item = RcRDevice> + '_ {
+        self.set.iter().filter_map(
+            |x| 
+            if x.0.borrow().get_interactable().tentative {
+                Some(x.clone())
+            } else {
+                None
+            }
+        )
+    }
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
-        self.set.iter().map(|d| d.0.borrow_mut().tentative_by_vsb(vsb));
+        let _: Vec<_> = self.set.iter().map(|d| {
+            d.0.borrow_mut().tentative_by_vsb(vsb);
+        }).collect();
     }
     pub fn new_res(&mut self) -> RcRDevice {
         let graphics = self.manager.r.graphics[0].clone();

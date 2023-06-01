@@ -1,8 +1,9 @@
 todo:
 
 - immediate:
-    unify draw/stroke interface
-    (tech debt)
+    unify schematic interations to SSPoint
+
+    traits for nets, devices, baseElement
 
     add gnd, voltage source devices (g, v)
     device parameters

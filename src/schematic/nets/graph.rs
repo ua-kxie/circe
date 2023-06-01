@@ -74,6 +74,11 @@ impl Default for Nets {
 }
 
 impl Nets {
+    pub fn tentatives(&self) -> impl Iterator<Item = NetEdge> + '_ {
+        self.graph.all_edges().filter_map(|e| {
+            if e.2.tentative {Some(e.2.clone())} else {None}
+        })
+    }
     pub fn clear(&mut self) {
         self.graph.clear();
     }

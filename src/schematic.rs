@@ -13,7 +13,7 @@ use iced::{widget::canvas::{
 use self::devices::{Devices, DeviceExt, RcRDevice};
 
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum BaseElement {
     NetEdge(NetEdge),
     Device(RcRDevice),
@@ -28,6 +28,8 @@ impl PartialEq for BaseElement {
         }
     }
 }
+
+impl Eq for BaseElement {}
 
 impl std::hash::Hash for BaseElement {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -65,8 +67,7 @@ pub struct Schematic {
 
 impl Schematic {
     fn clear_selected(&mut self) {
-        self.devices.clear_selected();
-        self.nets.clear_selected();
+        self.selected.clear();
     }
     fn clear_tentatives(&mut self) {
         self.devices.clear_tentatives();
@@ -75,7 +76,7 @@ impl Schematic {
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
         self.clear_tentatives();
         let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
-        self.devices.tentatives_by_vsbox(vsb);
+        self.devices.tentatives_by_vsbox(&vsb_p);
         for e in self.nets.graph.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
                 e.2.tentative = true;
@@ -107,8 +108,16 @@ impl Schematic {
         s
     }
     fn tentatives_to_selected(&mut self) {
-        self.nets.tentatives_to_selected();
-        self.devices.tentatives_to_selected();
+        let _: Vec<_> = self.devices.tentatives().map(
+            |d| {
+                self.selected.insert(BaseElement::Device(d));
+            }
+        ).collect();
+        let _: Vec<_> = self.nets.tentatives().map(
+            |e| {
+                self.selected.insert(BaseElement::NetEdge(e));
+            }
+        ).collect();
     }
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
@@ -156,9 +165,17 @@ impl Schematic {
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
         self.nets.draw_persistent(vct, vcscale, frame);
-        self.nets.draw_selected(vct, vcscale, frame);
         self.devices.draw_persistent(vct, vcscale, frame);
-        self.devices.draw_selected(vct, vcscale, frame);
+        let _: Vec<_> = self.selected.iter().map(|e|
+            match e {
+                BaseElement::NetEdge(e) => {
+                    e.draw_selected(vct, vcscale, frame);
+                },
+                BaseElement::Device(d) => {
+                    d.0.borrow().draw_selected(vct, vcscale, frame);
+                },
+            }
+        ).collect();
     }
 
     pub fn bounding_box(&self) -> VSBox {
@@ -261,7 +278,6 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                self.tentatives_to_selected();
                 state = SchematicState::Selecting(VSBox::new(curpos_vsp, curpos_vsp));
             },
             (
