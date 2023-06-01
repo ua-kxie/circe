@@ -199,6 +199,9 @@ impl Schematic {
     pub fn key_test(&mut self) {
         self.nets.tt();
     }
+    fn prune_nets(&mut self) {
+        self.nets.prune(self.devices.ports_ssp());
+    }
 
     pub fn events_handler(
         &mut self, 
@@ -310,6 +313,7 @@ impl Schematic {
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
                 self.devices.insert(di.clone());
+                self.prune_nets();
                 state = SchematicState::Idle;
                 clear_passive = true;
             },
@@ -334,7 +338,7 @@ impl Schematic {
                     let ssv = *ssp1 - *ssp0;
                     self.nets.move_selected(ssv);
                     self.devices.move_selected(ssv);
-                    self.nets.prune(self.devices.ports_ssp());
+                    self.prune_nets();
                     state = SchematicState::Idle;
                     clear_passive = true;
                 } else {
