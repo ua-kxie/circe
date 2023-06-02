@@ -4,7 +4,6 @@ mod devicetype;
 mod deviceinstance;
 use devicetype::Graphics;
 use deviceinstance::{DeviceType, Device, R, Gnd, DeviceClass};
-pub use deviceinstance::DeviceExt;
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
 use euclid::{Vector2D, Transform2D, Angle};
@@ -180,14 +179,14 @@ impl Devices {
         );
         SSBox::from_points(pts).cast().cast_unit()
     }
-    pub fn delete_selected(&mut self) {
-        todo!()
-    }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         for d in &self.set {
             if d.0.borrow().ports_occupy_ssp(ssp) {return true}
         }
         false
+    }
+    pub fn delete_device(&mut self, d: &RcRDevice) {
+        self.set.remove(d);
     }
 }
 

@@ -255,15 +255,8 @@ impl Nets {
             e.2.tentative = false;
         }
     }
-    pub fn delete_selected_from_persistent(&mut self, extra_vertices: Vec<SSPoint>) {
-        let mut tmp = vec![];
-        for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            tmp.push((e.0, e.1));
-        }
-        for e in tmp {
-            self.graph.remove_edge(e.0, e.1);
-        }
-        self.prune(extra_vertices);
+    pub fn delete_edge(&mut self, e: &NetEdge) {
+        self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
     }
 }
 

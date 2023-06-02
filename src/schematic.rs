@@ -1,16 +1,16 @@
 mod nets;
 mod devices;
 
-use std::{rc::Rc, cell::RefCell, ops::Deref, hash::Hash, collections::HashSet};
+use std::{rc::Rc, cell::RefCell, ops::Deref, hash::Hash, collections::HashSet, borrow::BorrowMut};
 
-use euclid::Size2D;
+use euclid::{Size2D, Vector2D};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
 use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace};
 use iced::widget::canvas::event::{self, Event};
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
-use self::devices::{Devices, DeviceExt, RcRDevice};
+use self::devices::{Devices, RcRDevice};
 
 
 #[derive(Debug, Clone)]
@@ -95,7 +95,7 @@ impl Schematic {
                     netname
                 },
                 BaseElement::Device(d) => {
-                    d.0.borrow_mut().set_tentative();
+                    (*d.0).borrow_mut().set_tentative();
                     None
                 },
             }
@@ -209,8 +209,18 @@ impl Schematic {
 
     pub fn delete_selected(&mut self) {
         if let SchematicState::Idle = self.state {
-            self.nets.delete_selected_from_persistent(self.devices.ports_ssp());
-            self.devices.delete_selected();
+            for be in &self.selected {
+                match be {
+                    BaseElement::NetEdge(e) => {
+                        self.nets.delete_edge(e);
+                    }
+                    BaseElement::Device(d) => {
+                        self.devices.delete_device(d);
+                    }
+                }
+            }
+            self.selected.clear();
+            self.prune_nets();
         }
     }
     pub fn key_test(&mut self) {
@@ -218,6 +228,20 @@ impl Schematic {
     }
     fn prune_nets(&mut self) {
         self.nets.prune(self.devices.ports_ssp());
+    }
+    fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+        let selected = self.selected.clone();
+        for be in selected {
+            match be {
+                BaseElement::NetEdge(mut e) => {
+                    let (ssp0, ssp1) = (e.src + ssv, e.dst + ssv);
+                    (e.src, e.dst) = (ssp0, ssp1);
+                }
+                BaseElement::Device(d) => {
+                    (*d.0).borrow_mut().translate(ssv);
+                }
+            }
+        }
     }
 
     pub fn events_handler(
@@ -301,7 +325,7 @@ impl Schematic {
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
                 let d = self.devices.new_res();
-                d.0.borrow_mut().set_translation(curpos_ssp);
+                (*d.0).borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
@@ -309,20 +333,20 @@ impl Schematic {
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
             ) => {
                 let d = self.devices.new_gnd();
-                d.0.borrow_mut().set_translation(curpos_ssp);
+                (*d.0).borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
-                SchematicState::DevicePlacement(di), 
+                SchematicState::DevicePlacement(d), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                di.0.borrow_mut().set_translation(curpos_ssp);
+                (*d.0).borrow_mut().set_translation(curpos_ssp);
             },
             (
-                SchematicState::DevicePlacement(di), 
+                SchematicState::DevicePlacement(d), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                di.0.borrow_mut().rotate(true);
+                (*d.0).borrow_mut().rotate(true);
             },
             (
                 SchematicState::DevicePlacement(di), 
@@ -352,8 +376,7 @@ impl Schematic {
             ) => {
                 if let Some((ssp0, ssp1)) = &mut opt_pts {
                     let ssv = *ssp1 - *ssp0;
-                    self.nets.move_selected(ssv);
-                    self.devices.move_selected(ssv);
+                    self.move_selected(ssv);
                     self.prune_nets();
                     state = SchematicState::Idle;
                     clear_passive = true;

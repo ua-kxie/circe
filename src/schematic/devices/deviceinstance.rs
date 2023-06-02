@@ -165,68 +165,48 @@ impl Device {
             class,
         }
     }
-}
-
-pub trait DeviceExt: Drawable {
-    fn get_interactable(&self) -> Interactable;
-    fn get_transform(&self) -> Transform2D<i16, SchematicSpace, SchematicSpace>;
-    fn set_tentative(&mut self);
-    fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
-    fn tentative_by_vsb(&mut self, vsb: &VSBox);
-    fn tentatives_to_selected(&mut self);
-    fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>);
-    fn clear_selected(&mut self);
-    fn clear_tentatives(&mut self);
-
-    fn ports_ssp(&self) -> Vec<SSPoint>;
-    fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool;
-    fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke);
-    fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke);
-    fn bounds(&self) -> &SSBox;
-    fn set_translation(&mut self, v: SSPoint);
-    fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>);
-    fn rotate(&mut self, cw: bool);
-    fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace>;
-}
-impl  DeviceExt for Device {
-    fn get_interactable(&self) -> Interactable {
+    pub fn translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+        self.transform = self.transform.pre_translate(ssv);
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
+    }
+    pub fn get_interactable(&self) -> Interactable {
         self.interactable
     }
-    fn get_transform(&self) -> Transform2D<i16, SchematicSpace, SchematicSpace> {
+    pub fn get_transform(&self) -> Transform2D<i16, SchematicSpace, SchematicSpace> {
         self.transform
     }
-    fn set_tentative(&mut self) {
+    pub fn set_tentative(&mut self) {
         self.interactable.tentative = true;
     }
-    fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         if self.interactable.selected {
             self.draw_selected(vct, vcscale, frame);
         }
     }
-    fn tentative_by_vsb(&mut self, vsb: &VSBox) {
+    pub fn tentative_by_vsb(&mut self, vsb: &VSBox) {
         if self.interactable.get_bounds().cast().cast_unit().intersects(vsb) {
             self.interactable.tentative = true;
         }
     }
-    fn tentatives_to_selected(&mut self) {
+    pub fn tentatives_to_selected(&mut self) {
         self.interactable.selected = self.interactable.tentative;
         self.interactable.tentative = false;
     }
-    fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         self.pre_translate(ssv.cast_unit());
         self.interactable.selected = false;
     }
-    fn clear_selected(&mut self) {
+    pub fn clear_selected(&mut self) {
         self.interactable.selected = false;
     }
-    fn clear_tentatives(&mut self) {
+    pub fn clear_tentatives(&mut self) {
         self.interactable.tentative = false;
     }
     
-    fn ports_ssp(&self) -> Vec<SSPoint> {
+    pub fn ports_ssp(&self) -> Vec<SSPoint> {
         self.class.graphics().ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
     }   
-    fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
+    pub fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
         for p in self.class.graphics().ports() {
             if self.transform.transform_point(p.offset) == ssp {
                 return true;
@@ -234,25 +214,25 @@ impl  DeviceExt for Device {
         }
         false
     }
-    fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+    pub fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
         self.class.graphics().stroke_bounds(vct, frame, stroke);
     }
-    fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
+    pub fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
         self.class.graphics().stroke_symbol(vct, frame, stroke);
     }
-    fn bounds(&self) -> &SSBox {
+    pub fn bounds(&self) -> &SSBox {
         &self.interactable.bounds
     }
-    fn set_translation(&mut self, v: SSPoint) {
+    pub fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
         self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds()));
     }
-    fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+    pub fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         self.transform = self.transform.pre_translate(ssv);
         self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds())); //self.device_type.as_ref().get_bounds().cast().cast_unit()
     }
-    fn rotate(&mut self, cw: bool) {
+    pub fn rotate(&mut self, cw: bool) {
         if cw {
             self.transform = self.transform.cast::<f32>().pre_rotate(Angle::frac_pi_2()).cast();
         } else {
@@ -260,7 +240,7 @@ impl  DeviceExt for Device {
         }
         self.interactable.set_bounds(self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit()));
     }
-    fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
+    pub fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform
         .cast()
         .with_destination::<ViewportSpace>()
@@ -268,6 +248,7 @@ impl  DeviceExt for Device {
         .then(&vct)
     }
 }
+
 impl  Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);
