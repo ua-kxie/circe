@@ -4,9 +4,9 @@ mod interactable;
 
 use std::{collections::HashSet};
 
-use euclid::Vector2D;
+use euclid::{Vector2D, Transform2D, Angle};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint};
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace};
 use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
@@ -47,7 +47,8 @@ pub enum SchematicState {
     Idle,
     DevicePlacement(RcRDevice),
     Selecting(SSBox),
-    Moving(Option<(SSPoint, SSPoint)>),
+    Moving(Option<(SSPoint, SSPoint, Transform2D<f32, ViewportSpace, ViewportSpace>)>),
+    // first click, second click, transform for rotation/flip ONLY
 }
 
 impl Default for SchematicState {
@@ -159,10 +160,18 @@ impl Schematic {
                     line_cap: LineCap::Square,
                     ..Stroke::default()
                 };
-                frame.stroke(&path_builder.build(), stroke)
+                frame.stroke(&path_builder.build(), stroke);
             },
-            SchematicState::Moving(Some((ssp0, ssp1))) => {
-                let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
+            SchematicState::Moving(Some((ssp0, ssp1, sst))) => {
+                let vct_c = vct.clone();
+                let v = (*ssp1 - *ssp0).cast().cast_unit();
+
+                let sst = sst
+                .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y).cast())
+                .then_translate(Vector2D::new(ssp0.x, ssp0.y).cast());
+
+                let vct_c = vct_c.pre_translate(v);
+                let vct_c = sst.then(&vct_c);
                 for be in &self.selected {
                     match be {
                         BaseElement::Device(d) => {
@@ -384,34 +393,22 @@ impl Schematic {
                 state = SchematicState::Moving(None);
             },
             (
-                SchematicState::Moving(Some((_ssp0, ssp1))),
+                SchematicState::Moving(Some((_ssp0, ssp1, sst))),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 *ssp1 = curpos_ssp;
             },
             (
-                SchematicState::Moving(Some((ssp0, ssp1))), 
+                SchematicState::Moving(Some((ssp0, ssp1, vvt))), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                let s = self.selected.clone();
-                self.selected.clear();
-                for mut be in s {
-                    match be {
-                        BaseElement::NetEdge(ref mut e) => {
-                            e.rotate(*ssp0, true);
-                        },
-                        BaseElement::Device(ref d) => {
-                            d.0.borrow_mut().rotate(*ssp0, true);
-                        },
-                    }
-                    self.selected.insert(be);
-                }
+                *vvt = vvt.pre_rotate(Angle::frac_pi_2());
             },
             (
                 SchematicState::Moving(mut opt_pts),
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                if let Some((ssp0, ssp1)) = &mut opt_pts {
+                if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
                     let ssv = *ssp1 - *ssp0;
                     self.move_selected(ssv);
                     self.prune_nets();
@@ -419,7 +416,8 @@ impl Schematic {
                     clear_passive = true;
                 } else {
                     let ssp: euclid::Point2D<_, _> = curpos_ssp;
-                    state = SchematicState::Moving(Some((ssp, ssp)));
+                    let sst = Transform2D::identity();
+                    state = SchematicState::Moving(Some((ssp, ssp, sst)));
                 }
             },
             // esc
