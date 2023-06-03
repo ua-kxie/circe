@@ -128,7 +128,7 @@ impl Schematic {
         vcscale: f32,
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
-        self.nets.draw_preview(vct, vcscale, frame);
+        self.nets.draw_preview(vct, vcscale, frame);  // this draws tentatives - refactor
         self.devices.draw_preview(vct, vcscale, frame);
 
         match &self.state {
@@ -151,8 +151,16 @@ impl Schematic {
             },
             SchematicState::Moving(Some((ssp0, ssp1))) => {
                 let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
-                self.nets.draw_selected_preview(vct_c, vcscale, frame);
-                self.devices.draw_selected_preview(vct_c, vcscale, frame);
+                for be in &self.selected {
+                    match be {
+                        BaseElement::Device(d) => {
+                            d.0.borrow().draw_preview(vct_c, vcscale, frame)
+                        },
+                        BaseElement::NetEdge(e) => {
+                            e.draw_preview(vct_c, vcscale, frame)
+                        }
+                    }
+                }
             },
             _ => {},
         }
@@ -231,11 +239,11 @@ impl Schematic {
     }
     fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
         let selected = self.selected.clone();
+        self.selected.clear();
         for be in selected {
             match be {
-                BaseElement::NetEdge(mut e) => {
-                    let (ssp0, ssp1) = (e.src + ssv, e.dst + ssv);
-                    (e.src, e.dst) = (ssp0, ssp1);
+                BaseElement::NetEdge(e) => {
+                    self.nets.translate(e, ssv);
                 }
                 BaseElement::Device(d) => {
                     (*d.0).borrow_mut().translate(ssv);

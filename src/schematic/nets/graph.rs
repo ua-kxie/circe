@@ -225,16 +225,10 @@ impl Nets {
             e.2.tentative = false;
         }
     }
-    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        let mut tmp = vec![];
-        for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            tmp.push((e.0, e.1, e.2.label.clone()));
-        }
-        for e in tmp {
-            self.graph.remove_edge(e.0, e.1);
-            let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.2, ..Default::default()});
-        }
+    pub fn translate(&mut self, e: NetEdge, ssv: Vector2D<i16, SchematicSpace>) {
+        self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
+        let (ssp0, ssp1) = (e.src + ssv, e.dst + ssv);
+        self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.label, ..Default::default()});
     }
     pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for e in self.graph.all_edges().filter(|e| e.2.selected) {
