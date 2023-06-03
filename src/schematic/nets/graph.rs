@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::schematic::interactable::{self, Interactable};
-use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox, SSVec};
-use euclid::{Point2D, Vector2D};
+use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox, SSVec, ViewportSpace};
+use euclid::{Point2D, Vector2D, Transform2D};
 use iced::widget::canvas::Frame;
 use petgraph::graphmap::GraphMap;
 use petgraph::algo::tarjan_scc;
@@ -235,9 +235,17 @@ impl Nets {
         }
         self.prune(extra_vertices);
     }
-    pub fn translate(&mut self, e: NetEdge, ssv: Vector2D<i16, SchematicSpace>) {
+    // pub fn translate(&mut self, e: NetEdge, ssv: Vector2D<i16, SchematicSpace>) {
+    //     self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
+    //     let (ssp0, ssp1) = (e.src + ssv, e.dst + ssv);
+    //     self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.label, ..Default::default()});
+    // }
+    pub fn transform(&mut self, e: NetEdge, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
-        let (ssp0, ssp1) = (e.src + ssv, e.dst + ssv);
+        let (ssp0, ssp1) = (
+            vvt.transform_point(e.src.cast().cast_unit()).round().cast().cast_unit(),
+            vvt.transform_point(e.dst.cast().cast_unit()).round().cast().cast_unit(),
+        );
         self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.label, ..Default::default()});
     }
     pub fn tt(&self) {

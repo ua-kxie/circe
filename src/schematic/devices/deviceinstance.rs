@@ -117,6 +117,10 @@ impl Device {
         self.transform.m32 = v.y;
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
+    pub fn transform(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
+        self.transform = self.transform.then(&vvt.cast().with_destination().with_source());
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
+    }
 }
 
 impl Drawable for Device {

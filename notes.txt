@@ -5,11 +5,11 @@ todo:
     instancing: clear selected, new device in selected, enter move mode
     moving: enter move mode
 
-    unify schematic interactions to SSPoint
-
-    display device identifier
-
     traits for nets, devices, baseElement - org and tech debt
+
+
+- medium term:
+    separate net names when split by a device
 
     add voltage source (v)
     device parameters
@@ -17,10 +17,6 @@ todo:
     generate netlist
     
     schematic saving/loading (serde)
-
-    separate net names when split by a device
-
-- medium term:
 
     schematic checking - mark floating nets, ports
 

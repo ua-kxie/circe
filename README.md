@@ -10,7 +10,7 @@ C - cycle tentative selection
 
 Del - delete selected
 
-R - resistor, rotate active
+R - resistor, rotate selected during move, placement
 
 G - ground
 

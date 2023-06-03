@@ -57,6 +57,15 @@ impl Default for SchematicState {
     }
 }
 
+impl SchematicState {
+    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, vvt: &Transform2D<f32, ViewportSpace, ViewportSpace>) -> Transform2D<f32, ViewportSpace, ViewportSpace> {
+        vvt
+        .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y).cast())
+        .then_translate(Vector2D::new(ssp0.x, ssp0.y).cast())
+        .then_translate((*ssp1-*ssp0).cast().cast_unit())
+    }
+}
+
 #[derive(Default)]
 pub struct Schematic {
     nets: Nets,
@@ -163,15 +172,9 @@ impl Schematic {
                 frame.stroke(&path_builder.build(), stroke);
             },
             SchematicState::Moving(Some((ssp0, ssp1, sst))) => {
-                let vct_c = vct.clone();
-                let v = (*ssp1 - *ssp0).cast().cast_unit();
+                let sst = SchematicState::move_transform(ssp0, ssp1, sst);
 
-                let sst = sst
-                .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y).cast())
-                .then_translate(Vector2D::new(ssp0.x, ssp0.y).cast());
-
-                let vct_c = vct_c.pre_translate(v);
-                let vct_c = sst.then(&vct_c);
+                let vct_c = sst.then(&vct);
                 for be in &self.selected {
                     match be {
                         BaseElement::Device(d) => {
@@ -258,16 +261,16 @@ impl Schematic {
     fn prune_nets(&mut self) {
         self.nets.prune(self.devices.ports_ssp());
     }
-    fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+    fn move_selected(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
         let selected = self.selected.clone();
         self.selected.clear();
         for be in selected {
             match be {
                 BaseElement::NetEdge(e) => {
-                    self.nets.translate(e, ssv);
+                    self.nets.transform(e, vvt);
                 }
                 BaseElement::Device(d) => {
-                    d.0.borrow_mut().translate(ssv);
+                    d.0.borrow_mut().transform(vvt);
                 }
             }
         }
@@ -408,9 +411,8 @@ impl Schematic {
                 SchematicState::Moving(mut opt_pts),
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
-                    let ssv = *ssp1 - *ssp0;
-                    self.move_selected(ssv);
+                if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
+                    self.move_selected(SchematicState::move_transform(ssp0, ssp1, vvt));
                     self.prune_nets();
                     state = SchematicState::Idle;
                     clear_passive = true;
