@@ -17,7 +17,6 @@ pub struct NetEdge {
     pub src: SSPoint,
     pub dst: SSPoint,
     pub tentative: bool,
-    pub selected: bool,
     pub label: Option<Rc<String>>,
     pub schematic_net_label: Option<SchematicNetLabel>,
 }
@@ -144,10 +143,6 @@ impl Drawable for NetEdge {
             ..Stroke::default()
         };
         draw_with(self.src, self.dst, vct, frame, wire_stroke);
-
-        if self.selected {
-            self.draw_selected(vct, vcscale, frame);
-        }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let wire_width = self::WIRE_WIDTH;

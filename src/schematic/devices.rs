@@ -79,9 +79,7 @@ impl Drawable for Devices {
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.set.iter().filter(|&d| d.0.borrow().get_interactable().selected) {
-            d.0.borrow().draw_selected(vct, vcscale, frame);
-        }
+        panic!("not intended for use");
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in self.set.iter().filter(|&d| d.0.borrow().get_interactable().tentative) {

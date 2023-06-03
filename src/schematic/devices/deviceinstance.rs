@@ -16,12 +16,11 @@ use std::hash::Hash;
 pub struct Interactable {
     bounds: SSBox,
     pub tentative: bool,
-    pub selected: bool,
 }
 
 impl Interactable {
     fn new() -> Self {
-        Interactable { bounds: SSBox::default(), tentative: false, selected: false }
+        Interactable { bounds: SSBox::default(), tentative: false }
     }
     fn set_bounds(&mut self, ssb: SSBox) {
         // self.bounds = SSBox::from_points([ssb.min, ssb.max]);  // ensures that bounds has positive

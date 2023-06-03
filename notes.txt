@@ -1,13 +1,17 @@
 todo:
 
 - immediate:
-    unify schematic interations to SSPoint
+    rotate while moving - unify device placement and moving systems
+    instancing: clear selected, new device in selected, enter move mode
+    moving: enter move mode
+
+    unify schematic interactions to SSPoint
 
     display device identifier
 
-    traits for nets, devices, baseElement
+    traits for nets, devices, baseElement - org and tech debt
 
-    add gnd, voltage source devices (g, v)
+    add voltage source (v)
     device parameters
     side panel device parameters edit
     generate netlist
