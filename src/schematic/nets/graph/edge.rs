@@ -67,23 +67,11 @@ impl NetEdge {
 }
 
 impl Interactive for NetEdge {
-    fn translate(&mut self, ssv: crate::transforms::SSVec) {
-        self.src = self.src + ssv;
-        self.dst = self.dst + ssv;
-    }
-
-    fn rotate(&mut self, axis: SSPoint, cw: bool) {
-        if cw {
-            for p in [&mut self.src, &mut self.dst] {
-                let v = *p - axis;
-                *p = SSPoint::new(v.y + axis.x, -v.x + axis.y);
-            }
-        } else {
-            for p in &mut [self.src, self.dst] {
-                let v = *p - axis;
-                *p = SSPoint::new(-v.y + axis.x, v.x + axis.y);
-            }
-        }
+    fn transform(&mut self, vvt: euclid::Transform2D<f32, ViewportSpace, ViewportSpace>) {
+        (self.src, self.dst) = (
+            vvt.transform_point(self.src.cast().cast_unit()).round().cast().cast_unit(),
+            vvt.transform_point(self.dst.cast().cast_unit()).round().cast().cast_unit()
+        );
     }
 }
 

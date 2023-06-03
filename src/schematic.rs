@@ -374,12 +374,6 @@ impl Schematic {
                 d.0.borrow_mut().set_translation(curpos_ssp);
             },
             (
-                SchematicState::DevicePlacement(d), 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
-            ) => {
-                d.0.borrow_mut().rotate(SSPoint::origin(), true);
-            },
-            (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {

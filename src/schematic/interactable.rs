@@ -1,4 +1,6 @@
-use crate::transforms::{SSBox, SSVec, VSBox, SSPoint};
+use euclid::Transform2D;
+
+use crate::transforms::{SSBox, SSVec, VSBox, SSPoint, ViewportSpace};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Interactable {
@@ -18,7 +20,6 @@ impl Interactable {
 }
 
 pub trait Interactive {
-    fn translate(&mut self, ssv: SSVec);
-    fn rotate(&mut self, axis: SSPoint, cw: bool);
+    fn transform(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>);
 }
 
