@@ -1,6 +1,6 @@
 use std::{rc::Rc, hash::Hasher};
 
-use super::devicetype::{Port, Graphics, DeviceClass};
+use super::devicetype::{DeviceClass};
 
 use euclid::{Size2D, Transform2D, Vector2D, Angle};
 use iced::widget::canvas::{Frame, Stroke};
@@ -11,25 +11,8 @@ use crate::{
         SSPoint, VSBox, SSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
     }, 
 };
+use crate::schematic::interactable::Interactable;
 use std::hash::Hash;
-#[derive(Debug, Clone, Copy)]
-pub struct Interactable {
-    bounds: SSBox,
-    pub tentative: bool,
-}
-
-impl Interactable {
-    fn new() -> Self {
-        Interactable { bounds: SSBox::default(), tentative: false }
-    }
-    fn set_bounds(&mut self, ssb: SSBox) {
-        // self.bounds = SSBox::from_points([ssb.min, ssb.max]);  // ensures that bounds has positive
-        self.bounds = ssb;
-    }
-    fn get_bounds(&self) -> SSBox {
-        self.bounds
-    }
-}
 #[derive(Debug)]
 pub struct Identifier {
     id_prefix: &'static str,  // prefix which determines device type in NgSpice
@@ -108,7 +91,7 @@ impl Device {
         self.interactable.tentative = true;
     }
     pub fn tentative_by_vsb(&mut self, vsb: &VSBox) {
-        if self.interactable.get_bounds().cast().cast_unit().intersects(vsb) {
+        if self.interactable.bounds.cast().cast_unit().intersects(vsb) {
             self.interactable.tentative = true;
         }
     }
@@ -132,7 +115,7 @@ impl Device {
     pub fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
-        self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds()));
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
     pub fn rotate(&mut self, cw: bool) {
         if cw {
@@ -140,7 +123,7 @@ impl Device {
         } else {
             self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
         }
-        self.interactable.set_bounds(self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit()));
+        self.interactable.bounds = self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit());
     }
     pub fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform

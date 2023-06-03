@@ -4,7 +4,7 @@ use crate::{
     transforms::{
         VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace, SSBox, SchematicSpace
     }, 
-    schematic::nets::{Drawable, Selectable}
+    schematic::{interactable::Interactable, nets::{Drawable, Selectable}}
 };
 use euclid::{Point2D, Box2D, Vector2D, Size2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
@@ -16,7 +16,9 @@ use super::{Label, SchematicNetLabel};
 pub struct NetEdge {
     pub src: SSPoint,
     pub dst: SSPoint,
-    pub tentative: bool,
+
+    pub interactable: Interactable,
+
     pub label: Option<Rc<String>>,
     pub schematic_net_label: Option<SchematicNetLabel>,
 }
@@ -35,6 +37,20 @@ impl std::hash::Hash for NetEdge {
 }
 
 impl NetEdge {
+    pub fn get_interactable(&self) -> Interactable {
+        self.interactable
+    }
+    pub fn set_tentative(&mut self) {
+        self.interactable.tentative = true;
+    }
+    pub fn tentative_by_vsb(&mut self, vsb: &VSBox) {
+        if self.interactable.bounds.cast().cast_unit().intersects(vsb) {
+            self.interactable.tentative = true;
+        }
+    }
+    pub fn clear_tentatives(&mut self) {
+        self.interactable.tentative = false;
+    }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         let v = self.dst - self.src;
         if v.x == 0 {

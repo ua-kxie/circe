@@ -1,12 +1,13 @@
 mod nets;
 mod devices;
+mod interactable;
 
 use std::{collections::HashSet};
 
-use euclid::{Size2D, Vector2D};
+use euclid::Vector2D;
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
 use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace};
-use iced::widget::canvas::event::{self, Event};
+use iced::widget::canvas::event::Event;
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
@@ -79,7 +80,7 @@ impl Schematic {
         self.devices.tentatives_by_vsbox(&vsb_p);
         for e in self.nets.graph.all_edges_mut() {
             if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
-                e.2.tentative = true;
+                e.2.interactable.tentative = true;
             }
         }
     }
@@ -90,7 +91,7 @@ impl Schematic {
                 BaseElement::NetEdge(e) => {
                     let mut netedge = e.clone();
                     let netname = e.label.map(|x| x.as_ref().clone());
-                    netedge.tentative = true;
+                    netedge.interactable.tentative = true;
                     self.nets.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
                     netname
                 },
