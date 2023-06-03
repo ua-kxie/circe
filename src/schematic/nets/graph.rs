@@ -16,8 +16,6 @@ pub use edge::NetEdge;
 
 use super::Drawable;
 
-type Label = Rc<RefCell<String>>;
-
 #[derive(Clone, Debug, Default, PartialOrd, PartialEq, Eq, Hash)]
 struct Label0 {
     name: String,
@@ -76,7 +74,7 @@ impl Default for Nets {
 impl Nets {
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         for e in self.graph.all_edges_mut() {
-            if ssb.contains(e.0.0.cast().cast_unit()) || ssb.contains(e.1.0.cast().cast_unit()) {
+            if e.2.interactable.bounds.intersects(ssb) {
                 e.2.interactable.tentative = true;
             }
         }
@@ -206,15 +204,17 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                let mut bounds = SSBox::from_points([src, dst]);
-                bounds.max = bounds.max + SSVec::new(1, 1);
-                let interactable = Interactable{bounds, tentative: true};
+                let interactable = Interactable{
+                    bounds: NetEdge::bounds_from_pts(src, dst),
+                    tentative: true,
+                };
                 self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, interactable, ..Default::default()});
             },
             (_x, 0) => {
-                let mut bounds = SSBox::from_points([src, dst]);
-                bounds.max = bounds.max + SSVec::new(1, 1);
-                let interactable = Interactable{bounds, tentative: true};
+                let interactable = Interactable{
+                    bounds: NetEdge::bounds_from_pts(src, dst),
+                    tentative: true,
+                };
                 self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, interactable, ..Default::default()});
             },
             (_x, y) => {
