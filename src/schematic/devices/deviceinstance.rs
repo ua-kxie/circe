@@ -3,7 +3,7 @@ use std::{rc::Rc, hash::Hasher};
 use super::devicetype::{DeviceClass};
 
 use euclid::{Size2D, Transform2D, Vector2D, Angle};
-use iced::widget::canvas::{Frame, Stroke};
+use iced::{widget::canvas::{Frame, Stroke, Text}, Color};
 
 use crate::{
     schematic::nets::Drawable,
@@ -138,6 +138,15 @@ impl  Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);
         self.class.graphics().draw_persistent(vct_c, vcscale, frame);
+        
+        let a = Text {
+            content: self.id.ng_id(),
+            position: Point::from(vct_c.transform_point(VSPoint::origin())).into(),
+            color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
+            size: vcscale,
+            ..Default::default()
+        };
+        frame.fill_text(a);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);

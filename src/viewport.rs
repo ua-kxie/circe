@@ -246,7 +246,7 @@ impl Viewport {
 
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         let a = Text {
-            content: String::from("testing string"),
+            content: String::from("origin"),
             position: Point::from(self.vc_transform().transform_point(VSPoint::origin())).into(),
             color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
             size: self.vc_scale(),
