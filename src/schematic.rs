@@ -6,12 +6,12 @@ use std::{collections::HashSet};
 
 use euclid::Vector2D;
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace};
-use iced::widget::canvas::event::Event;
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint};
+use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
-use self::devices::{Devices, RcRDevice};
+use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
 
 
 #[derive(Debug, Clone)]
@@ -46,7 +46,7 @@ pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
     DevicePlacement(RcRDevice),
-    Selecting(VSBox),
+    Selecting(SSBox),
     Moving(Option<(SSPoint, SSPoint)>),
 }
 
@@ -74,15 +74,11 @@ impl Schematic {
         self.devices.clear_tentatives();
         self.nets.clear_tentatives();
     }
-    pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
+    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         self.clear_tentatives();
-        let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
-        self.devices.tentatives_by_vsbox(&vsb_p);
-        for e in self.nets.graph.all_edges_mut() {
-            if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
-                e.2.interactable.tentative = true;
-            }
-        }
+        let ssb_p = SSBox::from_points([ssb.min, ssb.max]);
+        self.devices.tentatives_by_ssbox(&ssb_p);
+        self.nets.tentatives_by_ssbox(&ssb_p);
     }
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
         self.clear_tentatives();
@@ -141,14 +137,29 @@ impl Schematic {
             SchematicState::DevicePlacement(d) => {
                 d.0.borrow().draw_preview(vct, vcscale, frame);
             }
-            SchematicState::Selecting(vsb) => {
+            SchematicState::Selecting(ssb) => {
+                let color = if ssb.height() > 0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)};
                 let f = canvas::Fill {
-                    style: canvas::Style::Solid(if vsb.height() > 0.0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
+                    style: canvas::Style::Solid(color),
                     ..canvas::Fill::default()
                 };
-                let csb = vct.outer_transformed_box(&vsb.cast().cast_unit());
+                let csb = vct.outer_transformed_box(&ssb.cast().cast_unit());
                 let size = Size::new(csb.width(), csb.height());
                 frame.fill_rectangle(Point::from(csb.min).into(), size, f);
+
+                let mut path_builder = Builder::new();
+                path_builder.line_to(Point::from(csb.min).into());
+                path_builder.line_to(Point::from(CSPoint::new(csb.min.x, csb.max.y)).into());
+                path_builder.line_to(Point::from(csb.max).into());
+                path_builder.line_to(Point::from(CSPoint::new(csb.max.x, csb.min.y)).into());
+                path_builder.line_to(Point::from(csb.min).into());
+                let stroke = Stroke {
+                    width: (0.1 * vcscale).max(0.1 * 2.0),
+                    style: canvas::stroke::Style::Solid(color),
+                    line_cap: LineCap::Square,
+                    ..Stroke::default()
+                };
+                frame.stroke(&path_builder.build(), stroke)
             },
             SchematicState::Moving(Some((ssp0, ssp1))) => {
                 let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
@@ -311,14 +322,14 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                state = SchematicState::Selecting(VSBox::new(curpos_vsp, curpos_vsp));
+                state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
             },
             (
-                SchematicState::Selecting(vsb), 
+                SchematicState::Selecting(ssb), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                vsb.max = curpos_vsp;
-                self.tentatives_by_vsbox(&vsb);
+                ssb.max = curpos_ssp;
+                self.tentatives_by_ssbox(&ssb);
             },
             (
                 SchematicState::Selecting(_), 

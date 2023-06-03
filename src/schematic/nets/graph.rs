@@ -75,6 +75,13 @@ impl Default for Nets {
 }
 
 impl Nets {
+    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
+        for e in self.graph.all_edges_mut() {
+            if ssb.contains(e.0.0.cast().cast_unit()) || ssb.contains(e.1.0.cast().cast_unit()) {
+                e.2.interactable.tentative = true;
+            }
+        }
+    }
     pub fn tentatives(&self) -> impl Iterator<Item = NetEdge> + '_ {
         self.graph.all_edges().filter_map(|e| {
             if e.2.interactable.tentative {Some(e.2.clone())} else {None}

@@ -17,6 +17,8 @@ use crate::{
 
 use by_address::ByAddress;
 
+use super::interactable::Interactive;
+
 #[derive(Debug, Clone)]
 pub struct RcRDevice (pub Rc<RefCell<Device>>);
 
@@ -121,9 +123,10 @@ impl Devices {
             }
         )
     }
-    pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
+    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         let _: Vec<_> = self.set.iter().map(|d| {
-            d.0.borrow_mut().tentative_by_vsb(vsb);
+            // d.0.borrow_mut().tentative_by_vsb(vsb);
+            d.0.borrow_mut().tentative_by_ssb(ssb);
         }).collect();
     }
     pub fn new_res(&mut self) -> RcRDevice {

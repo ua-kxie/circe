@@ -6,7 +6,7 @@ use euclid::{Size2D, Transform2D, Vector2D, Angle};
 use iced::{widget::canvas::{Frame, Stroke, Text}, Color};
 
 use crate::{
-    schematic::nets::Drawable,
+    schematic::{nets::Drawable, interactable::Interactive},
     transforms::{
         SSPoint, VSBox, SSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
     }, 
@@ -80,21 +80,14 @@ impl Device {
             class,
         }
     }
-    pub fn translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        self.transform = self.transform.pre_translate(ssv);
-        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
-    }
+
     pub fn get_interactable(&self) -> Interactable {
         self.interactable
     }
     pub fn set_tentative(&mut self) {
         self.interactable.tentative = true;
     }
-    pub fn tentative_by_vsb(&mut self, vsb: &VSBox) {
-        if self.interactable.bounds.cast().cast_unit().intersects(vsb) {
-            self.interactable.tentative = true;
-        }
-    }
+
     pub fn clear_tentatives(&mut self) {
         self.interactable.tentative = false;
     }
@@ -117,14 +110,7 @@ impl Device {
         self.transform.m32 = v.y;
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
-    pub fn rotate(&mut self, cw: bool) {
-        if cw {
-            self.transform = self.transform.cast::<f32>().pre_rotate(Angle::frac_pi_2()).cast();
-        } else {
-            self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
-        }
-        self.interactable.bounds = self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit());
-    }
+
     pub fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform
         .cast()
@@ -134,7 +120,7 @@ impl Device {
     }
 }
 
-impl  Drawable for Device {
+impl Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);
         self.class.graphics().draw_persistent(vct_c, vcscale, frame);
@@ -158,3 +144,28 @@ impl  Drawable for Device {
     }
 }
 
+impl Interactive for Device {
+    fn translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
+        self.transform = self.transform.pre_translate(ssv);
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
+    }
+
+    fn rotate(&mut self, cw: bool) {
+        if cw {
+            self.transform = self.transform.cast::<f32>().pre_rotate(Angle::frac_pi_2()).cast();
+        } else {
+            self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
+        }
+        self.interactable.bounds = self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit());
+    }
+
+    fn tentative_by_ssb(&mut self, ssb: &SSBox) {
+        if self.interactable.bounds.intersects(ssb) {
+            self.interactable.tentative = true;
+        }
+    }
+
+    fn set_translation(&mut self, v: SSPoint) {
+        todo!()
+    }
+}
