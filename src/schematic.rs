@@ -267,7 +267,6 @@ impl Schematic {
     pub fn events_handler(
         &mut self, 
         event: Event, 
-        curpos_vsp: VSPoint,
         curpos_ssp: SSPoint, 
     ) -> (Option<crate::Msg>, bool) {
         let mut msg = None;
@@ -366,7 +365,7 @@ impl Schematic {
                 SchematicState::DevicePlacement(d), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                d.0.borrow_mut().rotate(true);
+                d.0.borrow_mut().rotate(SSPoint::origin(), true);
             },
             (
                 SchematicState::DevicePlacement(di), 
@@ -389,6 +388,24 @@ impl Schematic {
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 *ssp1 = curpos_ssp;
+            },
+            (
+                SchematicState::Moving(Some((ssp0, ssp1))), 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
+            ) => {
+                let s = self.selected.clone();
+                self.selected.clear();
+                for mut be in s {
+                    match be {
+                        BaseElement::NetEdge(ref mut e) => {
+                            e.rotate(*ssp0, true);
+                        },
+                        BaseElement::Device(ref d) => {
+                            d.0.borrow_mut().rotate(*ssp0, true);
+                        },
+                    }
+                    self.selected.insert(be);
+                }
             },
             (
                 SchematicState::Moving(mut opt_pts),

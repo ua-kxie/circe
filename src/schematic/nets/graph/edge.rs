@@ -4,7 +4,7 @@ use crate::{
     transforms::{
         VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace, SSBox, SchematicSpace
     }, 
-    schematic::{interactable::Interactable, nets::{Drawable, Selectable}}
+    schematic::{interactable::{Interactable, Interactive}, nets::{Drawable, Selectable}}
 };
 use euclid::{Point2D, Box2D, Vector2D, Size2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
@@ -62,6 +62,27 @@ impl NetEdge {
         } else {  
             // either edge of oblique line
             ssp == self.src || ssp == self.dst
+        }
+    }
+}
+
+impl Interactive for NetEdge {
+    fn translate(&mut self, ssv: crate::transforms::SSVec) {
+        self.src = self.src + ssv;
+        self.dst = self.dst + ssv;
+    }
+
+    fn rotate(&mut self, axis: SSPoint, cw: bool) {
+        if cw {
+            for p in [&mut self.src, &mut self.dst] {
+                let v = *p - axis;
+                *p = SSPoint::new(v.y + axis.x, -v.x + axis.y);
+            }
+        } else {
+            for p in &mut [self.src, self.dst] {
+                let v = *p - axis;
+                *p = SSPoint::new(-v.y + axis.x, v.x + axis.y);
+            }
         }
     }
 }

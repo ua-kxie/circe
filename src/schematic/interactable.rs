@@ -10,14 +10,15 @@ impl Interactable {
     pub fn new() -> Self {
         Interactable { bounds: SSBox::default(), tentative: false }
     }
+    pub fn tentative_by_ssb(&mut self, ssb: &SSBox) {
+        if self.bounds.intersects(ssb) {
+            self.tentative = true;
+        }
+    }
 }
 
 pub trait Interactive {
     fn translate(&mut self, ssv: SSVec);
-    fn rotate(&mut self, cw: bool);
-    // fn flip(&mut self, vertical: bool);
-
-    fn tentative_by_ssb(&mut self, ssb: &SSBox);
-    fn set_translation(&mut self, v: SSPoint);
+    fn rotate(&mut self, axis: SSPoint, cw: bool);
 }
 

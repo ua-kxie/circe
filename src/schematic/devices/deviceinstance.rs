@@ -61,7 +61,7 @@ impl Hash for Identifier {
 #[derive(Debug)]
 pub struct Device  {
     id: Identifier,
-    interactable: Interactable,
+    pub interactable: Interactable,
     transform: Transform2D<i16, SchematicSpace, SchematicSpace>,
     class: DeviceClass,
 }
@@ -105,18 +105,17 @@ impl Device {
     pub fn bounds(&self) -> &SSBox {
         &self.interactable.bounds
     }
-    pub fn set_translation(&mut self, v: SSPoint) {
-        self.transform.m31 = v.x;
-        self.transform.m32 = v.y;
-        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
-    }
-
     pub fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform
         .cast()
         .with_destination::<ViewportSpace>()
         .with_source::<ViewportSpace>()
         .then(&vct)
+    }
+    pub fn set_translation(&mut self, v: SSPoint) {
+        self.transform.m31 = v.x;
+        self.transform.m32 = v.y;
+        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
 }
 
@@ -150,22 +149,12 @@ impl Interactive for Device {
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
 
-    fn rotate(&mut self, cw: bool) {
+    fn rotate(&mut self, axis: SSPoint, cw: bool) {
         if cw {
             self.transform = self.transform.cast::<f32>().pre_rotate(Angle::frac_pi_2()).cast();
         } else {
             self.transform = self.transform.cast::<f32>().pre_rotate(-Angle::frac_pi_2()).cast();
         }
         self.interactable.bounds = self.transform.outer_transformed_box(&self.class.graphics().bounds().clone().cast_unit());
-    }
-
-    fn tentative_by_ssb(&mut self, ssb: &SSBox) {
-        if self.interactable.bounds.intersects(ssb) {
-            self.interactable.tentative = true;
-        }
-    }
-
-    fn set_translation(&mut self, v: SSPoint) {
-        todo!()
     }
 }
