@@ -219,30 +219,14 @@ impl Nets {
         }
         self.prune(extra_vertices);
     }
-    pub fn tentatives_to_selected(&mut self) {
-        for e in self.graph.all_edges_mut().filter(|e| e.2.tentative) {
-            e.2.selected = true;
-            e.2.tentative = false;
-        }
-    }
     pub fn translate(&mut self, e: NetEdge, ssv: Vector2D<i16, SchematicSpace>) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
         let (ssp0, ssp1) = (e.src + ssv, e.dst + ssv);
         self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.label, ..Default::default()});
     }
-    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            e.2.draw_preview(vct, vcscale, frame);
-        }
-    }
     pub fn tt(&self) {
         let a = tarjan_scc(&*self.graph);  // this finds the unconnected components 
         dbg!(a);
-    }
-    pub fn clear_selected(&mut self) {
-        for e in self.graph.all_edges_mut() {
-            e.2.selected = false;
-        }
     }
     pub fn clear_tentatives(&mut self) {
         for e in self.graph.all_edges_mut() {

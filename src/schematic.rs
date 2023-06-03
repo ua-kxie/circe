@@ -1,7 +1,7 @@
 mod nets;
 mod devices;
 
-use std::{rc::Rc, cell::RefCell, ops::Deref, hash::Hash, collections::HashSet, borrow::BorrowMut};
+use std::{collections::HashSet};
 
 use euclid::{Size2D, Vector2D};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
@@ -95,7 +95,7 @@ impl Schematic {
                     netname
                 },
                 BaseElement::Device(d) => {
-                    (*d.0).borrow_mut().set_tentative();
+                    d.0.borrow_mut().set_tentative();
                     None
                 },
             }
@@ -246,7 +246,7 @@ impl Schematic {
                     self.nets.translate(e, ssv);
                 }
                 BaseElement::Device(d) => {
-                    (*d.0).borrow_mut().translate(ssv);
+                    d.0.borrow_mut().translate(ssv);
                 }
             }
         }
@@ -333,7 +333,7 @@ impl Schematic {
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
                 let d = self.devices.new_res();
-                (*d.0).borrow_mut().set_translation(curpos_ssp);
+                d.0.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
@@ -341,20 +341,20 @@ impl Schematic {
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
             ) => {
                 let d = self.devices.new_gnd();
-                (*d.0).borrow_mut().set_translation(curpos_ssp);
+                d.0.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
                 SchematicState::DevicePlacement(d), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                (*d.0).borrow_mut().set_translation(curpos_ssp);
+                d.0.borrow_mut().set_translation(curpos_ssp);
             },
             (
                 SchematicState::DevicePlacement(d), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                (*d.0).borrow_mut().rotate(true);
+                d.0.borrow_mut().rotate(true);
             },
             (
                 SchematicState::DevicePlacement(di), 

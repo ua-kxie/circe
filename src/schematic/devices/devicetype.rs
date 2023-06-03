@@ -7,6 +7,10 @@ use crate::{
     }, schematic::Drawable, 
 };
 use iced::{widget::canvas::{Frame, Stroke}};
+
+pub mod r;
+pub mod gnd;
+mod R;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Port {
     pub name: &'static str,
@@ -86,48 +90,6 @@ impl Graphics {
     pub fn ports(&self) -> &[Port] {
         &self.ports
     }
-    pub fn default_r() -> Self {
-        Graphics { 
-            pts: vec![
-                vec![
-                    VSPoint::new(0., 3.),
-                    VSPoint::new(0., -3.),
-                ],
-                vec![
-                    VSPoint::new(-1., 2.),
-                    VSPoint::new(-1., -2.),
-                    VSPoint::new(1., -2.),
-                    VSPoint::new(1., 2.),
-                    VSPoint::new(-1., 2.),
-                ],
-            ],
-            ports: vec![
-                Port {name: "+", offset: SSPoint::new(0, 3)},
-                Port {name: "-", offset: SSPoint::new(0, -3)},
-            ], 
-            bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
-        }
-    }
-    pub fn default_gnd() -> Self {
-        Graphics { 
-            pts: vec![
-                vec![
-                    VSPoint::new(0., 2.),
-                    VSPoint::new(0., -1.)
-                ],
-                vec![
-                    VSPoint::new(0., -2.),
-                    VSPoint::new(1., -1.),
-                    VSPoint::new(-1., -1.),
-                    VSPoint::new(0., -2.),
-                ],
-            ],
-            ports: vec![
-                Port {name: "gnd", offset: SSPoint::new(0, 2)}
-            ], 
-            bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
-        }
-    }
     pub fn stroke_bounds(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
         let mut path_builder = Builder::new();
         let vsb = self.bounds.cast().cast_unit();
@@ -171,7 +133,6 @@ impl  Drawable for Graphics {
             ..Stroke::default()
         };
         self.stroke_bounds(vct, frame, stroke.clone());
-        // self.stroke_ports(vct, frame, stroke.clone());
         self.stroke_symbol(vct, frame, stroke.clone());
         for p in &self.ports {
             p.draw_selected(vct, vcscale, frame)
@@ -189,6 +150,33 @@ impl  Drawable for Graphics {
         self.stroke_symbol(vct, frame, stroke.clone());
         for p in &self.ports {
             p.draw_preview(vct, vcscale, frame)
+        }
+    }
+}
+
+pub trait DeviceType  {
+    fn default_graphics() -> Graphics;
+}
+
+
+
+
+#[derive(Debug)]
+pub enum DeviceClass {
+    Gnd(gnd::Gnd),
+    R(r::R),
+}
+impl DeviceClass {
+    pub fn graphics(&self) -> &'static Graphics {
+        match self {
+            DeviceClass::Gnd(x) => &x.graphics,
+            DeviceClass::R(x) => &x.graphics,
+        }
+    }
+    pub fn id_prefix(&self) -> &'static str {
+        match self {
+            DeviceClass::Gnd(_) => gnd::ID_PREFIX,
+            DeviceClass::R(_) => r::ID_PREFIX,
         }
     }
 }

@@ -2,11 +2,10 @@
 // device Id, net at port, ground net '0', device voltage 0
 mod devicetype;
 mod deviceinstance;
-use devicetype::Graphics;
-use deviceinstance::{DeviceType, Device, R, Gnd, DeviceClass};
+use devicetype::{Graphics, DeviceClass, r::R, gnd::Gnd};
+use deviceinstance::{Device};
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
-use euclid::{Vector2D, Transform2D, Angle};
 use iced::widget::canvas::Frame;
 
 use crate::{
@@ -17,8 +16,6 @@ use crate::{
 };
 
 use by_address::ByAddress;
-
-use self::deviceinstance::{ParamGnd, ParamR};
 
 #[derive(Debug, Clone)]
 pub struct RcRDevice (pub Rc<RefCell<Device>>);
@@ -58,8 +55,8 @@ struct DevicesManager {
 impl Default for DevicesManager {
     fn default() -> Self {
         Self { 
-            gnd: ClassManager::new_w_graphics(vec![Rc::new(Graphics::default_gnd())]), 
-            r: ClassManager::new_w_graphics(vec![Rc::new(Graphics::default_r())]), 
+            gnd: ClassManager::new_w_graphics(vec![]), 
+            r: ClassManager::new_w_graphics(vec![]), 
         }
     }
 }
@@ -132,39 +129,17 @@ impl Devices {
         }).collect();
     }
     pub fn new_res(&mut self) -> RcRDevice {
-        let graphics = self.manager.r.graphics[0].clone();
-        let d = Device::new_with_ord_class(0, DeviceClass::R(R::new_w_graphics(graphics)));
+        let d = Device::new_with_ord_class(0, DeviceClass::R(R::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     pub fn new_gnd(&mut self) -> RcRDevice {
-        let graphics = self.manager.gnd.graphics[0].clone();
-        let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::new_w_graphics(graphics)));
+        let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
         self.set.iter()
         .flat_map(|d| d.0.borrow().ports_ssp())
         .collect()
-    }
-    pub fn tentatives_to_selected(&mut self) {
-        for d in &self.set {
-            d.0.borrow_mut().tentatives_to_selected();
-        }
-    }
-    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        for d in &self.set {
-            d.0.borrow_mut().move_selected(ssv);
-        }
-    }
-    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in &self.set {
-            d.0.borrow_mut().draw_selected_preview(vct, vcscale, frame);
-        }
-    }
-    pub fn clear_selected(&mut self) {
-        for d in &self.set {
-            d.0.borrow_mut().clear_selected();
-        }
     }
     pub fn clear_tentatives(&mut self) {
         for d in &self.set {

@@ -3,6 +3,8 @@ todo:
 - immediate:
     unify schematic interations to SSPoint
 
+    display device identifier
+
     traits for nets, devices, baseElement
 
     add gnd, voltage source devices (g, v)
@@ -11,6 +13,8 @@ todo:
     generate netlist
     
     schematic saving/loading (serde)
+
+    separate net names when split by a device
 
 - medium term:
 

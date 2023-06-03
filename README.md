@@ -12,6 +12,8 @@ Del - delete selected
 
 R - resistor, rotate active
 
+G - ground
+
 M - move selected
 
 

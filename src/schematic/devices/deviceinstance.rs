@@ -1,12 +1,12 @@
 use std::{rc::Rc, hash::Hasher};
 
-use super::devicetype::{Port, Graphics};
+use super::devicetype::{Port, Graphics, DeviceClass};
 
 use euclid::{Size2D, Transform2D, Vector2D, Angle};
-use iced::{widget::canvas::{Frame, Stroke, stroke, LineCap, path::Builder, self, LineDash}, Color, Size};
+use iced::widget::canvas::{Frame, Stroke};
 
 use crate::{
-    schematic::nets::{Selectable, Drawable},
+    schematic::nets::Drawable,
     transforms::{
         SSPoint, VSBox, SSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
     }, 
@@ -33,7 +33,7 @@ impl Interactable {
 }
 #[derive(Debug)]
 pub struct Identifier {
-    id_prefix: &'static [char],  // prefix which determines device type in NgSpice
+    id_prefix: &'static str,  // prefix which determines device type in NgSpice
     id: usize,  // avoid changing - otherwise, 
     custom: Option<String>,  // if some, is set by the user - must use this as is for id - if multiple instances have same, both should be highlighted
     // changing the id will break outputs which reference the old id. Otherwise it can be changed
@@ -53,9 +53,7 @@ immutable identifier:
 impl Identifier {
     pub fn ng_id(&self) -> String {
         let mut ret = String::new();
-        for c in self.id_prefix {
-            ret.push(*c);
-        }
+        ret.push_str(self.id_prefix);
         if let Some(s) = &self.custom {
             ret.push_str(s);
         } else {
@@ -63,8 +61,8 @@ impl Identifier {
         }
         ret
     }
-    pub fn new_with_ord(ord: usize) -> Self {
-        Identifier { id_prefix: &self::PREFIX_R, id: ord, custom: None }
+    pub fn new_with_prefix_ord(id_prefix: &'static str , ord: usize) -> Self {
+        Identifier { id_prefix, id: ord, custom: None }
     }
 }
 impl PartialEq for Identifier {
@@ -77,72 +75,7 @@ impl Hash for Identifier {
         self.ng_id().hash(state);
     }
 }
-const PREFIX_R: [char; 1] = ['R'];
 
-pub trait DeviceType  {
-    fn default_graphics() -> Graphics;
-}
-#[derive(Debug)]
-pub struct R {
-    params: ParamR,
-    graphics: Rc<Graphics>,
-}
-impl R {
-    pub fn new_w_graphics(graphics: Rc<Graphics>) -> R {
-        R {params: ParamR::default(), graphics}
-    }
-}
-#[derive(Debug)]
-pub struct Gnd {
-    params: ParamGnd,
-    graphics: Rc<Graphics>,
-}
-impl Gnd {
-    pub fn new_w_graphics(graphics: Rc<Graphics>) -> Gnd {
-        Gnd {params: ParamGnd::default(), graphics}
-    }
-}
-#[derive(Debug)]
-pub struct SingleValue  {
-    value: f32,
-}
-impl SingleValue {
-    fn new(value: f32) -> Self {
-        SingleValue { value }
-    }
-}
-#[derive(Debug)]
-pub enum ParamR  {
-    Value(SingleValue),
-}
-impl Default for ParamR {
-    fn default() -> Self {
-        ParamR::Value(SingleValue::new(1000.0))
-    }
-}
-
-#[derive(Debug)]
-pub enum ParamGnd  {
-    None,
-}
-impl Default for ParamGnd {
-    fn default() -> Self {
-        ParamGnd::None
-    }
-}
-#[derive(Debug)]
-pub enum DeviceClass {
-    Gnd(Gnd),
-    R(R),
-}
-impl DeviceClass {
-    fn graphics(&self) -> &Rc<Graphics> {
-        match self {
-            DeviceClass::Gnd(x) => &x.graphics,
-            DeviceClass::R(x) => &x.graphics,
-        }
-    }
-}
 #[derive(Debug)]
 pub struct Device  {
     id: Identifier,
@@ -159,7 +92,7 @@ impl Device {
     }
     pub fn new_with_ord_class(ord: usize, class: DeviceClass) -> Self {
         Device { 
-            id: Identifier::new_with_ord(ord), 
+            id: Identifier::new_with_prefix_ord(class.id_prefix(), ord), 
             interactable: Interactable::new(), 
             transform: Transform2D::identity(), 
             class,
@@ -172,37 +105,17 @@ impl Device {
     pub fn get_interactable(&self) -> Interactable {
         self.interactable
     }
-    pub fn get_transform(&self) -> Transform2D<i16, SchematicSpace, SchematicSpace> {
-        self.transform
-    }
     pub fn set_tentative(&mut self) {
         self.interactable.tentative = true;
-    }
-    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        if self.interactable.selected {
-            self.draw_selected(vct, vcscale, frame);
-        }
     }
     pub fn tentative_by_vsb(&mut self, vsb: &VSBox) {
         if self.interactable.get_bounds().cast().cast_unit().intersects(vsb) {
             self.interactable.tentative = true;
         }
     }
-    pub fn tentatives_to_selected(&mut self) {
-        self.interactable.selected = self.interactable.tentative;
-        self.interactable.tentative = false;
-    }
-    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        self.pre_translate(ssv.cast_unit());
-        self.interactable.selected = false;
-    }
-    pub fn clear_selected(&mut self) {
-        self.interactable.selected = false;
-    }
     pub fn clear_tentatives(&mut self) {
         self.interactable.tentative = false;
     }
-    
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
         self.class.graphics().ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
     }   
@@ -214,12 +127,6 @@ impl Device {
         }
         false
     }
-    pub fn stroke_bounds(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        self.class.graphics().stroke_bounds(vct, frame, stroke);
-    }
-    pub fn stroke_symbol(&self, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
-        self.class.graphics().stroke_symbol(vct, frame, stroke);
-    }
     pub fn bounds(&self) -> &SSBox {
         &self.interactable.bounds
     }
@@ -227,10 +134,6 @@ impl Device {
         self.transform.m31 = v.x;
         self.transform.m32 = v.y;
         self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds()));
-    }
-    pub fn pre_translate(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        self.transform = self.transform.pre_translate(ssv);
-        self.interactable.set_bounds(self.transform.outer_transformed_box(self.class.graphics().bounds())); //self.device_type.as_ref().get_bounds().cast().cast_unit()
     }
     pub fn rotate(&mut self, cw: bool) {
         if cw {
