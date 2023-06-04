@@ -127,12 +127,21 @@ impl Drawable for Device {
         
         let a = Text {
             content: self.id.ng_id(),
-            position: Point::from(vct_c.transform_point(VSPoint::origin())).into(),
-            color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
+            position: Point::from(vct_c.transform_point(VSPoint::new(1.0, 1.0))).into(),
+            color: Color::from_rgba(1.0, 0.5, 1.0, 1.0),
             size: vcscale,
             ..Default::default()
         };
         frame.fill_text(a);
+
+        let b = Text {
+            content: self.class.param_summary(),
+            position: Point::from(vct_c.transform_point(VSPoint::new(1.0, 0.0))).into(),
+            color: Color::from_rgba(0.5, 1.0, 1.0, 1.0),
+            size: vcscale,
+            ..Default::default()
+        };
+        frame.fill_text(b);
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);

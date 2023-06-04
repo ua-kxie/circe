@@ -10,7 +10,7 @@ use iced::{widget::canvas::{Frame, Stroke}};
 
 pub mod r;
 pub mod gnd;
-mod R;
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Port {
     pub name: &'static str,
@@ -171,6 +171,16 @@ impl DeviceClass {
         match self {
             DeviceClass::Gnd(x) => &x.graphics,
             DeviceClass::R(x) => &x.graphics,
+        }
+    }
+    pub fn param_summary(&self) -> String {
+        match self {
+            DeviceClass::Gnd(x) => {
+                x.params.summary()
+            },
+            DeviceClass::R(x) => {
+                x.params.summary()
+            },
         }
     }
     pub fn id_prefix(&self) -> &'static str {

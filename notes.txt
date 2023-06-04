@@ -1,9 +1,9 @@
 todo:
 
 - immediate:
-    rotate while moving - unify device placement and moving systems
-    instancing: clear selected, new device in selected, enter move mode
-    moving: enter move mode
+    display params
+
+    edit params
 
     traits for nets, devices, baseElement - org and tech debt
 

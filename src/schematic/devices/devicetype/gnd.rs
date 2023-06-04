@@ -2,7 +2,7 @@ use crate::transforms::{SSPoint, VSPoint, SSBox};
 use super::{Graphics, Port};
 use lazy_static::lazy_static;
 
-pub const ID_PREFIX: &str = "GND";
+pub const ID_PREFIX: &str = "VGND";
 
 lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics = Graphics { 
@@ -32,6 +32,11 @@ pub enum ParamGnd  {
 impl Default for ParamGnd {
     fn default() -> Self {
         ParamGnd::None
+    }
+}
+impl ParamGnd {
+    pub fn summary(&self) -> String {
+        String::from("0")
     }
 }
 

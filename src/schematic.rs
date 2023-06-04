@@ -2,7 +2,7 @@ mod nets;
 mod devices;
 mod interactable;
 
-use std::{collections::HashSet};
+use std::{collections::HashSet, convert::identity};
 
 use euclid::{Vector2D, Transform2D, Angle};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};

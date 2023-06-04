@@ -48,6 +48,15 @@ impl Default for ParamR {
         ParamR::Value(SingleValue::new(1000.0))
     }
 }
+impl ParamR {
+    pub fn summary(&self) -> String {
+        match self {
+            ParamR::Value(v) => {
+                std::format!("{}", v.value)
+            },
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct R {
