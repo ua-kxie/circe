@@ -37,16 +37,6 @@ impl std::hash::Hash for NetEdge {
 }
 
 impl NetEdge {
-    pub fn new(src: SSPoint, dst: SSPoint, label: Option<Rc<String>>, schematic_net_label: Option<SchematicNetLabel>) -> NetEdge {
-        NetEdge { 
-            src, 
-            dst, 
-            interactable: Interactable { bounds: NetEdge::bounds_from_pts(src, dst), tentative: false }, 
-            label, 
-            schematic_net_label,
-        }
-    }
-
     pub fn interactable(src: SSPoint, dst: SSPoint, tentative: bool) -> Interactable {
         Interactable { bounds: NetEdge::bounds_from_pts(src, dst), tentative, }
     }
@@ -160,7 +150,6 @@ fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, st
     frame.stroke(&c, stroke);
 }
 
-const SOLDER_DIAMETER: f32 = 0.25;
 const WIRE_WIDTH: f32 = 0.05;
 const ZOOM_THRESHOLD: f32 = 5.0;
 

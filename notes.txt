@@ -3,19 +3,12 @@ todo:
 - immediate:
     traits for nets, devices, baseElement - org and tech debt
 
-    do not increment device ID on move
-
-    translation plus rotation causes offset between net and device
-    rework selected group transforms - gets rounded to different integers
-
-    edit params
+    edit device parameters
 
 - medium term:
     separate net names when split by a device
 
     add voltage source (v)
-    device parameters
-    side panel device parameters edit
     generate netlist
     
     schematic saving/loading (serde)

@@ -1,7 +1,7 @@
 mod transforms;
 use std::fmt::Debug;
 
-use transforms::{Point, CSPoint, VSPoint, CSBox, VSBox, SSPoint};
+use transforms::{Point, CSPoint, CSBox, SSPoint};
 mod viewport;
 use viewport::ViewportState;
 mod schematic;
@@ -165,7 +165,7 @@ impl canvas::Program<Msg> for Circe {
         sttup: &(Viewport, Schematic),
         _theme: &Theme,
         bounds: Rectangle,
-        cursor: Cursor,
+        _cursor: Cursor,
     ) -> Vec<Geometry> {
         let active = self.active_cache.draw(bounds.size(), |frame| {
             sttup.1.draw_active(sttup.0.vc_transform(), sttup.0.vc_scale(), frame);
@@ -268,8 +268,7 @@ mod infobar {
             None
         }
         fn view(&self, _state: &Self::State) -> Element<(), Renderer> {
-            let str_ssp;
-            str_ssp = format!("x: {}; y: {}", self.curpos_ssp.x, self.curpos_ssp.y);
+            let str_ssp = format!("x: {}; y: {}", self.curpos_ssp.x, self.curpos_ssp.y);
 
             row![
                 text(str_ssp).size(16).height(16).vertical_alignment(alignment::Vertical::Center),

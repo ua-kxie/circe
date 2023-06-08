@@ -1,6 +1,6 @@
 use euclid::Transform2D;
 
-use crate::transforms::{SSBox, SSVec, VSBox, SSPoint, ViewportSpace, SchematicSpace};
+use crate::transforms::{SSBox, SchematicSpace};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Interactable {

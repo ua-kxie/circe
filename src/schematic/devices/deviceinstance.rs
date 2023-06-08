@@ -1,14 +1,14 @@
-use std::{rc::Rc, hash::Hasher};
+use std::hash::Hasher;
 
 use super::devicetype::{DeviceClass};
 
-use euclid::{Size2D, Transform2D, Vector2D, Angle};
-use iced::{widget::canvas::{Frame, Stroke, Text}, Color};
+use euclid::Transform2D;
+use iced::{widget::canvas::{Frame, Text}, Color};
 
 use crate::{
     schematic::{nets::Drawable, interactable::Interactive},
     transforms::{
-        SSPoint, VSBox, SSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
+        SSPoint, SSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
     }, 
 };
 use crate::schematic::interactable::Interactable;

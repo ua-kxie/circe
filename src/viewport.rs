@@ -4,8 +4,8 @@
 /// ViewportSpace is the schematic coordinate in f32
 /// SchematicSpace is the schematic coordinate in i16
 
-use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, CanvasSpace, ViewportSpace, VSBox, CSBox};
-use euclid::{Vector2D, Rect, Size2D};
+use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, ViewportSpace, VSBox, CSBox};
+use euclid::Vector2D;
 
 use iced::widget::canvas::{
     stroke, LineCap, Path, Stroke, LineDash, Frame, Text, Event,
@@ -115,14 +115,11 @@ impl Viewport {
                 }
             },
             (
-                ViewportState::NewView(vsp0, vsp1), 
+                ViewportState::NewView(_vsp0, _vsp1), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed { key_code, modifiers })
             ) => {
-                match (key_code, modifiers.bits()) {
-                    (iced::keyboard::KeyCode::Escape, 0) => {
-                        state = ViewportState::None;
-                    },
-                    _ => {},
+                if let (iced::keyboard::KeyCode::Escape, 0) = (key_code, modifiers.bits()) {
+                    state = ViewportState::None;
                 }
             },
             (

@@ -3,7 +3,7 @@ use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash
 
 use crate::{
     transforms::{
-        SSPoint, VSBox, VSPoint, VCTransform, Point, ViewportSpace, SSBox
+        SSPoint, VSBox, VSPoint, VCTransform, Point, SSBox
     }, schematic::Drawable, 
 };
 use iced::{widget::canvas::{Frame, Stroke}};
@@ -18,7 +18,7 @@ pub struct Port {
 }
 
 impl Drawable for Port {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
+    fn draw_persistent(&self, vct: VCTransform, _vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
         let f = canvas::Fill {
             style: canvas::Style::Solid(Color::from_rgba(1.0, 0.0, 0.0, 1.0)),
             ..canvas::Fill::default()
@@ -169,8 +169,8 @@ pub enum DeviceClass {
 impl DeviceClass {
     pub fn graphics(&self) -> &'static Graphics {
         match self {
-            DeviceClass::Gnd(x) => &x.graphics,
-            DeviceClass::R(x) => &x.graphics,
+            DeviceClass::Gnd(x) => x.graphics,
+            DeviceClass::R(x) => x.graphics,
         }
     }
     pub fn param_summary(&self) -> String {

@@ -4,9 +4,9 @@ mod interactable;
 
 use std::{collections::HashSet};
 
-use euclid::{Vector2D, Transform2D, Angle};
+use euclid::{Vector2D, Transform2D};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec, self};
+use crate::transforms::{SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec, self};
 use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
@@ -294,7 +294,7 @@ impl Schematic {
             // wiring
             (
                 _, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::W, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::W, modifiers: _})
             ) => {
                 state = SchematicState::Wiring(None);
             },
@@ -351,7 +351,7 @@ impl Schematic {
             // device placement
             (
                 SchematicState::Idle, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers: _})
             ) => {
                 self.selected.clear();
                 let d = self.devices.new_res();
@@ -361,7 +361,7 @@ impl Schematic {
             },
             (
                 SchematicState::Idle, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers: _})
             ) => {
                 self.selected.clear();
                 let d = self.devices.new_gnd();
@@ -372,19 +372,19 @@ impl Schematic {
             // moving
             (
                 _, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::M, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::M, modifiers: _})
             ) => {
                 state = SchematicState::Moving(None);
             },
             (
-                SchematicState::Moving(Some((_ssp0, ssp1, sst))),
+                SchematicState::Moving(Some((_ssp0, ssp1, _sst))),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 *ssp1 = curpos_ssp;
             },
             (
-                SchematicState::Moving(Some((ssp0, ssp1, sst))), 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
+                SchematicState::Moving(Some((_ssp0, _ssp1, sst))), 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers: _})
             ) => {
                 *sst = sst.then(&transforms::SST_CWR);
             },
@@ -406,7 +406,7 @@ impl Schematic {
             // esc
             (
                 st, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Escape, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Escape, modifiers: _})
             ) => {
                 match st {
                     SchematicState::Idle => {
@@ -421,7 +421,7 @@ impl Schematic {
             // delete
             (
                 SchematicState::Idle, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Delete, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Delete, modifiers: _})
             ) => {
                 self.delete_selected();
                 clear_passive = true;
@@ -429,7 +429,7 @@ impl Schematic {
             // cycle
             (
                 SchematicState::Idle, 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers})
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers: _})
             ) => {
                 let s = self.tentative_next_by_vspoint(curpos_ssp);
                 msg = Some(crate::Msg::NetName(s));

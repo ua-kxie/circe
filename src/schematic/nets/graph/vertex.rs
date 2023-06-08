@@ -3,8 +3,7 @@
 /// 
 use std::cmp::Ordering;
 
-use crate::{transforms::{VSPoint, SSPoint, VSBox, VCTransform}, schematic::nets::{Drawable, Selectable}};
-use euclid::Box2D;
+use crate::{transforms::{SSPoint, VCTransform}, schematic::nets::Drawable};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap}, Color};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -28,24 +27,6 @@ impl Ord for NetVertex {
     }
 }
 
-impl Selectable for NetVertex {
-    fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
-        false
-    }
-    fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool {
-        let bb: VSBox = Box2D::new(self.0, self.0).cast().cast_unit();
-        bb.inflate(0.5, 0.5).contains(curpos_vsp)
-    }
-
-    fn contained_by_vsb(&self, _selbox: VSBox) -> bool {
-        todo!()
-    }
-
-    fn collision_by_vsb(&self, _selbox: VSBox) -> bool {
-        todo!()
-    }
-}
-
 fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
     let p = vct.transform_point(ssp.cast().cast_unit());
     let p = iced::Point::from([p.x, p.y]);
@@ -53,7 +34,6 @@ fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) 
     frame.stroke(&c, stroke);
 }
 const SOLDER_DIAMETER: f32 = 0.25;
-const WIRE_WIDTH: f32 = 0.05;
 const ZOOM_THRESHOLD: f32 = 5.0;
 
 impl Drawable for NetVertex {

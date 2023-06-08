@@ -2,7 +2,7 @@
 // device Id, net at port, ground net '0', device voltage 0
 mod devicetype;
 mod deviceinstance;
-use devicetype::{Graphics, DeviceClass, r::R, gnd::Gnd};
+use devicetype::{DeviceClass, r::R, gnd::Gnd};
 use deviceinstance::{Device};
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
@@ -11,13 +11,11 @@ use iced::widget::canvas::Frame;
 use crate::{
     schematic::nets::{Drawable},
     transforms::{
-        SSPoint, VSBox, VCTransform, SchematicSpace, SSBox, VSPoint
+        SSPoint, VSBox, VCTransform, SchematicSpace, SSBox
     }, 
 };
 
 use by_address::ByAddress;
-
-use super::interactable::Interactive;
 
 #[derive(Debug, Clone)]
 pub struct RcRDevice (pub Rc<RefCell<Device>>);
@@ -34,14 +32,14 @@ impl std::hash::Hash for RcRDevice {
     }
 }
 
+#[derive(Debug)]
 struct ClassManager {
     wm: usize,
-    graphics: Vec<Rc<Graphics>>,
 }
 
 impl ClassManager {
-    pub fn new_w_graphics(graphics: Vec<Rc<Graphics>>) -> Self {
-        ClassManager { wm: 0, graphics }
+    pub fn new() -> Self {
+        ClassManager { wm: 0 }
     }
     pub fn incr(&mut self) -> usize {
         self.wm += 1;
@@ -49,6 +47,7 @@ impl ClassManager {
     }
 }
 
+#[derive(Debug)]
 struct DevicesManager {
     gnd: ClassManager,
     r: ClassManager,
@@ -57,21 +56,16 @@ struct DevicesManager {
 impl Default for DevicesManager {
     fn default() -> Self {
         Self { 
-            gnd: ClassManager::new_w_graphics(vec![]), 
-            r: ClassManager::new_w_graphics(vec![]), 
+            gnd: ClassManager::new(), 
+            r: ClassManager::new(), 
         }
     }
 }
 
+#[derive(Debug, Default)]
 pub struct Devices {
     set: HashSet<RcRDevice>, 
     manager: DevicesManager,
-}
-
-impl Default for Devices {
-    fn default() -> Self {
-        Devices{ set: HashSet::new(), manager: DevicesManager::default() }
-    }
 }
 
 impl Drawable for Devices {
@@ -80,7 +74,7 @@ impl Drawable for Devices {
             d.0.borrow().draw_persistent(vct, vcscale, frame);
         }
     }
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
         panic!("not intended for use");
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
@@ -103,7 +97,7 @@ impl Devices {
     }
     pub fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<RcRDevice> {
         for d in &self.set {
-            let mut ssb = d.0.borrow().bounds().clone();
+            let mut ssb = *d.0.borrow().bounds();
             ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
             if ssb.contains(curpos_ssp) {
                 *count += 1;

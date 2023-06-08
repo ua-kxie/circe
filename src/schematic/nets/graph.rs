@@ -1,10 +1,9 @@
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::schematic::interactable::{self, Interactable, Interactive};
-use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox, SSVec, ViewportSpace};
-use euclid::{Point2D, Vector2D, Transform2D};
+use crate::schematic::interactable::Interactive;
+use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox};
+use euclid::{Point2D, Transform2D};
 use petgraph::graphmap::GraphMap;
 use petgraph::algo::tarjan_scc;
 
@@ -15,17 +14,6 @@ mod edge;
 pub use edge::NetEdge;
 
 use super::Drawable;
-
-#[derive(Clone, Debug, Default, PartialOrd, PartialEq, Eq, Hash)]
-struct Label0 {
-    name: String,
-}
-
-impl Label0 {
-    fn new_with_ord(ord: usize) -> Label0 {
-        Label0{name: format!("net_{}", ord)}
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 struct LabelManager {
@@ -286,7 +274,7 @@ impl Drawable for Nets {
         }
     }
 
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
+    fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut iced::widget::canvas::Frame) {
         panic!("not intended for use");
     }
 
