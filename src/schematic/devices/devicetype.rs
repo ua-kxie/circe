@@ -7,6 +7,10 @@ use crate::{
     }, schematic::Drawable, 
 };
 use iced::{widget::canvas::{Frame, Stroke}};
+
+pub mod r;
+pub mod gnd;
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Port {
     pub name: &'static str,
@@ -73,63 +77,18 @@ impl Drawable for Port {
 
 const STROKE_WIDTH: f32 = 0.1;
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Graphics <T> {
+pub struct Graphics {
     // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
     pts: Vec<Vec<VSPoint>>,
     ports: Vec<Port>,
     bounds: SSBox,
-    marker: core::marker::PhantomData<T>,
 }
-impl<T> Graphics<T> {
+impl Graphics {
     pub fn bounds(&self) -> &SSBox {
         &self.bounds
     }
     pub fn ports(&self) -> &[Port] {
         &self.ports
-    }
-    pub fn default_r() -> Self {
-        Graphics { 
-            pts: vec![
-                vec![
-                    VSPoint::new(0., 3.),
-                    VSPoint::new(0., -3.),
-                ],
-                vec![
-                    VSPoint::new(-1., 2.),
-                    VSPoint::new(-1., -2.),
-                    VSPoint::new(1., -2.),
-                    VSPoint::new(1., 2.),
-                    VSPoint::new(-1., 2.),
-                ],
-            ],
-            ports: vec![
-                Port {name: "+", offset: SSPoint::new(0, 3)},
-                Port {name: "-", offset: SSPoint::new(0, -3)},
-            ], 
-            bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
-            marker: core::marker::PhantomData 
-        }
-    }
-    pub fn default_gnd() -> Self {
-        Graphics { 
-            pts: vec![
-                vec![
-                    VSPoint::new(0., 2.),
-                    VSPoint::new(0., -1.)
-                ],
-                vec![
-                    VSPoint::new(0., -2.),
-                    VSPoint::new(1., -1.),
-                    VSPoint::new(-1., -1.),
-                    VSPoint::new(0., -2.),
-                ],
-            ],
-            ports: vec![
-                Port {name: "gnd", offset: SSPoint::new(0, 2)}
-            ], 
-            bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
-            marker: core::marker::PhantomData 
-        }
     }
     pub fn stroke_bounds(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
         let mut path_builder = Builder::new();
@@ -152,7 +111,7 @@ impl<T> Graphics<T> {
         }
     }
 }
-impl <T> Drawable for Graphics<T> {
+impl  Drawable for Graphics {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
@@ -174,7 +133,6 @@ impl <T> Drawable for Graphics<T> {
             ..Stroke::default()
         };
         self.stroke_bounds(vct, frame, stroke.clone());
-        // self.stroke_ports(vct, frame, stroke.clone());
         self.stroke_symbol(vct, frame, stroke.clone());
         for p in &self.ports {
             p.draw_selected(vct, vcscale, frame)
@@ -192,6 +150,43 @@ impl <T> Drawable for Graphics<T> {
         self.stroke_symbol(vct, frame, stroke.clone());
         for p in &self.ports {
             p.draw_preview(vct, vcscale, frame)
+        }
+    }
+}
+
+pub trait DeviceType  {
+    fn default_graphics() -> Graphics;
+}
+
+
+
+
+#[derive(Debug)]
+pub enum DeviceClass {
+    Gnd(gnd::Gnd),
+    R(r::R),
+}
+impl DeviceClass {
+    pub fn graphics(&self) -> &'static Graphics {
+        match self {
+            DeviceClass::Gnd(x) => &x.graphics,
+            DeviceClass::R(x) => &x.graphics,
+        }
+    }
+    pub fn param_summary(&self) -> String {
+        match self {
+            DeviceClass::Gnd(x) => {
+                x.params.summary()
+            },
+            DeviceClass::R(x) => {
+                x.params.summary()
+            },
+        }
+    }
+    pub fn id_prefix(&self) -> &'static str {
+        match self {
+            DeviceClass::Gnd(_) => gnd::ID_PREFIX,
+            DeviceClass::R(_) => r::ID_PREFIX,
         }
     }
 }

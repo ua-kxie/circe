@@ -2,9 +2,9 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::transforms::{SSPoint, VCTransform, SchematicSpace};
-use euclid::{Point2D, Vector2D};
-use iced::widget::canvas::Frame;
+use crate::schematic::interactable::{self, Interactable, Interactive};
+use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox, SSVec, ViewportSpace};
+use euclid::{Point2D, Vector2D, Transform2D};
 use petgraph::graphmap::GraphMap;
 use petgraph::algo::tarjan_scc;
 
@@ -15,8 +15,6 @@ mod edge;
 pub use edge::NetEdge;
 
 use super::Drawable;
-
-type Label = Rc<RefCell<String>>;
 
 #[derive(Clone, Debug, Default, PartialOrd, PartialEq, Eq, Hash)]
 struct Label0 {
@@ -74,6 +72,18 @@ impl Default for Nets {
 }
 
 impl Nets {
+    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
+        for e in self.graph.all_edges_mut() {
+            if e.2.interactable.bounds.intersects(ssb) {
+                e.2.interactable.tentative = true;
+            }
+        }
+    }
+    pub fn tentatives(&self) -> impl Iterator<Item = NetEdge> + '_ {
+        self.graph.all_edges().filter_map(|e| {
+            if e.2.interactable.tentative {Some(e.2.clone())} else {None}
+        })
+    }
     pub fn clear(&mut self) {
         self.graph.clear();
     }
@@ -194,15 +204,25 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {},
             (0, _y) => {
-                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, ..Default::default()});
+                let interactable = Interactable{
+                    bounds: NetEdge::bounds_from_pts(src, dst),
+                    tentative: true,
+                };
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, interactable, ..Default::default()});
             },
             (_x, 0) => {
-                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, tentative: true, ..Default::default()});
+                let interactable = Interactable{
+                    bounds: NetEdge::bounds_from_pts(src, dst),
+                    tentative: true,
+                };
+                self.graph.add_edge(NetVertex(src), NetVertex(dst), NetEdge{src, dst, interactable, ..Default::default()});
             },
             (_x, y) => {
+                // not finished
+                let interactable = Interactable{tentative: true, ..Default::default()};
                 let corner = Point2D::new(src.x, src.y + y);
-                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, tentative: true, ..Default::default()});
-                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, tentative: true, ..Default::default()});
+                self.graph.add_edge(NetVertex(src), NetVertex(corner), NetEdge{src, dst: corner, interactable, ..Default::default()});
+                self.graph.add_edge(NetVertex(corner), NetVertex(dst), NetEdge{src: corner, dst, interactable, ..Default::default()});
             }
         }
     }
@@ -214,51 +234,22 @@ impl Nets {
         }
         self.prune(extra_vertices);
     }
-    pub fn tentatives_to_selected(&mut self) {
-        for e in self.graph.all_edges_mut().filter(|e| e.2.tentative) {
-            e.2.selected = true;
-            e.2.tentative = false;
-        }
-    }
-    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        let mut tmp = vec![];
-        for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            tmp.push((e.0, e.1, e.2.label.clone()));
-        }
-        for e in tmp {
-            self.graph.remove_edge(e.0, e.1);
-            let (ssp0, ssp1) = (e.0.0 + ssv, e.1.0 + ssv);
-            self.graph.add_edge(NetVertex(ssp0), NetVertex(ssp1), NetEdge{src: ssp0, dst: ssp1, label: e.2, ..Default::default()});
-        }
-    }
-    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            e.2.draw_preview(vct, vcscale, frame);
-        }
+    pub fn transform(&mut self, mut e: NetEdge, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
+        self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
+        e.transform(vvt);
+        self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
     }
     pub fn tt(&self) {
         let a = tarjan_scc(&*self.graph);  // this finds the unconnected components 
         dbg!(a);
     }
-    pub fn clear_selected(&mut self) {
-        for e in self.graph.all_edges_mut() {
-            e.2.selected = false;
-        }
-    }
     pub fn clear_tentatives(&mut self) {
         for e in self.graph.all_edges_mut() {
-            e.2.tentative = false;
+            e.2.interactable.tentative = false;
         }
     }
-    pub fn delete_selected_from_persistent(&mut self, extra_vertices: Vec<SSPoint>) {
-        let mut tmp = vec![];
-        for e in self.graph.all_edges().filter(|e| e.2.selected) {
-            tmp.push((e.0, e.1));
-        }
-        for e in tmp {
-            self.graph.remove_edge(e.0, e.1);
-        }
-        self.prune(extra_vertices);
+    pub fn delete_edge(&mut self, e: &NetEdge) {
+        self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
     }
 }
 
@@ -273,15 +264,11 @@ impl Drawable for Nets {
     }
 
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        for (_, _, edge) in self.graph.all_edges() {
-            if edge.selected {
-                edge.draw_selected(vct, vcscale, frame)
-            }
-        }
+        panic!("not intended for use");
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
-        for (_, _, edge) in self.graph.all_edges().filter(|e| e.2.tentative) {
+        for (_, _, edge) in self.graph.all_edges().filter(|e| e.2.interactable.tentative) {
             edge.draw_preview(vct, vcscale, frame)
         }
     }

@@ -1,22 +1,23 @@
 mod nets;
 mod devices;
+mod interactable;
 
-use std::{rc::Rc, cell::RefCell, ops::Deref, hash::Hash, collections::HashSet};
+use std::{collections::HashSet, convert::identity};
 
-use euclid::Size2D;
+use euclid::{Vector2D, Transform2D, Angle};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace};
-use iced::widget::canvas::event::{self, Event};
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace};
+use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
-use self::devices::{Devices, DeviceExt};
+use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
 
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum BaseElement {
     NetEdge(NetEdge),
-    Device(Rc<RefCell<dyn DeviceExt>>),
+    Device(RcRDevice),
 }
 
 impl PartialEq for BaseElement {
@@ -28,6 +29,8 @@ impl PartialEq for BaseElement {
         }
     }
 }
+
+impl Eq for BaseElement {}
 
 impl std::hash::Hash for BaseElement {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -42,14 +45,24 @@ impl std::hash::Hash for BaseElement {
 pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
-    DevicePlacement(Rc<RefCell<dyn DeviceExt>>),
-    Selecting(VSBox),
-    Moving(Option<(SSPoint, SSPoint)>),
+    DevicePlacement(RcRDevice),
+    Selecting(SSBox),
+    Moving(Option<(SSPoint, SSPoint, Transform2D<f32, ViewportSpace, ViewportSpace>)>),
+    // first click, second click, transform for rotation/flip ONLY
 }
 
 impl Default for SchematicState {
     fn default() -> Self {
         SchematicState::Idle
+    }
+}
+
+impl SchematicState {
+    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, vvt: &Transform2D<f32, ViewportSpace, ViewportSpace>) -> Transform2D<f32, ViewportSpace, ViewportSpace> {
+        vvt
+        .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y).cast())
+        .then_translate(Vector2D::new(ssp0.x, ssp0.y).cast())
+        .then_translate((*ssp1-*ssp0).cast().cast_unit())
     }
 }
 
@@ -65,24 +78,17 @@ pub struct Schematic {
 
 impl Schematic {
     fn clear_selected(&mut self) {
-        self.devices.clear_selected();
-        self.nets.clear_selected();
+        self.selected.clear();
     }
     fn clear_tentatives(&mut self) {
         self.devices.clear_tentatives();
         self.nets.clear_tentatives();
     }
-    pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
+    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         self.clear_tentatives();
-        let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
-        for d in self.devices.iter_device_traits() {
-            d.borrow_mut().tentative_by_vsb(&vsb_p);
-        }
-        for e in self.nets.graph.all_edges_mut() {
-            if vsb_p.contains(e.0.0.cast().cast_unit()) || vsb_p.contains(e.1.0.cast().cast_unit()) {
-                e.2.tentative = true;
-            }
-        }
+        let ssb_p = SSBox::from_points([ssb.min, ssb.max]);
+        self.devices.tentatives_by_ssbox(&ssb_p);
+        self.nets.tentatives_by_ssbox(&ssb_p);
     }
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
         self.clear_tentatives();
@@ -91,12 +97,12 @@ impl Schematic {
                 BaseElement::NetEdge(e) => {
                     let mut netedge = e.clone();
                     let netname = e.label.map(|x| x.as_ref().clone());
-                    netedge.tentative = true;
+                    netedge.interactable.tentative = true;
                     self.nets.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
                     netname
                 },
                 BaseElement::Device(d) => {
-                    d.borrow_mut().set_tentative();
+                    d.0.borrow_mut().set_tentative();
                     None
                 },
             }
@@ -109,8 +115,16 @@ impl Schematic {
         s
     }
     fn tentatives_to_selected(&mut self) {
-        self.nets.tentatives_to_selected();
-        self.devices.tentatives_to_selected();
+        let _: Vec<_> = self.devices.tentatives().map(
+            |d| {
+                self.selected.insert(BaseElement::Device(d));
+            }
+        ).collect();
+        let _: Vec<_> = self.nets.tentatives().map(
+            |e| {
+                self.selected.insert(BaseElement::NetEdge(e));
+            }
+        ).collect();
     }
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
@@ -121,7 +135,7 @@ impl Schematic {
         vcscale: f32,
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
-        self.nets.draw_preview(vct, vcscale, frame);
+        self.nets.draw_preview(vct, vcscale, frame);  // this draws tentatives - refactor
         self.devices.draw_preview(vct, vcscale, frame);
 
         match &self.state {
@@ -130,19 +144,47 @@ impl Schematic {
             },
             SchematicState::Idle => {
             },
-            SchematicState::Selecting(vsb) => {
+            SchematicState::DevicePlacement(d) => {
+                d.0.borrow().draw_preview(vct, vcscale, frame);
+            }
+            SchematicState::Selecting(ssb) => {
+                let color = if ssb.height() > 0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)};
                 let f = canvas::Fill {
-                    style: canvas::Style::Solid(if vsb.height() > 0.0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)}),
+                    style: canvas::Style::Solid(color),
                     ..canvas::Fill::default()
                 };
-                let csb = vct.outer_transformed_box(&vsb.cast().cast_unit());
+                let csb = vct.outer_transformed_box(&ssb.cast().cast_unit());
                 let size = Size::new(csb.width(), csb.height());
                 frame.fill_rectangle(Point::from(csb.min).into(), size, f);
+
+                let mut path_builder = Builder::new();
+                path_builder.line_to(Point::from(csb.min).into());
+                path_builder.line_to(Point::from(CSPoint::new(csb.min.x, csb.max.y)).into());
+                path_builder.line_to(Point::from(csb.max).into());
+                path_builder.line_to(Point::from(CSPoint::new(csb.max.x, csb.min.y)).into());
+                path_builder.line_to(Point::from(csb.min).into());
+                let stroke = Stroke {
+                    width: (0.1 * vcscale).max(0.1 * 2.0),
+                    style: canvas::stroke::Style::Solid(color),
+                    line_cap: LineCap::Square,
+                    ..Stroke::default()
+                };
+                frame.stroke(&path_builder.build(), stroke);
             },
-            SchematicState::Moving(Some((ssp0, ssp1))) => {
-                let vct_c = vct.pre_translate((*ssp1 - *ssp0).cast().cast_unit());
-                self.nets.draw_selected_preview(vct_c, vcscale, frame);
-                self.devices.draw_selected_preview(vct_c, vcscale, frame);
+            SchematicState::Moving(Some((ssp0, ssp1, sst))) => {
+                let sst = SchematicState::move_transform(ssp0, ssp1, sst);
+
+                let vct_c = sst.then(&vct);
+                for be in &self.selected {
+                    match be {
+                        BaseElement::Device(d) => {
+                            d.0.borrow().draw_preview(vct_c, vcscale, frame)
+                        },
+                        BaseElement::NetEdge(e) => {
+                            e.draw_preview(vct_c, vcscale, frame)
+                        }
+                    }
+                }
             },
             _ => {},
         }
@@ -155,9 +197,17 @@ impl Schematic {
         frame: &mut Frame, 
     ) {  // draw elements which may need to be redrawn at any event
         self.nets.draw_persistent(vct, vcscale, frame);
-        self.nets.draw_selected(vct, vcscale, frame);
         self.devices.draw_persistent(vct, vcscale, frame);
-        self.devices.draw_selected(vct, vcscale, frame);
+        let _: Vec<_> = self.selected.iter().map(|e|
+            match e {
+                BaseElement::NetEdge(e) => {
+                    e.draw_selected(vct, vcscale, frame);
+                },
+                BaseElement::Device(d) => {
+                    d.0.borrow().draw_selected(vct, vcscale, frame);
+                },
+            }
+        ).collect();
     }
 
     pub fn bounding_box(&self) -> VSBox {
@@ -178,16 +228,8 @@ impl Schematic {
                     }
                 }
             }
-            for d in self.devices.iter_device_traits() {
-                let mut ssb = d.borrow().bounds().clone();
-                ssb.set_size(ssb.size() + Size2D::<i16, SchematicSpace>::new(1, 1));
-                if ssb.contains(curpos_ssp) {
-                    count += 1;
-                    if count > *skip {
-                        *skip = count;
-                        return Some(BaseElement::Device(d.clone()));
-                    }
-                }
+            if let Some(d) = self.devices.selectable(curpos_ssp, skip, &mut count) {
+                return Some(BaseElement::Device(d));
             }
             if count == 0 {
                 *skip = count;
@@ -199,18 +241,44 @@ impl Schematic {
 
     pub fn delete_selected(&mut self) {
         if let SchematicState::Idle = self.state {
-            self.nets.delete_selected_from_persistent(self.devices.ports_ssp());
-            self.devices.delete_selected();
+            for be in &self.selected {
+                match be {
+                    BaseElement::NetEdge(e) => {
+                        self.nets.delete_edge(e);
+                    }
+                    BaseElement::Device(d) => {
+                        self.devices.delete_device(d);
+                    }
+                }
+            }
+            self.selected.clear();
+            self.prune_nets();
         }
     }
     pub fn key_test(&mut self) {
         self.nets.tt();
     }
+    fn prune_nets(&mut self) {
+        self.nets.prune(self.devices.ports_ssp());
+    }
+    fn move_selected(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
+        let selected = self.selected.clone();
+        self.selected.clear();
+        for be in selected {
+            match be {
+                BaseElement::NetEdge(e) => {
+                    self.nets.transform(e, vvt);
+                }
+                BaseElement::Device(d) => {
+                    d.0.borrow_mut().transform(vvt);
+                }
+            }
+        }
+    }
 
     pub fn events_handler(
         &mut self, 
         event: Event, 
-        curpos_vsp: VSPoint,
         curpos_ssp: SSPoint, 
     ) -> (Option<crate::Msg>, bool) {
         let mut msg = None;
@@ -265,15 +333,14 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                self.tentatives_to_selected();
-                state = SchematicState::Selecting(VSBox::new(curpos_vsp, curpos_vsp));
+                state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
             },
             (
-                SchematicState::Selecting(vsb), 
+                SchematicState::Selecting(ssb), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                vsb.max = curpos_vsp;
-                self.tentatives_by_vsbox(&vsb);
+                ssb.max = curpos_ssp;
+                self.tentatives_by_ssbox(&ssb);
             },
             (
                 SchematicState::Selecting(_), 
@@ -288,34 +355,30 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                let d = self.devices.place_res();
-                d.borrow_mut().set_translation(curpos_ssp);
+                let d = self.devices.new_res();
+                d.0.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
             ) => {
-                let d = self.devices.place_gnd();
-                d.borrow_mut().set_translation(curpos_ssp);
+                let d = self.devices.new_gnd();
+                d.0.borrow_mut().set_translation(curpos_ssp);
                 state = SchematicState::DevicePlacement(d);
             },
             (
-                SchematicState::DevicePlacement(di), 
+                SchematicState::DevicePlacement(d), 
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
-                di.borrow_mut().set_translation(curpos_ssp);
-            },
-            (
-                SchematicState::DevicePlacement(di), 
-                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
-            ) => {
-                di.borrow_mut().rotate(true);
+                d.0.borrow_mut().set_translation(curpos_ssp);
             },
             (
                 SchematicState::DevicePlacement(di), 
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
+                self.devices.insert(di.clone());
+                self.prune_nets();
                 state = SchematicState::Idle;
                 clear_passive = true;
             },
@@ -327,25 +390,30 @@ impl Schematic {
                 state = SchematicState::Moving(None);
             },
             (
-                SchematicState::Moving(Some((_ssp0, ssp1))),
+                SchematicState::Moving(Some((_ssp0, ssp1, sst))),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 *ssp1 = curpos_ssp;
             },
             (
+                SchematicState::Moving(Some((ssp0, ssp1, vvt))), 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
+            ) => {
+                *vvt = vvt.pre_rotate(Angle::frac_pi_2());
+            },
+            (
                 SchematicState::Moving(mut opt_pts),
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
             ) => {
-                if let Some((ssp0, ssp1)) = &mut opt_pts {
-                    let ssv = *ssp1 - *ssp0;
-                    self.nets.move_selected(ssv);
-                    self.devices.move_selected(ssv);
-                    self.nets.prune(self.devices.ports_ssp());
+                if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
+                    self.move_selected(SchematicState::move_transform(ssp0, ssp1, vvt));
+                    self.prune_nets();
                     state = SchematicState::Idle;
                     clear_passive = true;
                 } else {
                     let ssp: euclid::Point2D<_, _> = curpos_ssp;
-                    state = SchematicState::Moving(Some((ssp, ssp)));
+                    let sst = Transform2D::identity();
+                    state = SchematicState::Moving(Some((ssp, ssp, sst)));
                 }
             },
             // esc

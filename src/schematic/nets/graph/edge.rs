@@ -2,22 +2,23 @@ use std::rc::Rc;
 
 use crate::{
     transforms::{
-        VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace, SSBox, SchematicSpace
+        VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace, SSBox, SchematicSpace, SSVec
     }, 
-    schematic::nets::{Drawable, Selectable}
+    schematic::{interactable::{Interactable, Interactive}, nets::{Drawable, Selectable}}
 };
 use euclid::{Point2D, Box2D, Vector2D, Size2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 
-use super::{Label, SchematicNetLabel};
+use super::{SchematicNetLabel};
 
 #[derive(Clone, Debug, Default)]
 // pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
 pub struct NetEdge {
     pub src: SSPoint,
     pub dst: SSPoint,
-    pub tentative: bool,
-    pub selected: bool,
+
+    pub interactable: Interactable,
+
     pub label: Option<Rc<String>>,
     pub schematic_net_label: Option<SchematicNetLabel>,
 }
@@ -48,6 +49,22 @@ impl NetEdge {
             // either edge of oblique line
             ssp == self.src || ssp == self.dst
         }
+    }
+
+    pub fn bounds_from_pts(src: SSPoint, dst: SSPoint) -> SSBox {
+        let mut ssb = SSBox::from_points([src, dst]);
+        ssb.max += SSVec::new(1, 1);
+        ssb
+    }
+}
+
+impl Interactive for NetEdge {
+    fn transform(&mut self, vvt: euclid::Transform2D<f32, ViewportSpace, ViewportSpace>) {
+        (self.src, self.dst) = (
+            vvt.transform_point(self.src.cast().cast_unit()).round().cast().cast_unit(),
+            vvt.transform_point(self.dst.cast().cast_unit()).round().cast().cast_unit()
+        );
+        self.interactable.bounds = NetEdge::bounds_from_pts(self.src, self.dst);
     }
 }
 
@@ -144,10 +161,6 @@ impl Drawable for NetEdge {
             ..Stroke::default()
         };
         draw_with(self.src, self.dst, vct, frame, wire_stroke);
-
-        if self.selected {
-            self.draw_selected(vct, vcscale, frame);
-        }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let wire_width = self::WIRE_WIDTH;

@@ -2,12 +2,10 @@
 // device Id, net at port, ground net '0', device voltage 0
 mod devicetype;
 mod deviceinstance;
-use devicetype::Graphics;
-use deviceinstance::{DeviceType, Device, R, Gnd};
-pub use deviceinstance::DeviceExt;
+use devicetype::{Graphics, DeviceClass, r::R, gnd::Gnd};
+use deviceinstance::{Device};
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
-use euclid::{Vector2D, Transform2D, Angle};
 use iced::widget::canvas::Frame;
 
 use crate::{
@@ -19,129 +17,152 @@ use crate::{
 
 use by_address::ByAddress;
 
-pub struct RcRDevice(Rc<RefCell<Device>>);
+use super::interactable::Interactive;
+
+#[derive(Debug, Clone)]
+pub struct RcRDevice (pub Rc<RefCell<Device>>);
 
 impl PartialEq for RcRDevice {
     fn eq(&self, other: &Self) -> bool {
         ByAddress(self.0.clone()) == ByAddress(other.0.clone())
     }
 }
-
+impl Eq for RcRDevice{}
 impl std::hash::Hash for RcRDevice {
     fn hash<H: Hasher>(&self, state: &mut H) {
         ByAddress(self.0.clone()).hash(state);
     }
 }
 
-struct DeviceSet <T> where T: DeviceType<T> {
-    set: HashSet<RcRDevice>, 
+struct ClassManager {
     wm: usize,
-    graphics_resources: Vec<Rc<Graphics<T>>>,
+    graphics: Vec<Rc<Graphics>>,
 }
-impl<T> DeviceSet<T> where T: DeviceType<T> + 'static {
-    fn new_instance(&mut self) -> Rc<RefCell<Device>> {
-        Rc::new(RefCell::new(Device::new_with_ord(self.wm, self.graphics_resources[0].clone())))
+
+impl ClassManager {
+    pub fn new_w_graphics(graphics: Vec<Rc<Graphics>>) -> Self {
+        ClassManager { wm: 0, graphics }
     }
-    fn new() -> Self {
-        DeviceSet { set: HashSet::new(), wm: 0, graphics_resources: vec![Rc::new(T::default_graphics())] }
+    pub fn incr(&mut self) -> usize {
+        self.wm += 1;
+        self.wm
     }
-    fn devices_traits(&self) -> Vec<Rc<RefCell<dyn DeviceExt>>> {
-        self.set.iter().map(|x| x.0.clone() as Rc<RefCell<dyn DeviceExt>>).collect()
+}
+
+struct DevicesManager {
+    gnd: ClassManager,
+    r: ClassManager,
+}
+
+impl Default for DevicesManager {
+    fn default() -> Self {
+        Self { 
+            gnd: ClassManager::new_w_graphics(vec![]), 
+            r: ClassManager::new_w_graphics(vec![]), 
+        }
     }
 }
 
 pub struct Devices {
-    set_r: DeviceSet<R>,
-    set_gnd: DeviceSet<Gnd>,
+    set: HashSet<RcRDevice>, 
+    manager: DevicesManager,
 }
 
 impl Default for Devices {
     fn default() -> Self {
-        Devices{ set_r: DeviceSet::new(), set_gnd: DeviceSet::new() }
+        Devices{ set: HashSet::new(), manager: DevicesManager::default() }
     }
 }
 
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.iter_device_traits() {
-            let vct_c = d.borrow().compose_transform(vct);
-            d.borrow().draw_persistent(vct_c, vcscale, frame);
+        for d in &self.set {
+            d.0.borrow().draw_persistent(vct, vcscale, frame);
         }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.iter_device_traits().iter().filter(|&d| d.borrow().get_interactable().selected) {
-            let vct_c = d.borrow().compose_transform(vct);
-            d.borrow().draw_selected(vct_c, vcscale, frame);
-        }
+        panic!("not intended for use");
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.iter_device_traits().iter().filter(|&d| d.borrow().get_interactable().tentative) {
-            let vct_c = d.borrow().compose_transform(vct);
-            d.borrow().draw_preview(vct_c, vcscale, frame);
+        for d in self.set.iter().filter(|&d| d.0.borrow().get_interactable().tentative) {
+            d.0.borrow().draw_preview(vct, vcscale, frame);
         }
     }
 }
 
 impl Devices {
-    pub fn place_res(&mut self) -> Rc<RefCell<dyn DeviceExt>> {
-        self.set_r.new_instance()
+    pub fn insert(&mut self, d: RcRDevice) {
+        let ord = match d.0.borrow().class() {
+            DeviceClass::Gnd(_) => self.manager.gnd.incr(),
+            DeviceClass::R(_) => self.manager.r.incr(),
+        };
+        d.0.borrow_mut().set_ord(ord);
+        self.set.insert(d);
     }
-    pub fn place_gnd(&mut self) -> Rc<RefCell<dyn DeviceExt>> {
-        self.set_gnd.new_instance()
+    pub fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<RcRDevice> {
+        for d in &self.set {
+            let mut ssb = d.0.borrow().bounds().clone();
+            ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
+            if ssb.contains(curpos_ssp) {
+                *count += 1;
+                if *count > *skip {
+                    *skip = *count;
+                    return Some(d.clone());
+                }
+            }
+        }
+        None
     }
-    pub fn iter_device_traits(&self) -> Vec<Rc<RefCell<dyn DeviceExt>>> {
-        [
-            self.set_gnd.devices_traits(),
-            self.set_r.devices_traits(),
-        ].concat()
+    pub fn tentatives(&self) -> impl Iterator<Item = RcRDevice> + '_ {
+        self.set.iter().filter_map(
+            |x| 
+            if x.0.borrow().get_interactable().tentative {
+                Some(x.clone())
+            } else {
+                None
+            }
+        )
+    }
+    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
+        let _: Vec<_> = self.set.iter().map(|d| {
+            // d.0.borrow_mut().tentative_by_vsb(vsb);
+            d.0.borrow_mut().interactable.tentative_by_ssb(ssb);
+        }).collect();
+    }
+    pub fn new_res(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::R(R::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
+    }
+    pub fn new_gnd(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
     }
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
-        self.set_gnd.set.iter().flat_map(|d| d.0.borrow().ports_ssp())
-        .chain(self.set_r.set.iter().flat_map(|d| d.0.borrow().ports_ssp()))
+        self.set.iter()
+        .flat_map(|d| d.0.borrow().ports_ssp())
         .collect()
     }
-    pub fn tentatives_to_selected(&mut self) {
-        for d in self.iter_device_traits() {
-            d.borrow_mut().tentatives_to_selected();
-        }
-    }
-    pub fn move_selected(&mut self, ssv: Vector2D<i16, SchematicSpace>) {
-        for d in self.iter_device_traits() {
-            d.borrow_mut().move_selected(ssv);
-        }
-    }
-    pub fn draw_selected_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.iter_device_traits() {
-            d.borrow_mut().draw_selected_preview(vct, vcscale, frame);
-        }
-    }
-    pub fn clear_selected(&mut self) {
-        for d in self.iter_device_traits() {
-            d.borrow_mut().clear_selected();
-        }
-    }
     pub fn clear_tentatives(&mut self) {
-        for d in self.iter_device_traits() {
-            d.borrow_mut().clear_tentatives();
+        for d in &self.set {
+            d.0.borrow_mut().clear_tentatives();
         }
     }
     pub fn bounding_box(&self) -> VSBox {
-        let vt = self.iter_device_traits();
-        let pts = vt.iter()
+        let pts = self.set.iter()
         .flat_map(
-            |d| 
-            [d.borrow().bounds().min, d.borrow().bounds().max].into_iter()
+            |d|
+            [d.0.borrow().bounds().min, d.0.borrow().bounds().max].into_iter()
         );
         SSBox::from_points(pts).cast().cast_unit()
     }
-    pub fn delete_selected(&mut self) {
-        todo!()
-    }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        for d in self.iter_device_traits() {
-            if d.borrow().ports_occupy_ssp(ssp) {return true}
+        for d in &self.set {
+            if d.0.borrow().ports_occupy_ssp(ssp) {return true}
         }
         false
+    }
+    pub fn delete_device(&mut self, d: &RcRDevice) {
+        self.set.remove(d);
     }
 }
 

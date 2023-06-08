@@ -51,9 +51,6 @@ pub trait Selectable {
 }
 
 pub trait Drawable {
-    // const SOLDER_DIAMETER: f32 = 0.25;
-    // const WIRE_WIDTH: f32 = 0.05;
-    // const ZOOM_THRESHOLD: f32 = 5.0;
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);

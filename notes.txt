@@ -1,17 +1,22 @@
 todo:
 
 - immediate:
-    unify draw/stroke interface
-    (tech debt)
+    display params
 
-    add gnd, voltage source devices (g, v)
+    edit params
+
+    traits for nets, devices, baseElement - org and tech debt
+
+
+- medium term:
+    separate net names when split by a device
+
+    add voltage source (v)
     device parameters
     side panel device parameters edit
     generate netlist
     
     schematic saving/loading (serde)
-
-- medium term:
 
     schematic checking - mark floating nets, ports
 
