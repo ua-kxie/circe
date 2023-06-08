@@ -2,11 +2,11 @@ mod nets;
 mod devices;
 mod interactable;
 
-use std::{collections::HashSet, convert::identity};
+use std::{collections::HashSet};
 
 use euclid::{Vector2D, Transform2D, Angle};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace};
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec};
 use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
@@ -86,7 +86,8 @@ impl Schematic {
     }
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         self.clear_tentatives();
-        let ssb_p = SSBox::from_points([ssb.min, ssb.max]);
+        let mut ssb_p = SSBox::from_points([ssb.min, ssb.max]);
+        ssb_p.max += SSVec::new(1, 1);
         self.devices.tentatives_by_ssbox(&ssb_p);
         self.nets.tentatives_by_ssbox(&ssb_p);
     }
@@ -340,7 +341,7 @@ impl Schematic {
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. })
             ) => {
                 ssb.max = curpos_ssp;
-                self.tentatives_by_ssbox(&ssb);
+                self.tentatives_by_ssbox(ssb);
             },
             (
                 SchematicState::Selecting(_), 

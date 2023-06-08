@@ -37,6 +37,20 @@ impl std::hash::Hash for NetEdge {
 }
 
 impl NetEdge {
+    pub fn new(src: SSPoint, dst: SSPoint, label: Option<Rc<String>>, schematic_net_label: Option<SchematicNetLabel>) -> NetEdge {
+        NetEdge { 
+            src, 
+            dst, 
+            interactable: Interactable { bounds: NetEdge::bounds_from_pts(src, dst), tentative: false }, 
+            label, 
+            schematic_net_label,
+        }
+    }
+
+    pub fn interactable(src: SSPoint, dst: SSPoint, tentative: bool) -> Interactable {
+        Interactable { bounds: NetEdge::bounds_from_pts(src, dst), tentative, }
+    }
+
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         let v = self.dst - self.src;
         if v.x == 0 {
