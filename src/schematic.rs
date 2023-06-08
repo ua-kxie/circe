@@ -5,7 +5,7 @@ mod interactable;
 use std::{collections::HashSet};
 
 use euclid::{Vector2D, Transform2D};
-pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
+pub use nets::{Drawable, Nets, graph::{NetEdge, NetVertex}};
 use crate::transforms::{SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec, self};
 use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{

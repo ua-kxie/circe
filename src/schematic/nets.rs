@@ -1,12 +1,11 @@
 pub mod graph;
-use std::{rc::Rc, cell::RefCell};
 
 pub use graph::Nets;
 
-use crate::transforms::{VSPoint, VSBox, VCTransform, SchematicSpace, SSPoint};
+use crate::transforms::VCTransform;
 use iced::widget::canvas::Frame;
 
-use flagset::flags;
+// use flagset::flags;
 
 // assign each edge a name
 // on split: if named, give subgraph other than named new name. give sub graph with fewer vertices a new name if not named
@@ -42,25 +41,17 @@ use flagset::flags;
 // every netedge an enum of Label/SchematicNetLabel ? no, better have a consolidated place to check collision and stuff
 // how to check autogen labels do not collide across sub-graphs? find collision, then treat in prune
 
-pub trait Selectable {
-    // collision with point, selection box
-    fn collision_by_vsp(&self, curpos_vsp: VSPoint) -> bool;
-    fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool;
-    fn contained_by_vsb(&self, selbox: VSBox) -> bool;
-    fn collision_by_vsb(&self, selbox: VSBox) -> bool;
-}
-
 pub trait Drawable {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
 }
 
-flags! {
-    enum DrawState: u8 {
-        Persistent,
-        Selected,
-        Preview,
-    }
-}
+// flags! {
+//     enum DrawState: u8 {
+//         Persistent,
+//         Selected,
+//         Preview,
+//     }
+// }
 
