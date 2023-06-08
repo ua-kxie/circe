@@ -6,6 +6,8 @@ todo:
     edit device parameters
 
 - medium term:
+    use pane_grid from iced
+
     separate net names when split by a device
 
     add voltage source (v)

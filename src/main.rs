@@ -11,7 +11,7 @@ use iced::{executor, Size};
 use iced::widget::canvas::{
     Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, column, row, button};
+use iced::widget::{canvas, column, row, button, text_input, pane_grid};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme,
@@ -20,6 +20,7 @@ use iced::widget::canvas::event::{self, Event};
 use iced::mouse;
 use euclid::{Box2D, Point2D};
 use infobar::infobar;
+use param_editor::param_editor;
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -40,6 +41,8 @@ struct Circe {
     active_cache: Cache,
     passive_cache: Cache,
     background_cache: Cache,
+
+    text: String,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +50,9 @@ pub enum Msg {
     NewCurpos(SSPoint),
     NewZoom(f32),
     NetName(Option<String>),
+
+    TextInputChanged(String),
+    TextInputSubmit,
 }
 
 impl Application for Circe {
@@ -65,6 +71,8 @@ impl Application for Circe {
                 active_cache: Default::default(),
                 passive_cache: Default::default(),
                 background_cache: Default::default(),
+
+                text: String::from(""),
             },
             Command::none(),
         )
@@ -89,6 +97,12 @@ impl Application for Circe {
                     self.net_name.clear();
                 }
             },
+            Msg::TextInputChanged(s) => {
+                self.text = s;
+            },
+            Msg::TextInputSubmit => {
+                println!("{}", self.text);
+            },
         }
         Command::none()
     }
@@ -98,8 +112,17 @@ impl Application for Circe {
             .width(Length::Fill)
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
+        let param_editor = column![
+            text_input("", &self.text)
+            .width(50)
+            .on_input(Msg::TextInputChanged)
+            .on_submit(Msg::TextInputSubmit),
+            button("enter"),
+        ]
+        .width(Length::Shrink);
+
         row![
-            button("placeholder"),
+            param_editor,
             column![
                 canvas,
                 infobar,
@@ -285,6 +308,83 @@ mod infobar {
         Message: 'a,
     {
         fn from(infobar: InfoBar) -> Self {
+            component(infobar)
+        }
+    }
+}
+
+mod param_editor {
+    use iced::widget::{column, text_input, button};
+    use iced_lazy::{component, Component};
+    use iced::{Length, Element, Renderer};
+
+    #[derive(Debug, Clone)]
+    pub enum Evt {
+        InputChanged(String),
+        InputSubmit,
+    }
+
+    pub struct ParamEditor<Message> {
+        value: String,
+        on_submit: Box<dyn Fn(String) -> Message>,
+    }
+    
+    impl<Message> ParamEditor<Message> {
+        pub fn new(
+            value: String,
+            on_submit: impl Fn(String) -> Message + 'static,
+        ) -> Self {
+            Self {
+                value,
+                on_submit: Box::new(on_submit),
+            }
+        }
+    }
+
+    pub fn param_editor<Message>(
+        value: String,
+        on_submit: impl Fn(String) -> Message + 'static,
+    ) -> ParamEditor<Message> {
+        ParamEditor::new(value, on_submit)
+    }
+
+    impl<Message> Component<Message, Renderer> for ParamEditor<Message> {
+        type State = ();
+        type Event = Evt;
+
+        fn update(
+            &mut self,
+            _state: &mut Self::State,
+            event: Evt,
+        ) -> Option<Message> {
+            match event {
+                Evt::InputChanged(s) => {
+                    self.value = s;
+                    None
+                },
+                Evt::InputSubmit => {
+                    Some((self.on_submit)(self.value.clone()))
+                },
+            }
+        }
+        fn view(&self, _state: &Self::State) -> Element<Evt, Renderer> {
+            column![
+                text_input("", &self.value)
+                .width(50)
+                .on_input(Evt::InputChanged)
+                .on_submit(Evt::InputSubmit),
+                button("enter"),
+            ]
+            .width(Length::Shrink)
+            .into()
+        }
+    }
+
+    impl<'a, Message> From<ParamEditor<Message>> for Element<'a, Message, Renderer>
+    where
+        Message: 'a,
+    {
+        fn from(infobar: ParamEditor<Message>) -> Self {
             component(infobar)
         }
     }
