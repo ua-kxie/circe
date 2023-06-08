@@ -13,6 +13,10 @@ use iced::{widget::canvas::{
 }, Size, Color};
 use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
 
+pub trait SchematicSet {
+    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement>;
+}
+
 
 #[derive(Debug, Clone)]
 pub enum BaseElement {
@@ -216,17 +220,11 @@ impl Schematic {
     fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
             let mut count = 0;
-            for e in self.nets.graph.all_edges() {
-                if e.2.collision_by_ssp(curpos_ssp) {
-                    count += 1;
-                    if count > *skip {
-                        *skip = count;
-                        return Some(BaseElement::NetEdge(e.2.clone()));
-                    }
-                }
+            if let Some(e) = self.nets.selectable(curpos_ssp, skip, &mut count) {
+                return Some(e);
             }
             if let Some(d) = self.devices.selectable(curpos_ssp, skip, &mut count) {
-                return Some(BaseElement::Device(d));
+                return Some(d);
             }
             if count == 0 {
                 *skip = count;

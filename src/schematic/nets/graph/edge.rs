@@ -2,11 +2,10 @@ use std::rc::Rc;
 
 use crate::{
     transforms::{
-        VSPoint, SSPoint, VSBox, VCTransform, CVTransform, ViewportSpace, SSBox, SchematicSpace, SSVec
+        SSPoint, VCTransform, SSBox, SchematicSpace, SSVec
     }, 
     schematic::{interactable::{Interactable, Interactive}, nets::Drawable}
 };
-use euclid::{Point2D, Box2D, Vector2D, Size2D};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 
 use super::{SchematicNetLabel};
@@ -61,32 +60,32 @@ impl NetEdge {
         ssb
     }
 
-    pub fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
-        let v = self.dst - self.src;
-        if v.x == 0 || v.y == 0 {
-            let mut ab = SSBox::from_points([  // from pts instead of new to guarantee positive sized box
-                self.src, 
-                self.dst
-            ]);
-            ab.set_size(ab.size() + Size2D::<i16, SchematicSpace>::new(1, 1));
-            ab.contains(curpos_ssp)
-        } else {  // oblique line
-            // find transform `t` to take stored geometry to unit horizontal line
-            // should be a better/faster way todo
-            let mut t = CVTransform::identity();
-            let v1: Vector2D<f32, ViewportSpace> = v.cast().cast_unit();
-            t = t.then_rotate(v1.angle_from_x_axis());
-            t = t.then_translate(self.src.to_vector().cast().cast_unit());
-            let t = t.inverse().unwrap();
+    // pub fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
+    //     let v = self.dst - self.src;
+    //     if v.x == 0 || v.y == 0 {
+    //         let mut ab = SSBox::from_points([  // from pts instead of new to guarantee positive sized box
+    //             self.src, 
+    //             self.dst
+    //         ]);
+    //         ab.set_size(ab.size() + Size2D::<i16, SchematicSpace>::new(1, 1));
+    //         ab.contains(curpos_ssp)
+    //     } else {  // oblique line
+    //         // find transform `t` to take stored geometry to unit horizontal line
+    //         // should be a better/faster way todo
+    //         let mut t = CVTransform::identity();
+    //         let v1: Vector2D<f32, ViewportSpace> = v.cast().cast_unit();
+    //         t = t.then_rotate(v1.angle_from_x_axis());
+    //         t = t.then_translate(self.src.to_vector().cast().cast_unit());
+    //         let t = t.inverse().unwrap();
 
-            // transform curpos_vsp with A
-            let p = t.transform_point(curpos_ssp.cast().cast_unit());
+    //         // transform curpos_vsp with A
+    //         let p = t.transform_point(curpos_ssp.cast().cast_unit());
 
-            // check if resulting point is contained in box around horizontal line
-            let bounds = Box2D::from_points([Point2D::from([v1.length()/10., 0.5]), Point2D::from([v1.length() - v1.length()/10., -0.5])]);
-            bounds.contains(p)
-        }
-    }
+    //         // check if resulting point is contained in box around horizontal line
+    //         let bounds = Box2D::from_points([Point2D::from([v1.length()/10., 0.5]), Point2D::from([v1.length() - v1.length()/10., -0.5])]);
+    //         bounds.contains(p)
+    //     }
+    // }
 }
 
 impl Interactive for NetEdge {  

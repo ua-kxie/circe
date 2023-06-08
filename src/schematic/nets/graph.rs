@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use crate::schematic::{BaseElement, SchematicSet};
 use crate::schematic::interactable::Interactive;
 use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox};
 use euclid::{Point2D, Transform2D};
@@ -261,6 +262,22 @@ impl Nets {
     }
     pub fn delete_edge(&mut self, e: &NetEdge) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
+    }
+}
+
+impl SchematicSet for Nets {
+    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement> {
+        for e in self.graph.all_edges() {
+            let ssb = e.2.interactable.bounds;
+            if ssb.contains(curpos_ssp) {
+                *count += 1;
+                if *count > *skip {
+                    *skip = *count;
+                    return Some(BaseElement::NetEdge(e.2.clone()));
+                }
+            }
+        }
+        None
     }
 }
 

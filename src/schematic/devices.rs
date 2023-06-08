@@ -17,6 +17,8 @@ use crate::{
 
 use by_address::ByAddress;
 
+use super::{SchematicSet, BaseElement};
+
 #[derive(Debug, Clone)]
 pub struct RcRDevice (pub Rc<RefCell<Device>>);
 
@@ -95,20 +97,7 @@ impl Devices {
             self.set.insert(d);
         }
     }
-    pub fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<RcRDevice> {
-        for d in &self.set {
-            let mut ssb = *d.0.borrow().bounds();
-            ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
-            if ssb.contains(curpos_ssp) {
-                *count += 1;
-                if *count > *skip {
-                    *skip = *count;
-                    return Some(d.clone());
-                }
-            }
-        }
-        None
-    }
+
     pub fn tentatives(&self) -> impl Iterator<Item = RcRDevice> + '_ {
         self.set.iter().filter_map(
             |x| 
@@ -162,4 +151,19 @@ impl Devices {
     }
 }
 
-
+impl SchematicSet for Devices {
+    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement> {
+        for d in &self.set {
+            let mut ssb = d.0.borrow().interactable.bounds;
+            ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
+            if ssb.contains(curpos_ssp) {
+                *count += 1;
+                if *count > *skip {
+                    *skip = *count;
+                    return Some(BaseElement::Device(d.clone()));
+                }
+            }
+        }
+        None
+    }
+}
