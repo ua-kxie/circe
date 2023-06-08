@@ -72,11 +72,11 @@ impl NetEdge {
     }
 }
 
-impl Interactive for NetEdge {
-    fn transform(&mut self, vvt: euclid::Transform2D<f32, ViewportSpace, ViewportSpace>) {
+impl Interactive for NetEdge {  
+    fn transform(&mut self, sst: euclid::Transform2D<i16, SchematicSpace, SchematicSpace>) {
         (self.src, self.dst) = (
-            vvt.transform_point(self.src.cast().cast_unit()).round().cast().cast_unit(),
-            vvt.transform_point(self.dst.cast().cast_unit()).round().cast().cast_unit()
+            sst.transform_point(self.src),
+            sst.transform_point(self.dst),
         );
         self.interactable.bounds = NetEdge::bounds_from_pts(self.src, self.dst);
     }

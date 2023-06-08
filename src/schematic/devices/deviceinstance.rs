@@ -154,8 +154,8 @@ impl Drawable for Device {
 }
 
 impl Interactive for Device {
-    fn transform(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
-        self.transform = self.transform.then(&vvt.cast().with_destination().with_source());
+    fn transform(&mut self, sst: Transform2D<i16, SchematicSpace, SchematicSpace>) {
+        self.transform = self.transform.then(&sst);
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
 }

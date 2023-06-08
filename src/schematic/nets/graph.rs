@@ -257,9 +257,9 @@ impl Nets {
         }
         self.prune(extra_vertices);
     }
-    pub fn transform(&mut self, mut e: NetEdge, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
+    pub fn transform(&mut self, mut e: NetEdge, sst: Transform2D<i16, SchematicSpace, SchematicSpace>) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
-        e.transform(vvt);
+        e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
     }
     pub fn tt(&self) {

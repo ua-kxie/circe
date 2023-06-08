@@ -1,6 +1,6 @@
 use euclid::Transform2D;
 
-use crate::transforms::{SSBox, SSVec, VSBox, SSPoint, ViewportSpace};
+use crate::transforms::{SSBox, SSVec, VSBox, SSPoint, ViewportSpace, SchematicSpace};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Interactable {
@@ -20,6 +20,6 @@ impl Interactable {
 }
 
 pub trait Interactive {
-    fn transform(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>);
+    fn transform(&mut self, sst: Transform2D<i16, SchematicSpace, SchematicSpace>);
 }
 

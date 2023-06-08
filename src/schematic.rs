@@ -6,7 +6,7 @@ use std::{collections::HashSet};
 
 use euclid::{Vector2D, Transform2D, Angle};
 pub use nets::{Selectable, Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec};
+use crate::transforms::{VSPoint, SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec, self};
 use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
@@ -46,7 +46,7 @@ pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
     Selecting(SSBox),
-    Moving(Option<(SSPoint, SSPoint, Transform2D<f32, ViewportSpace, ViewportSpace>)>),
+    Moving(Option<(SSPoint, SSPoint, Transform2D<i16, SchematicSpace, SchematicSpace>)>),
     // first click, second click, transform for rotation/flip ONLY
 }
 
@@ -57,11 +57,11 @@ impl Default for SchematicState {
 }
 
 impl SchematicState {
-    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, vvt: &Transform2D<f32, ViewportSpace, ViewportSpace>) -> Transform2D<f32, ViewportSpace, ViewportSpace> {
-        vvt
-        .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y).cast())
-        .then_translate(Vector2D::new(ssp0.x, ssp0.y).cast())
-        .then_translate((*ssp1-*ssp0).cast().cast_unit())
+    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &Transform2D<i16, SchematicSpace, SchematicSpace>) -> Transform2D<i16, SchematicSpace, SchematicSpace> {
+        sst
+        .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y))
+        .then_translate(Vector2D::new(ssp0.x, ssp0.y))
+        .then_translate(*ssp1-*ssp0)
     }
 }
 
@@ -169,9 +169,9 @@ impl Schematic {
                 frame.stroke(&path_builder.build(), stroke);
             },
             SchematicState::Moving(Some((ssp0, ssp1, sst))) => {
-                let sst = SchematicState::move_transform(ssp0, ssp1, sst);
+                let vvt = SchematicState::move_transform(ssp0, ssp1, sst).cast::<f32>().with_destination::<ViewportSpace>().with_source::<ViewportSpace>();
 
-                let vct_c = sst.then(&vct);
+                let vct_c = vvt.then(&vct);
                 for be in &self.selected {
                     match be {
                         BaseElement::Device(d) => {
@@ -258,16 +258,16 @@ impl Schematic {
     fn prune_nets(&mut self) {
         self.nets.prune(self.devices.ports_ssp());
     }
-    fn move_selected(&mut self, vvt: Transform2D<f32, ViewportSpace, ViewportSpace>) {
+    fn move_selected(&mut self, sst: Transform2D<i16, SchematicSpace, SchematicSpace>) {
         let selected = self.selected.clone();
         self.selected.clear();
         for be in selected {
             match be {
                 BaseElement::NetEdge(e) => {
-                    self.nets.transform(e, vvt);  // how to handle copying? e.g. adds new nets
+                    self.nets.transform(e, sst);  // how to handle copying? e.g. adds new nets
                 }
                 BaseElement::Device(d) => {
-                    d.0.borrow_mut().transform(vvt);
+                    d.0.borrow_mut().transform(sst);
                     self.devices.insert(d);
                 }
             }
@@ -357,7 +357,7 @@ impl Schematic {
                 let d = self.devices.new_res();
                 d.0.borrow_mut().set_translation(curpos_ssp);
                 self.selected.insert(BaseElement::Device(d));
-                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<f32, ViewportSpace, ViewportSpace>::identity())));
+                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<i16, SchematicSpace, SchematicSpace>::identity())));
             },
             (
                 SchematicState::Idle, 
@@ -367,7 +367,7 @@ impl Schematic {
                 let d = self.devices.new_gnd();
                 d.0.borrow_mut().set_translation(curpos_ssp);
                 self.selected.insert(BaseElement::Device(d));
-                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<f32, ViewportSpace, ViewportSpace>::identity())));
+                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<i16, SchematicSpace, SchematicSpace>::identity())));
             },
             // moving
             (
@@ -383,10 +383,10 @@ impl Schematic {
                 *ssp1 = curpos_ssp;
             },
             (
-                SchematicState::Moving(Some((ssp0, ssp1, vvt))), 
+                SchematicState::Moving(Some((ssp0, ssp1, sst))), 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
-                *vvt = vvt.pre_rotate(Angle::frac_pi_2());
+                *sst = sst.then(&transforms::SST_CWR);
             },
             (
                 SchematicState::Moving(mut opt_pts),

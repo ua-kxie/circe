@@ -23,6 +23,14 @@ pub type SSVec = euclid::Vector2D<i16, SchematicSpace>;
 pub type VCTransform = euclid::Transform2D<f32, ViewportSpace, CanvasSpace>;
 pub type CVTransform = euclid::Transform2D<f32, CanvasSpace, ViewportSpace>;
 
+pub const SST_CWR: euclid::Transform2D<i16, SchematicSpace, SchematicSpace> = euclid::Transform2D::<i16, SchematicSpace, SchematicSpace>::new(
+    0, -1, 1, 0, 0, 0
+);
+
+pub const SST_CCWR: euclid::Transform2D<i16, SchematicSpace, SchematicSpace> = euclid::Transform2D::<i16, SchematicSpace, SchematicSpace>::new(
+    0, 1, -1, 0, 0, 0
+);
+
 /// Newtype for working with iced::Point and euclid::Point2D s
 #[derive(Debug, Copy, Clone)]
 pub struct Point(CSPoint);

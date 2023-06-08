@@ -3,6 +3,9 @@ todo:
 - immediate:
     traits for nets, devices, baseElement - org and tech debt
 
+    do not increment device ID on move
+
+    translation plus rotation causes offset between net and device
     rework selected group transforms - gets rounded to different integers
 
     edit params
