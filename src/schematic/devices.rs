@@ -92,12 +92,14 @@ impl Drawable for Devices {
 
 impl Devices {
     pub fn insert(&mut self, d: RcRDevice) {
-        let ord = match d.0.borrow().class() {
-            DeviceClass::Gnd(_) => self.manager.gnd.incr(),
-            DeviceClass::R(_) => self.manager.r.incr(),
-        };
-        d.0.borrow_mut().set_ord(ord);
-        self.set.insert(d);
+        if !self.set.contains(&d) {
+            let ord = match d.0.borrow().class() {
+                DeviceClass::Gnd(_) => self.manager.gnd.incr(),
+                DeviceClass::R(_) => self.manager.r.incr(),
+            };
+            d.0.borrow_mut().set_ord(ord);
+            self.set.insert(d);
+        }
     }
     pub fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<RcRDevice> {
         for d in &self.set {
