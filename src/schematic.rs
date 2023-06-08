@@ -45,7 +45,6 @@ impl std::hash::Hash for BaseElement {
 pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
-    DevicePlacement(RcRDevice),
     Selecting(SSBox),
     Moving(Option<(SSPoint, SSPoint, Transform2D<f32, ViewportSpace, ViewportSpace>)>),
     // first click, second click, transform for rotation/flip ONLY
@@ -145,9 +144,6 @@ impl Schematic {
             },
             SchematicState::Idle => {
             },
-            SchematicState::DevicePlacement(d) => {
-                d.0.borrow().draw_preview(vct, vcscale, frame);
-            }
             SchematicState::Selecting(ssb) => {
                 let color = if ssb.height() > 0 {Color::from_rgba(1., 1., 0., 0.1)} else {Color::from_rgba(0., 1., 1., 0.1)};
                 let f = canvas::Fill {
@@ -268,10 +264,11 @@ impl Schematic {
         for be in selected {
             match be {
                 BaseElement::NetEdge(e) => {
-                    self.nets.transform(e, vvt);
+                    self.nets.transform(e, vvt);  // how to handle copying? e.g. adds new nets
                 }
                 BaseElement::Device(d) => {
                     d.0.borrow_mut().transform(vvt);
+                    self.devices.insert(d);
                 }
             }
         }
@@ -356,32 +353,21 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::R, modifiers})
             ) => {
+                self.selected.clear();
                 let d = self.devices.new_res();
                 d.0.borrow_mut().set_translation(curpos_ssp);
-                state = SchematicState::DevicePlacement(d);
+                self.selected.insert(BaseElement::Device(d));
+                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<f32, ViewportSpace, ViewportSpace>::identity())));
             },
             (
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::G, modifiers})
             ) => {
+                self.selected.clear();
                 let d = self.devices.new_gnd();
                 d.0.borrow_mut().set_translation(curpos_ssp);
-                state = SchematicState::DevicePlacement(d);
-            },
-            (
-                SchematicState::DevicePlacement(d), 
-                Event::Mouse(iced::mouse::Event::CursorMoved { .. })
-            ) => {
-                d.0.borrow_mut().set_translation(curpos_ssp);
-            },
-            (
-                SchematicState::DevicePlacement(di), 
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left))
-            ) => {
-                self.devices.insert(di.clone());
-                self.prune_nets();
-                state = SchematicState::Idle;
-                clear_passive = true;
+                self.selected.insert(BaseElement::Device(d));
+                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<f32, ViewportSpace, ViewportSpace>::identity())));
             },
             // moving
             (

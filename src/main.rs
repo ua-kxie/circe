@@ -210,7 +210,6 @@ impl canvas::Program<Msg> for Circe {
                 (ViewportState::Panning(_), _) => mouse::Interaction::Grabbing,
                 (ViewportState::None, SchematicState::Idle) => mouse::Interaction::default(),
                 (ViewportState::None, SchematicState::Wiring(_)) => mouse::Interaction::Crosshair,
-                (ViewportState::None, SchematicState::DevicePlacement(_)) => mouse::Interaction::ResizingHorizontally,
                 (ViewportState::None, SchematicState::Moving(_)) => mouse::Interaction::ResizingVertically,
                 _ => mouse::Interaction::default(),
             }

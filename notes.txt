@@ -1,12 +1,11 @@
 todo:
 
 - immediate:
-    display params
-
-    edit params
-
     traits for nets, devices, baseElement - org and tech debt
 
+    rework selected group transforms - gets rounded to different integers
+
+    edit params
 
 - medium term:
     separate net names when split by a device
