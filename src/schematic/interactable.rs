@@ -17,11 +17,6 @@ impl Interactable {
             self.tentative = true;
         }
     }
-    pub fn tentative_by_ssp(&mut self, ssp: SSPoint) {
-        if self.bounds.contains(ssp) {
-            self.tentative = true;
-        }
-    }
 }
 
 pub trait Interactive {

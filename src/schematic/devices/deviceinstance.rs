@@ -8,7 +8,7 @@ use iced::{widget::canvas::{Frame, Text}, Color};
 use crate::{
     schematic::{nets::Drawable, interactable::Interactive},
     transforms::{
-        SSPoint, SSBox, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
+        SSPoint, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
     }, 
 };
 use crate::schematic::interactable::Interactable;
@@ -18,12 +18,9 @@ pub struct Identifier {
     id_prefix: &'static str,  // prefix which determines device type in NgSpice
     id: usize,  // avoid changing - otherwise, 
     custom: Option<String>,  // if some, is set by the user - must use this as is for id - if multiple instances have same, both should be highlighted
-    // changing the id will break outputs which reference the old id. Otherwise it can be changed
-    // 1. how to catch and highlight duplicates
-    // 2. how to know id should not be changed (that it is referenced)
 }
 /*
-duplicates:
+id collision check:
     create hashset, for every identifier insert. if duplicate, save in second hashset
     every key in second hashset has duplicates
     iterate through devices and highlight every device with id which matches a key in second hashset
@@ -101,9 +98,6 @@ impl Device {
             }
         }
         false
-    }
-    pub fn bounds(&self) -> &SSBox {
-        &self.interactable.bounds
     }
     pub fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
         self.transform

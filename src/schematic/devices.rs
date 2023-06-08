@@ -136,7 +136,7 @@ impl Devices {
         let pts = self.set.iter()
         .flat_map(
             |d|
-            [d.0.borrow().bounds().min, d.0.borrow().bounds().max].into_iter()
+            [d.0.borrow().interactable.bounds.min, d.0.borrow().interactable.bounds.max].into_iter()
         );
         SSBox::from_points(pts).cast().cast_unit()
     }

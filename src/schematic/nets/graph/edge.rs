@@ -55,9 +55,7 @@ impl NetEdge {
     }
 
     pub fn bounds_from_pts(src: SSPoint, dst: SSPoint) -> SSBox {
-        let mut ssb = SSBox::from_points([src, dst]);
-        ssb.max += SSVec::new(1, 1);
-        ssb
+        SSBox::from_points([src, dst])
     }
 
     // pub fn collision_by_ssp(&self, curpos_ssp: SSPoint) -> bool {
