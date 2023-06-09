@@ -5,7 +5,7 @@ use transforms::{Point, CSPoint, CSBox, SSPoint};
 mod viewport;
 use viewport::ViewportState;
 mod schematic;
-use schematic::{Schematic, SchematicState};
+use schematic::{Schematic, SchematicState, RcRDevice};
 
 use iced::{executor, Size};
 use iced::widget::canvas::{
@@ -20,7 +20,7 @@ use iced::widget::canvas::event::{self, Event};
 use iced::mouse;
 use euclid::{Box2D, Point2D};
 use infobar::infobar;
-use param_editor::param_editor;
+use param_editor::{param_editor, ParamEditor};
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -44,6 +44,7 @@ struct Circe {
 
     text: String,
     schematic: Schematic,
+    active_device: Option<RcRDevice>,
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +53,7 @@ pub enum Msg {
     NewZoom(f32),
 
     TextInputChanged(String),
+    TextInputSubmit,
     CanvasEvent(Event, SSPoint),
 }
 
@@ -74,6 +76,7 @@ impl Application for Circe {
 
                 text: String::from(""),
                 schematic: Schematic::default(),
+                active_device: None,
             },
             Command::none(),
         )
@@ -93,12 +96,22 @@ impl Application for Circe {
             },
             Msg::TextInputChanged(s) => {
                 self.text = s;
-                println!("{}", self.text);
+            },
+            Msg::TextInputSubmit => {
+                if let Some(ad) = &self.active_device {
+                    ad.0.borrow_mut().class_mut().set(self.text.clone());
+                }
             },
             Msg::CanvasEvent(event, ssp) => {
                 let (opt_s, clear_passive) = self.schematic.events_handler(event, ssp);
                 if clear_passive {self.passive_cache.clear()}
                 self.net_name = opt_s;
+                self.active_device = self.schematic.active_device();
+                if let Some(rcrd) = &self.active_device {
+                    self.text = rcrd.0.borrow().class().param_summary();
+                } else {
+                    self.text = String::from("")
+                }
             },
         }
         Command::none()
@@ -109,10 +122,9 @@ impl Application for Circe {
             .width(Length::Fill)
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
-        let param_editor = param_editor(self.text.clone(), Msg::TextInputChanged);
-
+        let pe = param_editor(self.text.clone(), Msg::TextInputChanged, || {Msg::TextInputSubmit});
         row![
-            param_editor,
+            pe,
             column![
                 canvas,
                 infobar,
@@ -313,16 +325,19 @@ mod param_editor {
 
     pub struct ParamEditor<Message> {
         value: String,
-        on_submit: Box<dyn Fn(String) -> Message>,
+        on_change: Box<dyn Fn(String) -> Message>,
+        on_submit: Box<dyn Fn() -> Message>,
     }
     
     impl<Message> ParamEditor<Message> {
         pub fn new(
             value: String,
-            on_submit: impl Fn(String) -> Message + 'static,
+            on_change: impl Fn(String) -> Message + 'static,
+            on_submit: impl Fn() -> Message + 'static,
         ) -> Self {
             Self {
                 value,
+                on_change: Box::new(on_change),
                 on_submit: Box::new(on_submit),
             }
         }
@@ -330,9 +345,10 @@ mod param_editor {
 
     pub fn param_editor<Message>(
         value: String,
-        on_submit: impl Fn(String) -> Message + 'static,
+        on_change: impl Fn(String) -> Message + 'static,
+        on_submit: impl Fn() -> Message + 'static,
     ) -> ParamEditor<Message> {
-        ParamEditor::new(value, on_submit)
+        ParamEditor::new(value, on_change, on_submit)
     }
 
     impl<Message> Component<Message, Renderer> for ParamEditor<Message> {
@@ -346,11 +362,10 @@ mod param_editor {
         ) -> Option<Message> {
             match event {
                 Evt::InputChanged(s) => {
-                    self.value = s;
-                    None
+                    Some((self.on_change)(s))
                 },
                 Evt::InputSubmit => {
-                    Some((self.on_submit)(self.value.clone()))
+                    Some((self.on_submit)())
                 },
             }
         }

@@ -11,7 +11,7 @@ use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
 }, Size, Color};
-use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
+pub use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
 
 pub trait SchematicSet {
     fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement>;
@@ -80,6 +80,19 @@ pub struct Schematic {
 }
 
 impl Schematic {
+    pub fn active_device(&self) -> Option<RcRDevice> {
+        let mut v: Vec<_> = self.selected.iter().filter_map(|x| {
+            match x {
+                BaseElement::Device(d) => {Some(d.clone())},
+                _ => None,
+            }
+        }).collect();
+        if v.len() == 1 {
+            v.pop()
+        } else {
+            None
+        }
+    }
     fn clear_selected(&mut self) {
         self.selected.clear();
     }

@@ -167,6 +167,15 @@ pub enum DeviceClass {
     R(r::R),
 }
 impl DeviceClass {
+    pub fn set(&mut self, new: String) {
+        match self {
+            DeviceClass::R(x) => match &mut x.params {
+                r::ParamR::Raw(y) => y.set(new),
+                r::ParamR::Value(_) => {},
+            },
+            _ => {},
+        }
+    }
     pub fn graphics(&self) -> &'static Graphics {
         match self {
             DeviceClass::Gnd(x) => x.graphics,

@@ -35,6 +35,9 @@ impl Raw {
     fn new(raw: String) -> Self {
         Raw { raw }
     }
+    pub fn set(&mut self, new: String) {
+        self.raw = new;
+    }
 }
 
 #[derive(Debug)]

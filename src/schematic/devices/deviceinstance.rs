@@ -69,6 +69,9 @@ impl Device {
     pub fn class(&self) -> &DeviceClass {
         &self.class
     }
+    pub fn class_mut(&mut self) -> &mut DeviceClass {
+        &mut self.class
+    }
     pub fn new_with_ord_class(ord: usize, class: DeviceClass) -> Self {
         Device { 
             id: Identifier::new_with_prefix_ord(class.id_prefix(), ord), 
