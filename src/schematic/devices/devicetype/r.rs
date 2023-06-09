@@ -27,6 +27,15 @@ lazy_static! {
     };
 }
 
+#[derive(Debug)]
+pub struct Raw  {
+    raw: String,
+}
+impl Raw {
+    fn new(raw: String) -> Self {
+        Raw { raw }
+    }
+}
 
 #[derive(Debug)]
 pub struct SingleValue  {
@@ -41,11 +50,12 @@ impl SingleValue {
 
 #[derive(Debug)]
 pub enum ParamR  {
+    Raw(Raw),
     Value(SingleValue),
 }
 impl Default for ParamR {
     fn default() -> Self {
-        ParamR::Value(SingleValue::new(1000.0))
+        ParamR::Raw(Raw::new(String::from("1000")))
     }
 }
 impl ParamR {
@@ -53,6 +63,9 @@ impl ParamR {
         match self {
             ParamR::Value(v) => {
                 std::format!("{}", v.value)
+            },
+            ParamR::Raw(s) => {
+                s.raw.clone()
             },
         }
     }

@@ -5,19 +5,20 @@ todo:
 
     edit device parameters
 
-- medium term:
-    use pane_grid from iced
-
     separate net names when split by a device
-
     add voltage source (v)
     generate netlist
+
+    feed netlist to NgSpice simulator
+
+    make code/comment pristine - then code review
+
+- medium term:
+    use pane_grid from iced
     
     schematic saving/loading (serde)
 
     schematic checking - mark floating nets, ports
-
-    feed netlist to NgSpice simulator
 
     device/wire copy/paste
 

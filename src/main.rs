@@ -11,7 +11,7 @@ use iced::{executor, Size};
 use iced::widget::canvas::{
     Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, column, row, button, text_input, pane_grid};
+use iced::widget::{canvas, column, row};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme,
@@ -52,7 +52,6 @@ pub enum Msg {
     NetName(Option<String>),
 
     TextInputChanged(String),
-    TextInputSubmit,
 }
 
 impl Application for Circe {
@@ -99,8 +98,6 @@ impl Application for Circe {
             },
             Msg::TextInputChanged(s) => {
                 self.text = s;
-            },
-            Msg::TextInputSubmit => {
                 println!("{}", self.text);
             },
         }
@@ -112,14 +109,7 @@ impl Application for Circe {
             .width(Length::Fill)
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
-        let param_editor = column![
-            text_input("", &self.text)
-            .width(50)
-            .on_input(Msg::TextInputChanged)
-            .on_submit(Msg::TextInputSubmit),
-            button("enter"),
-        ]
-        .width(Length::Shrink);
+        let param_editor = param_editor(self.text.clone(), Msg::TextInputChanged);
 
         row![
             param_editor,
@@ -149,33 +139,35 @@ impl canvas::Program<Msg> for Circe {
         let curpos = cursor.position_in(&bounds);
         let vstate = sttup.0.state.clone();
         let mut msg = None;
-
-        if let Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}) = event {
-            // keys
-            match (vstate, key_code, modifiers.bits(), curpos) {
-                (_, iced::keyboard::KeyCode::T, 0, _) => {
-                    sttup.1.key_test();
-                    self.passive_cache.clear();
-                },
-                (_, iced::keyboard::KeyCode::F, 0, _) => {
-                    let vsb = sttup.1.bounding_box().inflate(5., 5.);
-                    sttup.0.display_bounds(
-                        CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
-                        vsb,
-                    );
-                    self.passive_cache.clear();
-                },
-                _ => {},
-            }
-        }
         
         if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
+            if let Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code, modifiers}) = event {
+                // keys
+                match (vstate, key_code, modifiers.bits(), curpos) {
+                    (_, iced::keyboard::KeyCode::T, 0, _) => {
+                        sttup.1.key_test();
+                        self.passive_cache.clear();
+                    },
+                    (_, iced::keyboard::KeyCode::F, 0, _) => {
+                        let vsb = sttup.1.bounding_box().inflate(5., 5.);
+                        sttup.0.display_bounds(
+                            CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.width, bounds.height)]), 
+                            vsb,
+                        );
+                        self.passive_cache.clear();
+                    },
+                    _ => {},
+                }
+            }
+
             let (msg0, clear_passive0) = sttup.0.events_handler(event, curpos_csp, bounds);
             let (msg1, clear_passive1) = sttup.1.events_handler(event, sttup.0.curpos_ssp());
             msg = msg0.or(msg1);
             if clear_passive0 || clear_passive1 { self.passive_cache.clear() }
+
+            self.active_cache.clear();
         }
-        self.active_cache.clear();
+
         if msg.is_some() {
             (event::Status::Captured, msg)
         } else {
