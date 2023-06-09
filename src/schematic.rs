@@ -276,15 +276,14 @@ impl Schematic {
         &mut self, 
         event: Event, 
         curpos_ssp: SSPoint, 
-    ) -> (Option<crate::Msg>, bool) {
-        let mut msg = None;
+    ) -> (Option<String>, bool) {
+        let mut ret = None;
         let mut clear_passive = false;
 
         if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
             let mut skip = self.selskip.saturating_sub(1);
-            let s = self.tentative_by_sspoint(curpos_ssp, &mut skip);
+            ret = self.tentative_by_sspoint(curpos_ssp, &mut skip);
             self.selskip = skip;
-            msg = Some(crate::Msg::NetName(s));
         }
 
         let mut state = self.state.clone();
@@ -429,12 +428,18 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers: _})
             ) => {
-                let s = self.tentative_next_by_vspoint(curpos_ssp);
-                msg = Some(crate::Msg::NetName(s));
+                ret = self.tentative_next_by_vspoint(curpos_ssp);
+            },
+            // test
+            (
+                SchematicState::Idle, 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::T, modifiers: _})
+            ) => {
+                self.key_test();
             },
             _ => {},
         }
         self.state = state;
-        (msg, clear_passive)
+        (ret, clear_passive)
     }
 }

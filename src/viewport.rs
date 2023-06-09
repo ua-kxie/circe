@@ -55,11 +55,12 @@ impl Viewport {
         event: iced::widget::canvas::Event, 
         curpos_csp: CSPoint, 
         bounds: iced::Rectangle
-    ) -> (Option<crate::Msg>, bool) {
+    ) -> (Option<crate::Msg>, bool, bool) {
         self.curpos_update(curpos_csp);
 
         let mut msg = None;
         let mut clear_passive = false;
+        let mut processed = true;
         let mut state = self.state.clone();
         match (&mut state, event) {
             // zooming
@@ -136,12 +137,15 @@ impl Viewport {
                 state = ViewportState::None;
                 clear_passive = true;
             },
-            _ => {},
+            _ => {
+                processed = false;
+            },
         }
         self.state = state;
         (
             msg,
             clear_passive,
+            processed,
         )
     }
 
