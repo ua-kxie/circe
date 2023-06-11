@@ -103,7 +103,6 @@ impl Schematic {
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         self.clear_tentatives();
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-        // ssb_p.max += SSVec::new(1, 1);
         self.devices.tentatives_by_ssbox(&ssb_p);
         self.nets.tentatives_by_ssbox(&ssb_p);
     }

@@ -11,7 +11,7 @@ use iced::{executor, Size};
 use iced::widget::canvas::{
     Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, column, row};
+use iced::widget::{canvas, column, row, button};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme,
@@ -100,6 +100,7 @@ impl Application for Circe {
             Msg::TextInputSubmit => {
                 if let Some(ad) = &self.active_device {
                     ad.0.borrow_mut().class_mut().set(self.text.clone());
+                    self.passive_cache.clear();
                 }
             },
             Msg::CanvasEvent(event, ssp) => {
@@ -122,6 +123,12 @@ impl Application for Circe {
             .width(Length::Fill)
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
+        let pe;
+        if let Some(ad) = &self.active_device {
+            if let Some(pe0) = ad.0.borrow_mut().param_editor() {
+                pe = Some(pe0);
+            }
+        }
         let pe = param_editor(self.text.clone(), Msg::TextInputChanged, || {Msg::TextInputSubmit});
         row![
             pe,
@@ -386,8 +393,8 @@ mod param_editor {
     where
         Message: 'a,
     {
-        fn from(infobar: ParamEditor<Message>) -> Self {
-            component(infobar)
+        fn from(parameditor: ParamEditor<Message>) -> Self {
+            component(parameditor)
         }
     }
 }

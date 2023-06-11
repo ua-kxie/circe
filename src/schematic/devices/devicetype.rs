@@ -1,12 +1,14 @@
 use euclid::Vector2D;
-use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash}, Color};
+use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash}, Color, Element};
 
 use crate::{
     transforms::{
         SSPoint, VSBox, VSPoint, VCTransform, Point, SSBox
-    }, schematic::Drawable, 
+    }, schematic::Drawable,
 };
 use iced::{widget::canvas::{Frame, Stroke}};
+
+use self::r::ParamEditor;
 
 pub mod r;
 pub mod gnd;
@@ -167,6 +169,16 @@ pub enum DeviceClass {
     R(r::R),
 }
 impl DeviceClass {
+    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
+        match self {
+            DeviceClass::Gnd(_) => {
+                None
+            },
+            DeviceClass::R(r) => {
+                r.params.param_editor()
+            },
+        }
+    }
     pub fn set(&mut self, new: String) {
         match self {
             DeviceClass::R(x) => match &mut x.params {

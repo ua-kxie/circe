@@ -1,5 +1,6 @@
 use crate::transforms::{SSPoint, VSPoint, SSBox};
 use super::{Graphics, Port};
+use iced::Element;
 use lazy_static::lazy_static;
 
 pub const ID_PREFIX: &str = "R";
@@ -38,6 +39,9 @@ impl Raw {
     pub fn set(&mut self, new: String) {
         self.raw = new;
     }
+    pub fn param_editor(&mut self) -> impl ParamEditor + Into<Element<()>> {
+        param_editor::param_editor(self.raw.clone(), |x| self.set(x))
+    }
 }
 
 #[derive(Debug)]
@@ -72,6 +76,14 @@ impl ParamR {
             },
         }
     }
+    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
+        match self {
+            ParamR::Raw(raw) => {
+                Some(raw.param_editor())
+            },
+            ParamR::Value(_) => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -82,5 +94,89 @@ pub struct R {
 impl R {
     pub fn new() -> R {
         R {params: ParamR::default(), graphics: &DEFAULT_GRAPHICS}
+    }
+}
+
+pub trait ParamEditor {
+
+}
+
+mod param_editor {
+    use iced::widget::{column, text_input, button};
+    use iced_lazy::{component, Component};
+    use iced::{Length, Element, Renderer};
+    use super::ParamEditor;
+
+    #[derive(Debug, Clone)]
+    pub enum Evt {
+        InputChanged(String),
+        InputSubmit,
+    }
+
+    pub struct RawParamEditor {
+        value: String,
+        on_submit: Box<dyn FnMut(String)>,
+    }
+
+    impl ParamEditor for RawParamEditor {
+
+    }
+    
+    impl RawParamEditor {
+        pub fn new(
+            value: String,
+            on_submit: impl FnMut(String) + 'static,
+        ) -> Self {
+            Self {
+                value,
+                on_submit: Box::new(on_submit),
+            }
+        }
+    }
+
+    pub fn param_editor(
+        value: String,
+        on_submit: impl FnMut(String) + 'static,
+    ) -> RawParamEditor {
+        RawParamEditor::new(value, on_submit)
+    }
+
+    impl Component<(), Renderer> for RawParamEditor {
+        type State = ();
+        type Event = Evt;
+
+        fn update(
+            &mut self,
+            _state: &mut Self::State,
+            event: Evt,
+        ) -> Option<()> {
+            match event {
+                Evt::InputChanged(s) => {
+                    self.value = s;
+                    None
+                },
+                Evt::InputSubmit => {
+                    Some((self.on_submit)(self.value.clone()))
+                },
+            }
+        }
+        fn view(&self, _state: &Self::State) -> Element<Evt, Renderer> {
+            column![
+                text_input("", &self.value)
+                .width(50)
+                .on_input(Evt::InputChanged)
+                .on_submit(Evt::InputSubmit),
+                button("enter"),
+            ]
+            .width(Length::Shrink)
+            .into()
+        }
+    }
+
+    impl<'a> From<RawParamEditor> for Element<'a, (), Renderer>
+    {
+        fn from(parameditor: RawParamEditor) -> Self {
+            component(parameditor)
+        }
     }
 }

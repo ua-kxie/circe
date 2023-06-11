@@ -1,9 +1,9 @@
 use std::hash::Hasher;
 
-use super::devicetype::{DeviceClass};
+use super::devicetype::{DeviceClass, r::ParamEditor};
 
 use euclid::Transform2D;
-use iced::{widget::canvas::{Frame, Text}, Color};
+use iced::{widget::canvas::{Frame, Text}, Color, Element};
 
 use crate::{
     schematic::{nets::Drawable, interactable::Interactive},
@@ -63,6 +63,9 @@ pub struct Device  {
     class: DeviceClass,
 }
 impl Device {
+    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
+        self.class.param_editor()
+    }
     pub fn set_ord(&mut self, ord: usize) {
         self.id.id = ord;
     }
