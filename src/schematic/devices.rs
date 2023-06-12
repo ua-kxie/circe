@@ -149,6 +149,9 @@ impl Devices {
     pub fn delete_device(&mut self, d: &RcRDevice) {
         self.set.remove(d);
     }
+    pub fn get_set(&self) -> &HashSet<RcRDevice> {
+        &self.set
+    }
 }
 
 impl SchematicSet for Devices {

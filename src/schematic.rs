@@ -263,7 +263,18 @@ impl Schematic {
         }
     }
     pub fn key_test(&mut self) {
-        self.nets.tt();
+        // self.nets.tt();
+        self.netlist();
+    }
+    fn netlist(&self) {
+        let mut netlist = String::from("");
+        for d in self.devices.get_set() {
+            netlist.push_str(
+                &d.0.borrow().spice_line(&self.nets)
+            )
+        }
+        netlist.push('\n');
+        print!("{}", netlist);
     }
     fn prune_nets(&mut self) {
         self.nets.prune(self.devices.ports_ssp());

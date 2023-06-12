@@ -39,9 +39,6 @@ impl Raw {
     pub fn set(&mut self, new: String) {
         self.raw = new;
     }
-    pub fn param_editor(&mut self) -> impl ParamEditor + Into<Element<()>> {
-        param_editor::param_editor(self.raw.clone(), |x| self.set(x))
-    }
 }
 
 #[derive(Debug)]
@@ -77,12 +74,13 @@ impl ParamR {
         }
     }
     pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
-        match self {
-            ParamR::Raw(raw) => {
-                Some(raw.param_editor())
-            },
-            ParamR::Value(_) => None,
-        }
+        None::<param_editor::RawParamEditor>
+        // match self {
+        //     ParamR::Raw(raw) => {
+        //         Some(raw.param_editor())
+        //     },
+        //     ParamR::Value(_) => None,
+        // }
     }
 }
 

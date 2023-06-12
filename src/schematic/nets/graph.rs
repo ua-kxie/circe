@@ -61,6 +61,14 @@ impl Default for Nets {
 }
 
 impl Nets {
+    pub fn net_at(&self, ssp: SSPoint) -> String {
+        for e in self.graph.all_edges() {
+            if e.2.occupies_ssp(ssp) {
+                return e.2.label.as_ref().unwrap().to_string();
+            }
+        }
+        String::from("floating")
+    }
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         for e in self.graph.all_edges_mut() {
             if e.2.interactable.bounds.intersects(ssb) {
@@ -212,7 +220,7 @@ impl Nets {
         false
     }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.vertex_occupies_ssp(ssp) || self.edge_occupies_ssp(ssp)
+        self.edge_occupies_ssp(ssp)
     }
     pub fn route(&mut self, src: SSPoint, dst: SSPoint) {
         // pathfinding?

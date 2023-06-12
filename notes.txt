@@ -3,12 +3,13 @@ todo:
 - immediate:
     traits for nets, devices, baseElement - org and tech debt
 
-    edit device parameters
+    edit device parameters rework
 
     separate net names when split by a device
-    add voltage source (v)
+
     generate netlist
 
+    add voltage source (v)
     feed netlist to NgSpice simulator
 
     make code/comment pristine - then code review

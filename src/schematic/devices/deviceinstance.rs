@@ -6,7 +6,7 @@ use euclid::Transform2D;
 use iced::{widget::canvas::{Frame, Text}, Color, Element};
 
 use crate::{
-    schematic::{nets::Drawable, interactable::Interactive},
+    schematic::{nets::Drawable, interactable::Interactive, Nets},
     transforms::{
         SSPoint, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
     }, 
@@ -117,7 +117,19 @@ impl Device {
         self.transform.m32 = v.y;
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
-
+    pub fn spice_line(&self, nets: &Nets) -> String {
+        // need to handle floating ports
+        let mut sline = self.id.ng_id();
+        sline.push(' ');
+        for p in self.class.graphics().ports() {
+            let pt = self.transform.transform_point(p.offset);
+            sline.push_str(&nets.net_at(pt));
+            sline.push(' ');
+        }
+        sline.push_str(&self.class.param_summary());
+        sline.push('\n');
+        sline
+    }
 }
 
 impl Drawable for Device {

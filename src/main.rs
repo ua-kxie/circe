@@ -123,12 +123,6 @@ impl Application for Circe {
             .width(Length::Fill)
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
-        let pe;
-        if let Some(ad) = &self.active_device {
-            if let Some(pe0) = ad.0.borrow_mut().param_editor() {
-                pe = Some(pe0);
-            }
-        }
         let pe = param_editor(self.text.clone(), Msg::TextInputChanged, || {Msg::TextInputSubmit});
         row![
             pe,

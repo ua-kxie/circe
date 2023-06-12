@@ -44,10 +44,10 @@ impl NetEdge {
         let v = self.dst - self.src;
         if v.x == 0 {
             // anywhere on vertical line
-            ssp.x == self.src.x && ssp.y < self.src.y.max(self.dst.y) && ssp.y > self.src.y.min(self.dst.y)
+            ssp.x == self.src.x && ssp.y <= self.src.y.max(self.dst.y) && ssp.y >= self.src.y.min(self.dst.y)
         } else if v.y == 0 {
             // anywhere on horizontal line
-            ssp.y == self.src.y && ssp.x < self.src.x.max(self.dst.x) && ssp.x > self.src.x.min(self.dst.x)
+            ssp.y == self.src.y && ssp.x <= self.src.x.max(self.dst.x) && ssp.x >= self.src.x.min(self.dst.x)
         } else {  
             // either edge of oblique line
             ssp == self.src || ssp == self.dst
