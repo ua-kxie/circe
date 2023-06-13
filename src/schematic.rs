@@ -266,11 +266,12 @@ impl Schematic {
         // self.nets.tt();
         self.netlist();
     }
-    fn netlist(&self) {
+    fn netlist(&mut self) {
+        self.nets.pre_netlist();
         let mut netlist = String::from("");
         for d in self.devices.get_set() {
             netlist.push_str(
-                &d.0.borrow().spice_line(&self.nets)
+                &d.0.borrow().spice_line(&mut self.nets)
             )
         }
         netlist.push('\n');

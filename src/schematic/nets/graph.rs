@@ -20,6 +20,7 @@ use super::Drawable;
 struct LabelManager {
     wm: usize,
     labels: HashSet<Rc<String>>,
+    float_wm: usize,
 }
 
 impl LabelManager {
@@ -37,6 +38,18 @@ impl LabelManager {
     fn get_label(&mut self, s: String) -> Rc<String> {
         self.labels.insert(Rc::new(s.clone()));
         self.labels.get(&Rc::new(s)).unwrap().clone()
+    }
+    fn new_floating_label(&mut self) -> String {
+        loop {
+            let l = format!("fn_{}", self.float_wm);
+            self.float_wm += 1;
+            if !self.labels.contains(&l) {
+                break l
+            }
+        }
+    }
+    fn rst_floating_nets(&mut self) {
+        self.float_wm = 0;
     }
 }
 
@@ -61,13 +74,16 @@ impl Default for Nets {
 }
 
 impl Nets {
-    pub fn net_at(&self, ssp: SSPoint) -> String {
+    pub fn pre_netlist(&mut self) {
+        self.label_manager.rst_floating_nets();
+    }
+    pub fn net_at(&mut self, ssp: SSPoint) -> String {
         for e in self.graph.all_edges() {
             if e.2.occupies_ssp(ssp) {
                 return e.2.label.as_ref().unwrap().to_string();
             }
         }
-        String::from("floating")
+        self.label_manager.new_floating_label()
     }
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         for e in self.graph.all_edges_mut() {

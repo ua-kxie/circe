@@ -36,7 +36,7 @@ impl Default for ParamGnd {
 }
 impl ParamGnd {
     pub fn summary(&self) -> String {
-        String::from("0")
+        String::from("0 0")
     }
 }
 
