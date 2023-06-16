@@ -1,18 +1,15 @@
 todo:
 
-- immediate:
-    traits for nets, devices, baseElement - org and tech debt
-
-    edit device parameters rework
-
-    separate net names when split by a device
+- immediate: 
+    add voltage source (v)
 
     generate netlist
-
-    add voltage source (v)
     feed netlist to NgSpice simulator
+    print results on schematic
 
     make code/comment pristine - then code review
+    traits for nets, devices, baseElement - org and tech debt
+    edit device parameters rework
 
 - medium term:
     use pane_grid from iced

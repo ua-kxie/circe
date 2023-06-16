@@ -17,7 +17,7 @@ impl Interactable {
             self.tentative = true;
         }
     }
-    pub fn contains_ssp(&mut self, ssp: SSPoint) -> bool {
+    pub fn contains_ssp(&self, ssp: SSPoint) -> bool {
         let mut ssb = self.bounds;
         ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
         ssb.contains(ssp)
