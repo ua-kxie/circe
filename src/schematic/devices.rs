@@ -2,7 +2,7 @@
 // device Id, net at port, ground net '0', device voltage 0
 mod devicetype;
 mod deviceinstance;
-use devicetype::{DeviceClass, r::R, gnd::Gnd};
+use devicetype::{DeviceClass, r::R, gnd::Gnd, v::V};
 use deviceinstance::{Device};
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
@@ -53,6 +53,7 @@ impl ClassManager {
 struct DevicesManager {
     gnd: ClassManager,
     r: ClassManager,
+    v: ClassManager,
 }
 
 impl Default for DevicesManager {
@@ -60,6 +61,7 @@ impl Default for DevicesManager {
         Self { 
             gnd: ClassManager::new(), 
             r: ClassManager::new(), 
+            v: ClassManager::new(), 
         }
     }
 }
@@ -92,6 +94,7 @@ impl Devices {
             let ord = match d.0.borrow().class() {
                 DeviceClass::Gnd(_) => self.manager.gnd.incr(),
                 DeviceClass::R(_) => self.manager.r.incr(),
+                DeviceClass::V(_) => self.manager.v.incr(),
             };
             d.0.borrow_mut().set_ord(ord);
             self.set.insert(d);
@@ -120,6 +123,10 @@ impl Devices {
     }
     pub fn new_gnd(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
+    }
+    pub fn new_vs(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::V(V::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     pub fn ports_ssp(&self) -> Vec<SSPoint> {

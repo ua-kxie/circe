@@ -18,6 +18,7 @@ lazy_static! {
                 VSPoint::new(0., -2.),
             ],
         ],
+        circles: vec![],
         ports: vec![
             Port {name: "gnd", offset: SSPoint::new(0, 2)}
         ], 

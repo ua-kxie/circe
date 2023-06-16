@@ -1,7 +1,8 @@
 todo:
 
 - immediate: 
-    add voltage source (v)
+    curpos info bar bug
+    zooming during device placement visual bug
 
     generate netlist
     feed netlist to NgSpice simulator

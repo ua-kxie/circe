@@ -390,6 +390,16 @@ impl Schematic {
                 self.selected.insert(BaseElement::Device(d));
                 state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<i16, SchematicSpace, SchematicSpace>::identity())));
             },
+            (
+                SchematicState::Idle, 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::V, modifiers: _})
+            ) => {
+                self.selected.clear();
+                let d = self.devices.new_vs();
+                d.0.borrow_mut().set_translation(curpos_ssp);
+                self.selected.insert(BaseElement::Device(d));
+                state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, Transform2D::<i16, SchematicSpace, SchematicSpace>::identity())));
+            },
             // moving
             (
                 _, 

@@ -1,5 +1,5 @@
 use euclid::Vector2D;
-use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash}, Color, Element};
+use iced::{Size, widget::canvas::{self, stroke, LineCap, path::{Builder, self}, LineDash}, Color, Element};
 
 use crate::{
     transforms::{
@@ -10,6 +10,7 @@ use iced::{widget::canvas::{Frame, Stroke}};
 
 use self::r::ParamEditor;
 
+pub mod v;
 pub mod r;
 pub mod gnd;
 
@@ -82,6 +83,7 @@ const STROKE_WIDTH: f32 = 0.1;
 pub struct Graphics {
     // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
     pts: Vec<Vec<VSPoint>>,
+    circles: Vec<(VSPoint, f32)>,
     ports: Vec<Port>,
     bounds: SSBox,
 }
@@ -100,7 +102,7 @@ impl Graphics {
         path_builder.rectangle(Point::from(csb.min).into(), size);
         frame.stroke(&path_builder.build(), stroke);    
     }
-    pub fn stroke_symbol(&self, vct_composite: VCTransform, frame: &mut Frame, stroke: Stroke) {
+    pub fn stroke_symbol(&self, vct_composite: VCTransform, vcscale: f32, frame: &mut Frame, stroke: Stroke) {
         // let mut path_builder = Builder::new();
         for v1 in &self.pts {
             // there's a bug where dashed stroke can draw a solid line across a move
@@ -111,9 +113,14 @@ impl Graphics {
             }
             frame.stroke(&path_builder.build(), stroke.clone());
         }
+        let mut path_builder = Builder::new();
+        for (p, r) in &self.circles {
+            path_builder.circle(Point::from(vct_composite.transform_point(*p)).into(), *r * vcscale);
+        }
+        frame.stroke(&path_builder.build(), stroke.clone());
     }
 }
-impl  Drawable for Graphics {
+impl Drawable for Graphics {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
@@ -122,7 +129,7 @@ impl  Drawable for Graphics {
             ..Stroke::default()
         };
         // self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
+        self.stroke_symbol(vct, vcscale, frame, stroke.clone());
         for p in &self.ports {
             p.draw_persistent(vct, vcscale, frame)
         }
@@ -135,7 +142,7 @@ impl  Drawable for Graphics {
             ..Stroke::default()
         };
         self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
+        self.stroke_symbol(vct, vcscale, frame, stroke.clone());
         for p in &self.ports {
             p.draw_selected(vct, vcscale, frame)
         }
@@ -149,7 +156,7 @@ impl  Drawable for Graphics {
             ..Stroke::default()
         };
         self.stroke_bounds(vct, frame, stroke.clone());
-        self.stroke_symbol(vct, frame, stroke.clone());
+        self.stroke_symbol(vct, vcscale, frame, stroke.clone());
         for p in &self.ports {
             p.draw_preview(vct, vcscale, frame)
         }
@@ -167,6 +174,7 @@ pub trait DeviceType  {
 pub enum DeviceClass {
     Gnd(gnd::Gnd),
     R(r::R),
+    V(v::V),
 }
 impl DeviceClass {
     pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
@@ -177,6 +185,9 @@ impl DeviceClass {
             DeviceClass::R(r) => {
                 r.params.param_editor()
             },
+            DeviceClass::V(v) => {
+                None
+            },
         }
     }
     pub fn set(&mut self, new: String) {
@@ -185,13 +196,15 @@ impl DeviceClass {
                 r::ParamR::Raw(y) => y.set(new),
                 r::ParamR::Value(_) => {},
             },
-            _ => {},
+            DeviceClass::Gnd(_) => todo!(),
+            DeviceClass::V(_) => todo!(),
         }
     }
     pub fn graphics(&self) -> &'static Graphics {
         match self {
             DeviceClass::Gnd(x) => x.graphics,
             DeviceClass::R(x) => x.graphics,
+            DeviceClass::V(x) => x.graphics,
         }
     }
     pub fn param_summary(&self) -> String {
@@ -202,12 +215,16 @@ impl DeviceClass {
             DeviceClass::R(x) => {
                 x.params.summary()
             },
+            DeviceClass::V(x) => {
+                x.params.summary()
+            },
         }
     }
     pub fn id_prefix(&self) -> &'static str {
         match self {
             DeviceClass::Gnd(_) => gnd::ID_PREFIX,
             DeviceClass::R(_) => r::ID_PREFIX,
+            DeviceClass::V(_) => v::ID_PREFIX,
         }
     }
 }
