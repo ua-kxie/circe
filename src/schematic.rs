@@ -14,7 +14,7 @@ use iced::{widget::canvas::{
 pub use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
 
 pub trait SchematicSet {
-    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement>;
+    fn selectable(&mut self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement>;
 }
 
 
@@ -118,7 +118,7 @@ impl Schematic {
                     netname
                 },
                 BaseElement::Device(d) => {
-                    d.0.borrow_mut().set_tentative();
+                    d.0.borrow_mut().interactable.tentative = true;
                     None
                 },
             }
@@ -229,7 +229,7 @@ impl Schematic {
         bbn.union(&bbi)
     }
 
-    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
+    fn selectable(&mut self, curpos_ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
             let mut count = 0;
             if let Some(e) = self.nets.selectable(curpos_ssp, skip, &mut count) {

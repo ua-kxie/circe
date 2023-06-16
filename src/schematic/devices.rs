@@ -155,11 +155,9 @@ impl Devices {
 }
 
 impl SchematicSet for Devices {
-    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement> {
+    fn selectable(&mut self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement> {
         for d in &self.set {
-            let mut ssb = d.0.borrow().interactable.bounds;
-            ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
-            if ssb.contains(curpos_ssp) {
+            if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
                 *count += 1;
                 if *count > *skip {
                     *skip = *count;

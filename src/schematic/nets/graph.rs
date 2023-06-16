@@ -290,10 +290,9 @@ impl Nets {
 }
 
 impl SchematicSet for Nets {
-    fn selectable(&self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement> {
-        for e in self.graph.all_edges() {
-            let ssb = e.2.interactable.bounds;
-            if ssb.contains(curpos_ssp) {
+    fn selectable(&mut self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement> {
+        for e in self.graph.all_edges_mut() {   
+            if e.2.interactable.contains_ssp(curpos_ssp) {
                 *count += 1;
                 if *count > *skip {
                     *skip = *count;
