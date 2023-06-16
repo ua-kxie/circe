@@ -41,16 +41,20 @@ lazy_static! {
 
 #[derive(Debug)]
 pub enum ParamV  {
-    None,
+    Raw(super::r::Raw),
 }
 impl Default for ParamV {
     fn default() -> Self {
-        ParamV::None
+        ParamV::Raw(super::r::Raw::new(String::from("3.3")))
     }
 }
 impl ParamV {
     pub fn summary(&self) -> String {
-        String::from("3.3")
+        match self {
+            ParamV::Raw(s) => {
+                s.raw.clone()
+            },
+        }
     }
 }
 

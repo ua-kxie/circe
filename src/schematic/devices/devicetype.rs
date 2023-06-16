@@ -196,8 +196,10 @@ impl DeviceClass {
                 r::ParamR::Raw(y) => y.set(new),
                 r::ParamR::Value(_) => {},
             },
-            DeviceClass::Gnd(_) => todo!(),
-            DeviceClass::V(_) => todo!(),
+            DeviceClass::Gnd(_) => {},
+            DeviceClass::V(x) => match &mut x.params {
+                v::ParamV::Raw(y) => y.set(new),
+            },
         }
     }
     pub fn graphics(&self) -> &'static Graphics {

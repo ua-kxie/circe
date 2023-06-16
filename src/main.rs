@@ -49,7 +49,6 @@ struct Circe {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    NewCurpos(SSPoint),
     NewZoom(f32),
 
     TextInputChanged(String),
@@ -88,9 +87,6 @@ impl Application for Circe {
 
     fn update(&mut self, message: Msg) -> Command<Msg> {
         match message {
-            Msg::NewCurpos(opt_ssp) => {
-                self.curpos_ssp = opt_ssp
-            }
             Msg::NewZoom(value) => {
                 self.zoom_scale = value
             },
@@ -107,6 +103,7 @@ impl Application for Circe {
                 let (opt_s, clear_passive) = self.schematic.events_handler(event, ssp);
                 if clear_passive {self.passive_cache.clear()}
                 self.net_name = opt_s;
+                self.curpos_ssp = ssp;
                 self.active_device = self.schematic.active_device();
                 if let Some(rcrd) = &self.active_device {
                     self.text = rcrd.0.borrow().class().param_summary();

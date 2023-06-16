@@ -31,10 +31,10 @@ lazy_static! {
 
 #[derive(Debug)]
 pub struct Raw  {
-    raw: String,
+    pub raw: String,
 }
 impl Raw {
-    fn new(raw: String) -> Self {
+    pub fn new(raw: String) -> Self {
         Raw { raw }
     }
     pub fn set(&mut self, new: String) {

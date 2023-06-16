@@ -1,8 +1,7 @@
 todo:
 
 - immediate: 
-    curpos info bar bug
-    zooming during device placement visual bug
+    zooming during device placement visual bug - maybe selection system not a good fit
 
     generate netlist
     feed netlist to NgSpice simulator
