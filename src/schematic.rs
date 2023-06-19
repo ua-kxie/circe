@@ -278,7 +278,7 @@ impl Schematic {
         let mut netlist = String::from("Netlist Created by Circe\n");
         for d in self.devices.get_set() {
             netlist.push_str(
-                &d.0.borrow().spice_line(&mut self.nets)
+                &d.0.borrow_mut().spice_line(&mut self.nets)
             )
         }
         netlist.push('\n');
@@ -301,6 +301,10 @@ impl Schematic {
                 }
             }
         }
+    }
+
+    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
+        self.devices.op(pkvecvaluesall);
     }
 
     pub fn events_handler(

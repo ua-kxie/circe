@@ -89,6 +89,11 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
+        for d in &self.set {
+            d.0.borrow_mut().op(pkvecvaluesall);
+        }
+    }
     pub fn insert(&mut self, d: RcRDevice) {
         if !self.set.contains(&d) {
             let ord = match d.0.borrow().class() {

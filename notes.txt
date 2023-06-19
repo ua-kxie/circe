@@ -3,10 +3,6 @@ todo:
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit
 
-    generate netlist
-    feed netlist to NgSpice simulator
-    print results on schematic
-
     make code/comment pristine - then code review
     traits for nets, devices, baseElement - org and tech debt
     edit device parameters rework

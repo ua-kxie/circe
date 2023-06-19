@@ -25,7 +25,15 @@ use param_editor::{param_editor, ParamEditor};
 
 use paprika::*;
 use colored::Colorize;
-struct SpManager{}
+struct SpManager{
+    tmp: Option<PkVecvaluesall>,
+}
+
+impl SpManager {
+    fn new() -> Self {
+        SpManager { tmp: None }
+    }
+}
 
 #[allow(unused_variables)]
 impl paprika::PkSpiceManager for SpManager{
@@ -50,9 +58,7 @@ impl paprika::PkSpiceManager for SpManager{
     fn cb_send_init(&mut self, pkvecinfoall: PkVecinfoall, id: i32) {
     }
     fn cb_send_data(&mut self, pkvecvaluesall: PkVecvaluesall, count: i32, id: i32) {
-        for a in pkvecvaluesall.vecsa {
-            println!("{}, {}", &a.name, &a.creal);
-        }
+        self.tmp = Some(pkvecvaluesall);
     }
     fn cb_bgt_state(&mut self, is_fin: bool, id: i32) {
     }
@@ -105,7 +111,7 @@ impl Application for Circe {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Msg>) {
-        let manager = Arc::new(SpManager{});
+        let manager = Arc::new(SpManager::new());
         let mut lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
         lib.init(Some(manager.clone()));
         (
@@ -163,10 +169,7 @@ impl Application for Circe {
             Msg::LoadPressed => {
                 self.lib.command("source netlist.cir");  // results pointer array starts at same address
                 self.lib.command("op");  // ngspice recommends sending in control statements separately, not as part of netlist
-                // for s in self.lib.get_all_vecs(&self.lib.get_cur_plot()) {
-                //     let a = self.lib.get_vec_info(&s);
-                //     println!("{:?}", a);
-                // }
+                self.schematic.op(&self.spmanager.tmp.as_ref().unwrap());
             }
         }
         Command::none()

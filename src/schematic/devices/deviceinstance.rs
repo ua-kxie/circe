@@ -2,7 +2,7 @@ use std::hash::Hasher;
 
 use super::devicetype::{DeviceClass, r::ParamEditor};
 
-use euclid::Transform2D;
+use euclid::{Transform2D, Point2D, Vector2D};
 use iced::{widget::canvas::{Frame, Text}, Color, Element};
 
 use crate::{
@@ -61,6 +61,8 @@ pub struct Device  {
     pub interactable: Interactable,
     transform: Transform2D<i16, SchematicSpace, SchematicSpace>,
     class: DeviceClass,
+    nets: Vec<String>,
+    op: Vec<f32>,
 }
 impl Device {
     pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
@@ -81,6 +83,8 @@ impl Device {
             interactable: Interactable::new(), 
             transform: Transform2D::identity(), 
             class,
+            nets: vec![],
+            op: vec![],
         }
     }
 
@@ -117,17 +121,31 @@ impl Device {
         self.transform.m32 = v.y;
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
-    pub fn spice_line(&self, nets: &mut Nets) -> String {
+    pub fn spice_line(&mut self, nets: &mut Nets) -> String {
+        self.nets.clear();
         let mut sline = self.id.ng_id();
         sline.push(' ');
         for p in self.class.graphics().ports() {
             let pt = self.transform.transform_point(p.offset);
-            sline.push_str(&nets.net_at(pt));
+            let net = nets.net_at(pt);
+            sline.push_str(&net);
             sline.push(' ');
+            self.nets.push(net);
         }
         sline.push_str(&self.class.param_summary());
         sline.push('\n');
         sline
+    }
+    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
+        self.op.clear();
+        for n in &self.nets {
+            for v in &pkvecvaluesall.vecsa {
+                if &v.name == n {
+                    self.op.push(v.creal as f32);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -153,6 +171,18 @@ impl Drawable for Device {
             ..Default::default()
         };
         frame.fill_text(b);
+
+        let ports = self.class.graphics().ports();
+        for (i, v) in self.op.iter().enumerate() {
+            let b = Text {
+                content: v.to_string(),
+                position: Point::from(vct_c.transform_point(ports[i].offset.cast().cast_unit())).into(),
+                color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
+                size: vcscale,
+                ..Default::default()
+            };
+            frame.fill_text(b);
+        }
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);
