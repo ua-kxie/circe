@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::schematic::{BaseElement, SchematicSet, interactable};
-use crate::schematic::interactable::Interactive;
-use crate::transforms::{SSPoint, VCTransform, SchematicSpace, SSBox};
+use crate::{
+    transforms::{SSPoint, VCTransform, SchematicSpace, SSBox}, 
+    schematic::{BaseElement, SchematicSet, interactable::Interactive}
+};
 use euclid::{Point2D, Transform2D};
 use petgraph::graphmap::GraphMap;
 use petgraph::algo::tarjan_scc;
@@ -18,9 +19,9 @@ use super::Drawable;
 
 #[derive(Clone, Debug, Default)]
 struct LabelManager {
+    float_wm: usize,
     wm: usize,
     labels: HashSet<Rc<String>>,
-    float_wm: usize,
 }
 
 impl LabelManager {
@@ -34,10 +35,6 @@ impl LabelManager {
                 break self.labels.get(&Rc::new(l)).unwrap().clone()
             }
         }
-    }
-    fn get_label(&mut self, s: String) -> Rc<String> {
-        self.labels.insert(Rc::new(s.clone()));
-        self.labels.get(&Rc::new(s)).unwrap().clone()
     }
     fn new_floating_label(&mut self) -> String {
         // create a new unique floating net. Not stored as it is only called during netlisting
@@ -113,7 +110,7 @@ impl Nets {
         }
         ret
     }
-    fn unify_labels(&mut self, ven: Vec<(NetVertex, NetVertex)>, v_taken: &Vec<Rc<String>>) -> Rc<String> {
+    fn unify_labels(&mut self, ven: Vec<(NetVertex, NetVertex)>, v_taken: &[Rc<String>]) -> Rc<String> {
         let mut label = None;
         // get smallest untaken of existing labels, if any
         for tup in &ven {
@@ -247,14 +244,6 @@ impl Nets {
         }
         false
     }
-    pub fn vertex_occupies_ssp(&self, ssp: SSPoint) -> bool {
-        for v in self.graph.nodes() {
-            if v.occupies_ssp(ssp) {
-                return true;
-            }
-        }
-        false
-    }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.edge_occupies_ssp(ssp)
     }
@@ -295,10 +284,6 @@ impl Nets {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
         e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
-    }
-    pub fn tt(&self) {
-        let a = tarjan_scc(&*self.graph);  // this finds the unconnected components 
-        dbg!(a);
     }
     pub fn clear_tentatives(&mut self) {
         for e in self.graph.all_edges_mut() {

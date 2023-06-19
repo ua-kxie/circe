@@ -1,33 +1,41 @@
+/// NetEdge - Edge Weight used in petgraph::Graph
+
 use std::rc::Rc;
 
+use super::SchematicNetLabel;
 use crate::{
     transforms::{
-        SSPoint, VCTransform, SSBox, SchematicSpace, SSVec
+        SSPoint, VCTransform, SSBox, SchematicSpace
     }, 
     schematic::{interactable::{Interactable, Interactive}, nets::Drawable}
 };
+
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
 
-use super::{SchematicNetLabel};
-
+/// A NetEdge represents a segment of wiring. 
+/// It exists in the program as an edge weight for petgraph::Graph. 
 #[derive(Clone, Debug, Default)]
-// pub struct NetEdge (pub SSPoint, pub SSPoint, pub Cell<bool>);
 pub struct NetEdge {
+    /// source point of edge segment
     pub src: SSPoint,
+    /// destination point of edge segment
     pub dst: SSPoint,
-
+    /// interactable associated with this edge segment
     pub interactable: Interactable,
-
+    /// auto generated net name associated with this edge segment
     pub label: Option<Rc<String>>,
+    /// user defined net name assigned to this edge segment
     pub schematic_net_label: Option<SchematicNetLabel>,
 }
 
+/// two edges are equal if their source and destination pts are equal
 impl PartialEq for NetEdge {
     fn eq(&self, other: &Self) -> bool {
         self.src == other.src && self.dst == other.dst
     }
 }
 
+/// hash absed on the soruce and destination points
 impl std::hash::Hash for NetEdge {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.src.hash(state);
@@ -36,20 +44,22 @@ impl std::hash::Hash for NetEdge {
 }
 
 impl NetEdge {
+    /// creates an interactable based on source and destination points, with settable 'tentative' flag
     pub fn interactable(src: SSPoint, dst: SSPoint, tentative: bool) -> Interactable {
         Interactable { bounds: NetEdge::bounds_from_pts(src, dst), tentative, }
     }
-
+    /// creates a bound based on source and destination points - return value is guaranteed to have positive area
     pub fn bounds_from_pts(src: SSPoint, dst: SSPoint) -> SSBox {
         SSBox::from_points([src, dst])
     }
-
+    /// checks if argument SSPoint lies on the edge (excludes source and destination points)
     pub fn intersects_ssp(&self, ssp: SSPoint) -> bool {
         self.interactable.contains_ssp(ssp) && self.src != ssp && self.dst != ssp
     }
 }
 
-impl Interactive for NetEdge {  
+impl Interactive for NetEdge {
+    /// transform the edge based on SSTransform argument
     fn transform(&mut self, sst: euclid::Transform2D<i16, SchematicSpace, SchematicSpace>) {
         (self.src, self.dst) = (
             sst.transform_point(self.src),
@@ -59,6 +69,7 @@ impl Interactive for NetEdge {
     }
 }
 
+/// helper function for drawing the netedge on the canvas
 fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
     let psrcv = vct.transform_point(src.cast().cast_unit());
     let pdstv = vct.transform_point(dst.cast().cast_unit());

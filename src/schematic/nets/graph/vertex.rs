@@ -1,38 +1,38 @@
-/// petgraph vertices weight
-/// in GraphMap, also serve as the keys
-/// 
 use std::cmp::Ordering;
 
-use crate::{transforms::{SSPoint, VCTransform}, schematic::nets::Drawable};
+use crate::{
+    transforms::{SSPoint, VCTransform}, 
+    schematic::nets::Drawable
+};
 use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap}, Color};
 
+/// petgraph vertices weight. 
+/// In GraphMap, also serve as the keys.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct NetVertex (pub SSPoint);
 
-impl NetVertex {
-    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.0 == ssp
-    }
-}
-
+/// two vertices are equal if their coordinates are equal
 impl PartialOrd for NetVertex {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+/// ord of points based on their x - y coordinate tuple
 impl Ord for NetVertex {
     fn cmp(&self, other: &Self) -> Ordering {
         (self.0.x, self.0.y).cmp(&(other.0.x, other.0.y))
     }
 }
 
+/// helper function for drawing the netedge on the canvas
 fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
     let p = vct.transform_point(ssp.cast().cast_unit());
     let p = iced::Point::from([p.x, p.y]);
     let c = Path::line(p, p,);
     frame.stroke(&c, stroke);
 }
+
 const SOLDER_DIAMETER: f32 = 0.25;
 const ZOOM_THRESHOLD: f32 = 5.0;
 
