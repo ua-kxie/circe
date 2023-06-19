@@ -1,5 +1,6 @@
 mod transforms;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use transforms::{Point, CSPoint, CSBox, SSPoint};
 mod viewport;
@@ -11,7 +12,7 @@ use iced::{executor, Size};
 use iced::widget::canvas::{
     Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, column, row, button};
+use iced::widget::{canvas, column, row, button, text};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme,
@@ -21,6 +22,41 @@ use iced::mouse;
 use euclid::{Box2D, Point2D};
 use infobar::infobar;
 use param_editor::{param_editor, ParamEditor};
+
+use paprika::*;
+use colored::Colorize;
+struct SpManager{}
+
+#[allow(unused_variables)]
+impl paprika::PkSpiceManager for SpManager{
+    fn cb_send_char(&mut self, msg: String, id: i32) {
+        let opt = msg.split_once(' ');
+        let (token, msgs) = match opt {
+            Some(tup) => (tup.0, tup.1),
+            None => (msg.as_str(), msg.as_str()),
+        };
+        let msgc = match token {
+            "stdout" => msgs.green(),
+            "stderr" => msgs.red(),
+            _ => msg.magenta().strikethrough(),
+        };
+        println!("{}", msgc);
+    }
+    fn cb_send_stat(&mut self, msg: String, id: i32) {
+        println!("{}", msg.blue());
+    }
+    fn cb_ctrldexit(&mut self, status: i32, is_immediate: bool, is_quit: bool, id: i32) {
+    }
+    fn cb_send_init(&mut self, pkvecinfoall: PkVecinfoall, id: i32) {
+    }
+    fn cb_send_data(&mut self, pkvecvaluesall: PkVecvaluesall, count: i32, id: i32) {
+        for a in pkvecvaluesall.vecsa {
+            println!("{}, {}", &a.name, &a.creal);
+        }
+    }
+    fn cb_bgt_state(&mut self, is_fin: bool, id: i32) {
+    }
+}
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -45,6 +81,10 @@ struct Circe {
     text: String,
     schematic: Schematic,
     active_device: Option<RcRDevice>,
+
+    spmanager: Arc<SpManager>,
+    lib: PkSpice<SpManager>,
+    libpath: String,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +94,8 @@ pub enum Msg {
     TextInputChanged(String),
     TextInputSubmit,
     CanvasEvent(Event, SSPoint),
+
+    LoadPressed,
 }
 
 impl Application for Circe {
@@ -63,6 +105,9 @@ impl Application for Circe {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Msg>) {
+        let manager = Arc::new(SpManager{});
+        let mut lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
+        lib.init(Some(manager.clone()));
         (
             Circe {
                 zoom_scale: 10.0,  // would be better to get this from the viewport on startup
@@ -76,6 +121,10 @@ impl Application for Circe {
                 text: String::from(""),
                 schematic: Schematic::default(),
                 active_device: None,
+
+                lib,
+                spmanager: manager,
+                libpath: String::from("paprika/ngspice.dll"),
             },
             Command::none(),
         )
@@ -111,6 +160,14 @@ impl Application for Circe {
                     self.text = String::from("")
                 }
             },
+            Msg::LoadPressed => {
+                self.lib.command("source netlist.cir");  // results pointer array starts at same address
+                self.lib.command("op");  // ngspice recommends sending in control statements separately, not as part of netlist
+                // for s in self.lib.get_all_vecs(&self.lib.get_cur_plot()) {
+                //     let a = self.lib.get_vec_info(&s);
+                //     println!("{:?}", a);
+                // }
+            }
         }
         Command::none()
     }
@@ -121,13 +178,19 @@ impl Application for Circe {
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
         let pe = param_editor(self.text.clone(), Msg::TextInputChanged, || {Msg::TextInputSubmit});
-        row![
-            pe,
-            column![
-                canvas,
-                infobar,
+        column![
+            row![
+                text(&self.libpath).size(24).width(Length::Fill),
+                button("Load").on_press(Msg::LoadPressed),
+            ],
+            row![
+                pe,
+                column![
+                    canvas,
+                    infobar,
+                ]
+                .width(Length::Fill),
             ]
-            .width(Length::Fill),
         ]
         .into()
     }

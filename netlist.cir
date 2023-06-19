@@ -1,0 +1,6 @@
+Netlist Created by Circe
+R1 net_2 net_1 1000
+VGND1 net_1 0 0
+R2 net_0 net_2 1000
+V1 net_0 net_1 3.3
+

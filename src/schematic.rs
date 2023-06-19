@@ -2,7 +2,7 @@ mod nets;
 mod devices;
 mod interactable;
 
-use std::{collections::HashSet};
+use std::{collections::HashSet, fs::OpenOptions, io::Write};
 
 use euclid::{Vector2D, Transform2D};
 pub use nets::{Drawable, Nets, graph::{NetEdge, NetVertex}};
@@ -264,18 +264,25 @@ impl Schematic {
     }
     pub fn key_test(&mut self) {
         // self.nets.tt();
-        self.netlist();
+        let n = self.netlist();
+        OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("netlist.cir")
+        .and_then(|mut file| {
+            file.write_all(n.as_bytes())
+        });
     }
-    fn netlist(&mut self) {
+    fn netlist(&mut self) -> String {
         self.nets.pre_netlist();
-        let mut netlist = String::from("");
+        let mut netlist = String::from("Netlist Created by Circe\n");
         for d in self.devices.get_set() {
             netlist.push_str(
                 &d.0.borrow().spice_line(&mut self.nets)
             )
         }
         netlist.push('\n');
-        print!("{}", netlist);
+        netlist
     }
     fn prune_nets(&mut self) {
         self.nets.prune(self.devices.ports_ssp());
