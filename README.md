@@ -16,6 +16,8 @@ G - ground
 
 M - move selected
 
+Space - run dc op simulation
+
 
 click wires or device to select
 

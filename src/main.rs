@@ -163,13 +163,18 @@ impl Application for Circe {
                 if let Some(rcrd) = &self.active_device {
                     self.text = rcrd.0.borrow().class().param_summary();
                 } else {
-                    self.text = String::from("")
+                    self.text = String::from("");
+                }
+                if let Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Space, modifiers: _}) = event {
+                    self.lib.command("source netlist.cir");  // results pointer array starts at same address
+                    self.lib.command("op");  // ngspice recommends sending in control statements separately, not as part of netlist
+                    self.schematic.op(self.spmanager.tmp.as_ref().unwrap());
                 }
             },
             Msg::LoadPressed => {
                 self.lib.command("source netlist.cir");  // results pointer array starts at same address
                 self.lib.command("op");  // ngspice recommends sending in control statements separately, not as part of netlist
-                self.schematic.op(&self.spmanager.tmp.as_ref().unwrap());
+                self.schematic.op(self.spmanager.tmp.as_ref().unwrap());
             }
         }
         Command::none()

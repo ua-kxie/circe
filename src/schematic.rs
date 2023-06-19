@@ -482,6 +482,14 @@ impl Schematic {
             ) => {
                 self.key_test();
             },
+            // dc op
+            (
+                SchematicState::Idle, 
+                Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Space, modifiers: _})
+            ) => {
+                self.key_test();
+                clear_passive = true;
+            },
             _ => {},
         }
         self.state = state;
