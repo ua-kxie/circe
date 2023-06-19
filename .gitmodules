@@ -1,0 +1,3 @@
+[submodule "paprika"]
+	path = paprika
+	url = https://github.com/ua-kxie/paprika.git
