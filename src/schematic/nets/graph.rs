@@ -17,16 +17,21 @@ pub use edge::NetEdge;
 
 use super::Drawable;
 
+/// This struct facillitates the creation of unique net names
 #[derive(Clone, Debug, Default)]
 struct LabelManager {
+    /// watermark for floating nets
     float_wm: usize,
+    /// watermark for net names
     wm: usize,
-    labels: HashSet<Rc<String>>,
+    /// set of labels already in use
+    pub labels: HashSet<Rc<String>>,
 }
 
 impl LabelManager {
+    /// returns a Rc<String>, guaranteed to be unique from all labels already registered with LabelManager.
+    /// The returned String is registered and the same net name will not be returned again.
     fn new_label(&mut self) -> Rc<String> {
-        // create a new unique label, store it, return it
         loop {
             let l = format!("net_{}", self.wm);
             self.wm += 1;
@@ -36,8 +41,10 @@ impl LabelManager {
             }
         }
     }
+    /// returns a String, guaranteed to be unique from all labels already registered with LabelManager.
+    /// The returned String is not registered but will not be returned again until floating nets is reset.
+    /// intended for generating unique net names for devices which port(s) is left unconnected.
     fn new_floating_label(&mut self) -> String {
-        // create a new unique floating net. Not stored as it is only called during netlisting
         loop {
             let l = format!("fn_{}", self.float_wm);
             self.float_wm += 1;
@@ -46,8 +53,14 @@ impl LabelManager {
             }
         }
     }
+    /// sets float_wm to 0. Intended to be called everytime a netlist is generated. 
+    /// I.e. no need for net names to be unique between multiple netlists.
     fn rst_floating_nets(&mut self) {
         self.float_wm = 0;
+    }
+    /// register a new label
+    fn register(&mut self, label: Rc<String>) {
+        self.labels.insert(label);
     }
 }
 
@@ -98,11 +111,11 @@ impl Nets {
     pub fn clear(&mut self) {
         self.graph.clear();
     }
-    fn nodes_to_edge_nodes(&self, vn: Vec<NetVertex>) -> Vec<(NetVertex, NetVertex)> {
-        // given a vector of vertices, return a vector of edges between the given vertices
+    /// given a vector of vertices, return a vector of edges between the given vertices
+    fn nodes_to_edge_nodes(&self, vertices: Vec<NetVertex>) -> Vec<(NetVertex, NetVertex)> {
         let mut set = HashSet::<SSPoint>::new();
         let mut ret = vec![];
-        for n in vn {
+        for n in vertices {
             for e in self.graph.edges(n) {
                 if !set.contains(&e.1.0) {ret.push((e.0, e.1))}  // if dst has already been iterated through, the edge was already accounted for
             }
@@ -110,13 +123,14 @@ impl Nets {
         }
         ret
     }
-    fn unify_labels(&mut self, ven: Vec<(NetVertex, NetVertex)>, v_taken: &[Rc<String>]) -> Rc<String> {
+    /// finds an appropriate net name and assigns it to all edge in edges. 
+    fn unify_labels(&mut self, edges: Vec<(NetVertex, NetVertex)>) -> Rc<String> {
         let mut label = None;
         // get smallest untaken of existing labels, if any
-        for tup in &ven {
+        for tup in &edges {
             if let Some(ew) = self.graph.edge_weight(tup.0, tup.1) {
                 if let Some(label1) = &ew.label {
-                    if v_taken.contains(label1) {
+                    if self.label_manager.labels.contains(label1) {
                         continue;
                     }
                     if label.is_none() || label1 < label.as_ref().unwrap() {
@@ -130,7 +144,7 @@ impl Nets {
             label = Some(self.label_manager.new_label());
         }
         // assign label to all edges
-        for tup in ven {
+        for tup in edges {
             if let Some(ew) = self.graph.edge_weight_mut(tup.0, tup.1) {
                 ew.label = label.clone();
             }
@@ -229,11 +243,11 @@ impl Nets {
         // assign net names
         // for each subnet
         // unify labels - give vector of taken labels
-        let vvn = tarjan_scc(&*self.graph);  // this finds the subnets
-        let mut v_taken = vec![];
-        for vn in vvn {
-            let ve = self.nodes_to_edge_nodes(vn);
-            v_taken.push(self.unify_labels(ve, &v_taken));
+        let subgraph_vertices = tarjan_scc(&*self.graph);  // this finds the subnets
+        for vertices in subgraph_vertices {
+            let edges = self.nodes_to_edge_nodes(vertices);
+            let net_name = self.unify_labels(edges);
+            self.label_manager.register(net_name);
         }
     }
     pub fn edge_occupies_ssp(&self, ssp: SSPoint) -> bool {
