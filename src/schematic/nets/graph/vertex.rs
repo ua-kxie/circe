@@ -33,7 +33,10 @@ fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) 
     frame.stroke(&c, stroke);
 }
 
+/// diameter of the solder point
 const SOLDER_DIAMETER: f32 = 0.25;
+
+/// zoom level below which solder point stops becoming smaller
 const ZOOM_THRESHOLD: f32 = 5.0;
 
 impl Drawable for NetVertex {

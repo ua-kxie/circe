@@ -46,8 +46,10 @@ impl Default for Viewport {
 }
 
 impl Viewport {
-    const MAX_SCALING: f32 = 100.0;  // most zoomed in - every 1.0 unit is 100.0 pixels
-    const MIN_SCALING: f32 = 1.;  // most zoomed out - every 1.0 unit is 1.0 pixels
+    /// most zoomed in - every 1.0 unit is 100.0 pixels
+    const MAX_SCALING: f32 = 100.0;  
+    /// most zoomed out - every 1.0 unit is 1.0 pixels
+    const MIN_SCALING: f32 = 1.;  
 
     pub fn events_handler(
         &mut self, 
@@ -180,32 +182,41 @@ impl Viewport {
         self.curpos_update(self.curpos.0);
     }
 
+    /// pan by vector v
     pub fn pan(&mut self, v: VSVec) {
         self.transform = self.transform.pre_translate(v);
     }
 
+    /// return the canvas to viewport space transform
     pub fn cv_transform(&self) -> CVTransform {
         self.transform.inverse().unwrap()
     }
 
+    /// return the viewport to canvas space transform
     pub fn vc_transform(&self) -> VCTransform {
         self.transform
     }
     
+    /// returns the scale factor in the viewwport to canvas transform
+    /// this value is stored to avoid calling sqrt() each time
     pub fn vc_scale(&self) -> f32 {
         self.scale
     }
 
+    /// returns the scale factor in the viewwport to canvas transform
+    /// this value is stored to avoid calling sqrt() each time
     pub fn cv_scale(&self) -> f32 {
         1. / self.scale
     }
 
+    /// update the cursor position
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
         let ssp1: SSPoint = vsp1.round().cast().cast_unit();
         self.curpos = (csp1, vsp1, ssp1);
     }
 
+    /// change the viewport zoom by scale
     pub fn zoom(&mut self, scale: f32) {
         let (csp, vsp, _) = self.curpos;
         let scaled_transform = self.transform.then_scale(scale, scale);
@@ -229,6 +240,7 @@ impl Viewport {
         self.scale = self.transform.determinant().abs().sqrt();
     }
 
+    /// draw the cursor onto canvas
     pub fn draw_cursor(&self, frame: &mut Frame) {
         let cursor_stroke = || -> Stroke {
             Stroke {
@@ -246,6 +258,7 @@ impl Viewport {
         frame.stroke(&c, cursor_stroke());
     }
 
+    /// draw the schematic grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         let a = Text {
             content: String::from("origin"),

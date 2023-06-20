@@ -80,7 +80,9 @@ fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, st
     frame.stroke(&c, stroke);
 }
 
+/// width of the wire segment
 const WIRE_WIDTH: f32 = 0.05;
+/// zoom level below which wire width stops becoming thinner
 const ZOOM_THRESHOLD: f32 = 5.0;
 
 impl Drawable for NetEdge {
