@@ -21,7 +21,7 @@ use iced::widget::canvas::event::{self, Event};
 use iced::mouse;
 use euclid::{Box2D, Point2D};
 use infobar::infobar;
-use param_editor::{param_editor, ParamEditor};
+use param_editor::param_editor;
 
 use paprika::*;
 use colored::Colorize;

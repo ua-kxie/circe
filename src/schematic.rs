@@ -6,7 +6,7 @@ use std::{collections::HashSet, fs};
 
 use euclid::{Vector2D, Transform2D};
 pub use nets::{Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, SSVec, self};
+use crate::transforms::{SSPoint, VCTransform, VSBox, Point, SSBox, SchematicSpace, CSPoint, ViewportSpace, self};
 use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
 use iced::{widget::canvas::{
     Frame, self,
