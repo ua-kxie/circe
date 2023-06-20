@@ -2,7 +2,7 @@ mod nets;
 mod devices;
 mod interactable;
 
-use std::{collections::HashSet, fs::OpenOptions, io::Write};
+use std::{collections::HashSet, fs};
 
 use euclid::{Vector2D, Transform2D};
 pub use nets::{Drawable, Nets, graph::{NetEdge, NetVertex}};
@@ -265,13 +265,7 @@ impl Schematic {
     pub fn key_test(&mut self) {
         // self.nets.tt();
         let n = self.netlist();
-        OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("netlist.cir")
-        .and_then(|mut file| {
-            file.write_all(n.as_bytes())
-        });
+        fs::write("netlist.cir", n.as_bytes()).expect("Unable to write file");
     }
     fn netlist(&mut self) -> String {
         self.nets.pre_netlist();
@@ -279,7 +273,7 @@ impl Schematic {
         for d in self.devices.get_set() {
             netlist.push_str(
                 &d.0.borrow_mut().spice_line(&mut self.nets)
-            )
+            );
         }
         netlist.push('\n');
         netlist

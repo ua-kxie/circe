@@ -3,7 +3,7 @@ Cargo.lock
 /artefacts
 /.vscode
 /out
-
+netlist.cir
 # Added by cargo
 #
 # already existing elements were commented out
