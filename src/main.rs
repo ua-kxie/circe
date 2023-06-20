@@ -116,11 +116,19 @@ impl Application for Circe {
         }
         #[cfg(target_family="unix")]
         {
-            let ret = std::process::Command::new("sh -c")
-            .arg("ldconfig -p | prep ngspice | awk '/.*libngspice.so$/{print$4'")
-            .stdout(Stdio::piped()).output().unwrap();
+            use std::process::{self, Command, Stdio};
+
+            // dynamically retrieves libngspice from system
+            let ret = Command::new("sh")
+                .arg("-c")
+                .arg("ldconfig -p | grep ngspice | awk '/.*libngspice.so$/{print $4}'")
+                .stdout(Stdio::piped()).output().unwrap_or_else(|_| {
+                    eprintln!("Error: Could not find libngspice. Make sure it is installed.");
+                    process::exit(1);
+                });
+
             let path = String::from_utf8(ret.stdout).unwrap();
-            lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path)).unwrap();
+            lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path.trim())).unwrap();
         }
 
         lib.init(Some(manager.clone()));
