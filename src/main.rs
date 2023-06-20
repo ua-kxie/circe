@@ -112,7 +112,20 @@ impl Application for Circe {
 
     fn new(_flags: ()) -> (Self, Command<Msg>) {
         let manager = Arc::new(SpManager::new());
-        let mut lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
+        let mut lib;
+        #[cfg(target_family="windows")]
+        {
+            lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
+        }
+        #[cfg(target_family="unix")]
+        {
+            let ret = std::process::Command::new("sh -c")
+            .arg("ldconfig -p | prep ngspice | awk '/.*libngspice.so$/{print$4'")
+            .stdout(Stdio::piped()).output().unwrap();
+            let path = String::from_utf8(ret.stdout).unwrap();
+            lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path)).unwrap();
+        }
+
         lib.init(Some(manager.clone()));
         (
             Circe {

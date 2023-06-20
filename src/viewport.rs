@@ -4,14 +4,13 @@
 /// ViewportSpace is the schematic coordinate in f32
 /// SchematicSpace is the schematic coordinate in i16
 
-use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, ViewportSpace, VSBox, CSBox};
-use euclid::Vector2D;
+use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, VSBox, CSBox, VSVec, CSVec};
 
 use iced::widget::canvas::{
     stroke, LineCap, Path, Stroke, LineDash, Frame, Text, Event,
 };
 
-use iced::{Color};
+use iced::Color;
 
 #[derive(Clone, Debug)]
 pub enum ViewportState {
@@ -47,8 +46,8 @@ impl Default for Viewport {
 }
 
 impl Viewport {
-    const MAX_SCALING: f32 = 100.0;  // most zoomed in - every 100 pixel is 1
-    const MIN_SCALING: f32 = 1.;  // most zoomed out - every pixel is 1
+    const MAX_SCALING: f32 = 100.0;  // most zoomed in - every 1.0 unit is 100.0 pixels
+    const MIN_SCALING: f32 = 1.;  // most zoomed out - every 1.0 unit is 1.0 pixels
 
     pub fn events_handler(
         &mut self, 
@@ -161,7 +160,8 @@ impl Viewport {
         self.curpos.2
     }
 
-    fn bounds_transform(csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
+    /// returns transform and scale such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
+    fn bounds_transform(csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {
         let mut vct = VCTransform::identity();
         
         let s = (csb.height() / vsb.height()).min(csb.width() / vsb.width()).clamp(Viewport::MIN_SCALING, Viewport::MAX_SCALING);  // scale from vsb to fit inside csb
@@ -173,13 +173,14 @@ impl Viewport {
         (vct, s)
     }
 
-    pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {  // change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
+    /// change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
+    pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {
         (self.transform, self.scale) = Viewport::bounds_transform(csb, vsb);
         // recalculate cursor in viewport, or it will be wrong until cursor is moved
         self.curpos_update(self.curpos.0);
     }
 
-    pub fn pan(&mut self, v: Vector2D<f32, ViewportSpace>) {
+    pub fn pan(&mut self, v: VSVec) {
         self.transform = self.transform.pre_translate(v);
     }
 
@@ -239,7 +240,7 @@ impl Viewport {
         };
         let curdim = 5.0;
         let csp = self.vc_transform().transform_point(self.curpos.2.cast().cast_unit());
-        let csp_topleft = csp - Vector2D::from([curdim/2.; 2]);
+        let csp_topleft = csp - CSVec::from([curdim/2.; 2]);
         let s = iced::Size::from([curdim, curdim]);
         let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
         frame.stroke(&c, cursor_stroke());
@@ -262,8 +263,8 @@ impl Viewport {
 
             let v = bb_viewport.max - bb_viewport.min;
             for col in 0..=(v.x.ceil() / spacing) as u32 {
-                let csp0 = bb_viewport.min + Vector2D::from([col as f32 * spacing, 0.0]);
-                let csp1 = bb_viewport.min + Vector2D::from([col as f32 * spacing, v.y.ceil()]);
+                let csp0 = bb_viewport.min + VSVec::from([col as f32 * spacing, 0.0]);
+                let csp1 = bb_viewport.min + VSVec::from([col as f32 * spacing, v.y.ceil()]);
                 let c = Path::line(
                     Point::from(vct.transform_point(csp0)).into(), 
                     Point::from(vct.transform_point(csp1)).into()
