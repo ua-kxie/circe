@@ -52,8 +52,8 @@ pub const SST_CCWR: SSTransform = SSTransform::new(
 );
 
 /// converts SSTransform to VVTransform so that it can be composited with VCTransform
-pub fn sst_to_vxt<T>(sst: SSTransform) -> Transform2D<f32, T, T> {
-    sst.cast::<f32>().with_destination().with_source()
+pub fn sst_to_xxt<T>(sst: SSTransform) -> Transform2D<f32, T, T> {
+    sst.cast().with_destination().with_source()
 }
 
 /// Newtype for working with iced::Point and euclid::Point2D s

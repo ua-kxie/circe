@@ -2,13 +2,12 @@ use std::hash::Hasher;
 
 use super::devicetype::{DeviceClass, r::ParamEditor};
 
-use euclid::{Transform2D, Point2D, Vector2D};
 use iced::{widget::canvas::{Frame, Text}, Color, Element};
 
 use crate::{
     schematic::{nets::Drawable, interactable::Interactive, Nets},
     transforms::{
-        SSPoint, VSPoint, VCTransform, Point, ViewportSpace, SchematicSpace, CanvasSpace
+        SSPoint, VSPoint, VCTransform, Point, SSTransform, ViewportSpace, sst_to_xxt
     }, 
 };
 use crate::schematic::interactable::Interactable;
@@ -59,7 +58,7 @@ impl Hash for Identifier {
 pub struct Device  {
     id: Identifier,
     pub interactable: Interactable,
-    transform: Transform2D<i16, SchematicSpace, SchematicSpace>,
+    transform: SSTransform,
     class: DeviceClass,
     nets: Vec<String>,
     op: Vec<f32>,
@@ -81,7 +80,7 @@ impl Device {
         Device { 
             id: Identifier::new_with_prefix_ord(class.id_prefix(), ord), 
             interactable: Interactable::new(), 
-            transform: Transform2D::identity(), 
+            transform: SSTransform::identity(), 
             class,
             nets: vec![],
             op: vec![],
@@ -91,10 +90,6 @@ impl Device {
     pub fn get_interactable(&self) -> Interactable {
         self.interactable
     }
-    pub fn set_tentative(&mut self) {
-        self.interactable.tentative = true;
-    }
-
     pub fn clear_tentatives(&mut self) {
         self.interactable.tentative = false;
     }
@@ -109,12 +104,8 @@ impl Device {
         }
         false
     }
-    pub fn compose_transform(&self, vct: VCTransform) -> Transform2D<f32, ViewportSpace, CanvasSpace> {
-        self.transform
-        .cast()
-        .with_destination::<ViewportSpace>()
-        .with_source::<ViewportSpace>()
-        .then(&vct)
+    pub fn compose_transform(&self, vct: VCTransform) -> VCTransform {
+        sst_to_xxt::<ViewportSpace>(self.transform).then(&vct)
     }
     pub fn set_translation(&mut self, v: SSPoint) {
         self.transform.m31 = v.x;
@@ -195,7 +186,7 @@ impl Drawable for Device {
 }
 
 impl Interactive for Device {
-    fn transform(&mut self, sst: Transform2D<i16, SchematicSpace, SchematicSpace>) {
+    fn transform(&mut self, sst: SSTransform) {
         self.transform = self.transform.then(&sst);
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }

@@ -1,9 +1,8 @@
-use euclid::Vector2D;
-use iced::{Size, widget::canvas::{self, stroke, LineCap, path::{Builder, self}, LineDash}, Color, Element};
+use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash}, Color, Element};
 
 use crate::{
     transforms::{
-        SSPoint, VSBox, VSPoint, VCTransform, Point, SSBox
+        SSPoint, VSBox, VSPoint, VCTransform, Point, SSBox, VSVec
     }, schematic::Drawable,
 };
 use iced::{widget::canvas::{Frame, Stroke}};
@@ -28,8 +27,8 @@ impl Drawable for Port {
         };
         let dim = 0.4;
         let ssb = VSBox::new(
-            self.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0), 
-            self.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim/2.0, dim/2.0), 
         );
 
         let csbox = vct.outer_transformed_box(&ssb);
@@ -49,8 +48,8 @@ impl Drawable for Port {
         let mut path_builder = Builder::new();
         let dim = 0.4;
         let vsb = VSBox::new(
-            self.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0), 
-            self.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim/2.0, dim/2.0), 
         );
         let csb = vct.outer_transformed_box(&vsb);
         let size = Size::new(csb.width(), csb.height());
@@ -68,8 +67,8 @@ impl Drawable for Port {
         let mut path_builder = Builder::new();
         let dim = 0.4;
         let vsb = VSBox::new(
-            self.offset.cast::<f32>().cast_unit() - Vector2D::new(dim/2.0, dim/2.0), 
-            self.offset.cast::<f32>().cast_unit() + Vector2D::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim/2.0, dim/2.0), 
         );
         let csb = vct.outer_transformed_box(&vsb);
         let size = Size::new(csb.width(), csb.height());

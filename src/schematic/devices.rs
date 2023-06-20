@@ -3,7 +3,7 @@
 mod devicetype;
 mod deviceinstance;
 use devicetype::{DeviceClass, r::R, gnd::Gnd, v::V};
-use deviceinstance::{Device};
+use deviceinstance::Device;
 
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
 use iced::widget::canvas::Frame;
@@ -11,7 +11,7 @@ use iced::widget::canvas::Frame;
 use crate::{
     schematic::nets::{Drawable},
     transforms::{
-        SSPoint, VSBox, VCTransform, SchematicSpace, SSBox
+        SSPoint, VSBox, VCTransform, SSBox
     }, 
 };
 

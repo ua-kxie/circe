@@ -185,7 +185,7 @@ impl Schematic {
                 frame.stroke(&path_builder.build(), stroke);
             },
             SchematicState::Moving(Some((ssp0, ssp1, sst))) => {
-                let vvt = transforms::sst_to_vxt::<ViewportSpace>(SchematicState::move_transform(ssp0, ssp1, sst));
+                let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicState::move_transform(ssp0, ssp1, sst));
 
                 let vct_c = vvt.then(&vct);
                 for be in &self.selected {

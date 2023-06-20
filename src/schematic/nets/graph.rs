@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::{
-    transforms::{SSPoint, VCTransform, SchematicSpace, SSBox}, 
+    transforms::{SSPoint, VCTransform, SSBox, SSTransform}, 
     schematic::{BaseElement, SchematicSet, interactable::Interactive}
 };
 use euclid::{Point2D, Transform2D};
@@ -294,7 +294,7 @@ impl Nets {
         }
         self.prune(extra_vertices);
     }
-    pub fn transform(&mut self, mut e: NetEdge, sst: Transform2D<i16, SchematicSpace, SchematicSpace>) {
+    pub fn transform(&mut self, mut e: NetEdge, sst: SSTransform) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
         e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);

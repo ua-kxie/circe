@@ -5,7 +5,7 @@ use std::rc::Rc;
 use super::SchematicNetLabel;
 use crate::{
     transforms::{
-        SSPoint, VCTransform, SSBox, SchematicSpace
+        SSPoint, VCTransform, SSBox, SSTransform
     }, 
     schematic::{interactable::{Interactable, Interactive}, nets::Drawable}
 };
@@ -60,7 +60,7 @@ impl NetEdge {
 
 impl Interactive for NetEdge {
     /// transform the edge based on SSTransform argument
-    fn transform(&mut self, sst: euclid::Transform2D<i16, SchematicSpace, SchematicSpace>) {
+    fn transform(&mut self, sst: SSTransform) {
         (self.src, self.dst) = (
             sst.transform_point(self.src),
             sst.transform_point(self.dst),
