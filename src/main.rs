@@ -12,7 +12,7 @@ use iced::{executor, Size};
 use iced::widget::canvas::{
     Cache, Cursor, Geometry,
 };
-use iced::widget::{canvas, column, row, button, text};
+use iced::widget::{canvas, column, row};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme,
@@ -90,7 +90,6 @@ struct Circe {
 
     spmanager: Arc<SpManager>,
     lib: PkSpice<SpManager>,
-    libpath: String,
 }
 
 #[derive(Debug, Clone)]
@@ -100,8 +99,6 @@ pub enum Msg {
     TextInputChanged(String),
     TextInputSubmit,
     CanvasEvent(Event, SSPoint),
-
-    LoadPressed,
 }
 
 impl Application for Circe {
@@ -143,7 +140,6 @@ impl Application for Circe {
 
                 lib,
                 spmanager: manager,
-                libpath: String::from("paprika/ngspice.dll"),
             },
             Command::none(),
         )
@@ -184,11 +180,6 @@ impl Application for Circe {
                     self.schematic.op(self.spmanager.tmp.as_ref().unwrap());
                 }
             },
-            Msg::LoadPressed => {
-                self.lib.command("source netlist.cir");  // results pointer array starts at same address
-                self.lib.command("op");  // ngspice recommends sending in control statements separately, not as part of netlist
-                self.schematic.op(self.spmanager.tmp.as_ref().unwrap());
-            }
         }
         Command::none()
     }
@@ -199,19 +190,13 @@ impl Application for Circe {
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
         let pe = param_editor(self.text.clone(), Msg::TextInputChanged, || {Msg::TextInputSubmit});
-        column![
-            row![
-                text(&self.libpath).size(24).width(Length::Fill),
-                button("Load").on_press(Msg::LoadPressed),
-            ],
-            row![
-                pe,
-                column![
-                    canvas,
-                    infobar,
-                ]
-                .width(Length::Fill),
+        row![
+            pe,
+            column![
+                canvas,
+                infobar,
             ]
+            .width(Length::Fill),
         ]
         .into()
     }

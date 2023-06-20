@@ -124,13 +124,13 @@ impl Nets {
         ret
     }
     /// finds an appropriate net name and assigns it to all edge in edges. 
-    fn unify_labels(&mut self, edges: Vec<(NetVertex, NetVertex)>) -> Rc<String> {
+    fn unify_labels(&mut self, edges: Vec<(NetVertex, NetVertex)>, taken_net_names: &[Rc<String>]) -> Rc<String> {
         let mut label = None;
         // get smallest untaken of existing labels, if any
         for tup in &edges {
             if let Some(ew) = self.graph.edge_weight(tup.0, tup.1) {
                 if let Some(label1) = &ew.label {
-                    if self.label_manager.labels.contains(label1) {
+                    if taken_net_names.contains(label1) {
                         continue;
                     }
                     if label.is_none() || label1 < label.as_ref().unwrap() {
@@ -244,10 +244,10 @@ impl Nets {
         // for each subnet
         // unify labels - give vector of taken labels
         let subgraph_vertices = tarjan_scc(&*self.graph);  // this finds the subnets
+        let mut taken_net_names = vec![];
         for vertices in subgraph_vertices {
             let edges = self.nodes_to_edge_nodes(vertices);
-            let net_name = self.unify_labels(edges);
-            self.label_manager.register(net_name);
+            taken_net_names.push(self.unify_labels(edges, &taken_net_names));
         }
     }
     pub fn edge_occupies_ssp(&self, ssp: SSPoint) -> bool {

@@ -1,5 +1,5 @@
 use iced::Point as IcedPoint;
-use euclid::Point2D;
+use euclid::{Point2D, Transform2D};
 
 /// PhantomData tag used to denote the patch of screen being drawn on
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,16 +38,23 @@ pub type SSVec = euclid::Vector2D<i16, SchematicSpace>;
 pub type VCTransform = euclid::Transform2D<f32, ViewportSpace, CanvasSpace>;
 /// canvas to viewport space transform
 pub type CVTransform = euclid::Transform2D<f32, CanvasSpace, ViewportSpace>;
+/// schematic space transform
+pub type SSTransform = euclid::Transform2D<i16, SchematicSpace, SchematicSpace>;
 
 /// 90 deg clockwise rotation transform
-pub const SST_CWR: euclid::Transform2D<i16, SchematicSpace, SchematicSpace> = euclid::Transform2D::<i16, SchematicSpace, SchematicSpace>::new(
+pub const SST_CWR: SSTransform = SSTransform::new(
     0, -1, 1, 0, 0, 0
 );
 
 /// 90 deg counter clockwise rotation transform
-pub const SST_CCWR: euclid::Transform2D<i16, SchematicSpace, SchematicSpace> = euclid::Transform2D::<i16, SchematicSpace, SchematicSpace>::new(
+pub const SST_CCWR: SSTransform = SSTransform::new(
     0, 1, -1, 0, 0, 0
 );
+
+/// converts SSTransform to VVTransform so that it can be composited with VCTransform
+pub fn sst_to_vxt<T>(sst: SSTransform) -> Transform2D<f32, T, T> {
+    sst.cast::<f32>().with_destination().with_source()
+}
 
 /// Newtype for working with iced::Point and euclid::Point2D s
 #[derive(Debug, Copy, Clone)]
