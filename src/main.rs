@@ -126,7 +126,25 @@ impl Application for Circe {
         {
             lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
         }
-        #[cfg(target_family="unix")]
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::{self, Command, Stdio};
+
+            // dynamically retrieves libngspice from system
+            let ret = Command::new("find")
+                .args(&["/usr/lib", "/usr/local/lib"])
+                .arg("-name")
+                .arg("*libngspice.dylib")
+                .stdout(Stdio::piped())
+                .output()
+                .unwrap_or_else(|_| {
+                    eprintln!("Error: Could not find libngspice.dylib. Make sure it is installed.");
+                    process::exit(1);
+                });
+            let path = String::from_utf8(ret.stdout).unwrap();
+            lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path.trim())).unwrap();
+        }
+        #[cfg(target_os = "linux")]
         {
             use std::process::{self, Command, Stdio};
 
