@@ -9,7 +9,7 @@ use viewport::ViewportState;
 
 mod schematic;
 use schematic::{Schematic, SchematicState, RcRDevice};
-use std::process::{self, Command as Cmd, Stdio};
+
 
 
 use iced::{
@@ -26,6 +26,8 @@ use param_editor::param_editor;
 
 use paprika::*;
 use colored::Colorize;
+
+use std::process::{self, Command as Cmd, Stdio};
 
 /// Spice Manager to facillitate interaction with NgSpice
 struct SpManager{
