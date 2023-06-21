@@ -1,23 +1,21 @@
-// ex: Vgnd0 net1 0 0
-// device Id, net at port, ground net '0', device voltage 0
+use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
+
+mod params;
 mod devicetype;
 mod deviceinstance;
+
+use super::{SchematicSet, BaseElement};
 use devicetype::{DeviceClass, r::R, gnd::Gnd, v::V};
 use deviceinstance::Device;
-
-use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
-use iced::widget::canvas::Frame;
-
 use crate::{
-    schematic::nets::{Drawable},
+    schematic::Drawable,
     transforms::{
         SSPoint, VSBox, VCTransform, SSBox
     }, 
 };
 
+use iced::widget::canvas::Frame;
 use by_address::ByAddress;
-
-use super::{SchematicSet, BaseElement};
 
 #[derive(Debug, Clone)]
 pub struct RcRDevice (pub Rc<RefCell<Device>>);
@@ -82,7 +80,7 @@ impl Drawable for Devices {
         panic!("not intended for use");
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self.set.iter().filter(|&d| d.0.borrow().get_interactable().tentative) {
+        for d in self.set.iter().filter(|&d| d.0.borrow().interactable.tentative) {
             d.0.borrow().draw_preview(vct, vcscale, frame);
         }
     }
@@ -101,7 +99,7 @@ impl Devices {
                 DeviceClass::R(_) => self.manager.r.incr(),
                 DeviceClass::V(_) => self.manager.v.incr(),
             };
-            d.0.borrow_mut().set_ord(ord);
+            d.0.borrow_mut().set_wm(ord);
             self.set.insert(d);
         }
     }
@@ -109,7 +107,7 @@ impl Devices {
     pub fn tentatives(&self) -> impl Iterator<Item = RcRDevice> + '_ {
         self.set.iter().filter_map(
             |x| 
-            if x.0.borrow().get_interactable().tentative {
+            if x.0.borrow().interactable.tentative {
                 Some(x.clone())
             } else {
                 None
@@ -141,7 +139,7 @@ impl Devices {
     }
     pub fn clear_tentatives(&mut self) {
         for d in &self.set {
-            d.0.borrow_mut().clear_tentatives();
+            d.0.borrow_mut().interactable.tentative = false;
         }
     }
     pub fn bounding_box(&self) -> VSBox {

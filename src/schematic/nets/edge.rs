@@ -1,5 +1,3 @@
-/// NetEdge - Edge Weight used in petgraph::Graph
-
 use std::rc::Rc;
 
 use super::SchematicNetLabel;

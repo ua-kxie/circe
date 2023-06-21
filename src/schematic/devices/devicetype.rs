@@ -1,11 +1,10 @@
-use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash}, Color, Element};
+use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash, Frame, Stroke}, Color, Element};
 
 use crate::{
     transforms::{
         SSPoint, VSBox, VSPoint, VCTransform, Point, SSBox, VSVec
     }, schematic::Drawable,
 };
-use iced::{widget::canvas::{Frame, Stroke}};
 
 use self::r::ParamEditor;
 
@@ -13,9 +12,12 @@ pub mod v;
 pub mod r;
 pub mod gnd;
 
+/// ports for devices, where wires may be connected
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Port {
+    /// the name of a port (necessary?)
     pub name: &'static str,
+    /// the offset of the port - position of the port relative to the device center
     pub offset: SSPoint,
 }
 
@@ -78,12 +80,17 @@ impl Drawable for Port {
 }
 
 const STROKE_WIDTH: f32 = 0.1;
+
+/// graphical representation for devices
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Graphics {
-    // T is just an identifier so the graphic is not used for the wrong device type, analogous to ViewportSpace/SchematicSpace of euclid
+    /// line is traced from point to point for each inner vector.
     pts: Vec<Vec<VSPoint>>,
+    /// arbitrary number of circles (center, radius) to be drawn
     circles: Vec<(VSPoint, f32)>,
+    /// arbitrary number of device ports
     ports: Vec<Port>,
+    /// device bounds
     bounds: SSBox,
 }
 impl Graphics {
@@ -166,9 +173,7 @@ pub trait DeviceType  {
     fn default_graphics() -> Graphics;
 }
 
-
-
-
+/// DeviceClass enumerates the various classes of devices. E.g. ground, resistor, voltage source... etc
 #[derive(Debug)]
 pub enum DeviceClass {
     Gnd(gnd::Gnd),
@@ -176,6 +181,7 @@ pub enum DeviceClass {
     V(v::V),
 }
 impl DeviceClass {
+    /// todo wip concept
     pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
         match self {
             DeviceClass::Gnd(_) => {
@@ -189,6 +195,7 @@ impl DeviceClass {
             },
         }
     }
+    /// sets the raw parameter of the device
     pub fn set(&mut self, new: String) {
         match self {
             DeviceClass::R(x) => match &mut x.params {
@@ -201,6 +208,7 @@ impl DeviceClass {
             },
         }
     }
+    /// returns a reference to the device graphics
     pub fn graphics(&self) -> &'static Graphics {
         match self {
             DeviceClass::Gnd(x) => x.graphics,
@@ -208,6 +216,7 @@ impl DeviceClass {
             DeviceClass::V(x) => x.graphics,
         }
     }
+    /// returns a summary of the device parameter for display on canvas
     pub fn param_summary(&self) -> String {
         match self {
             DeviceClass::Gnd(x) => {
@@ -221,6 +230,7 @@ impl DeviceClass {
             },
         }
     }
+    /// returns the id prefix of the device class
     pub fn id_prefix(&self) -> &'static str {
         match self {
             DeviceClass::Gnd(_) => gnd::ID_PREFIX,

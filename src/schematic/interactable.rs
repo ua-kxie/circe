@@ -1,5 +1,9 @@
 use crate::transforms::{SSBox, SchematicSpace, SSPoint, SSTransform};
 
+pub trait Interactive {
+    fn transform(&mut self, sst: SSTransform);
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Interactable {
     /// the bounds of the interactable. e.g. mouse hover over this area should highlight the interactable.
@@ -23,8 +27,3 @@ impl Interactable {
         ssb.contains(ssp)
     }
 }
-
-pub trait Interactive {
-    fn transform(&mut self, sst: SSTransform);
-}
-

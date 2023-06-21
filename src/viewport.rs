@@ -5,11 +5,9 @@
 /// SchematicSpace is the schematic coordinate in i16
 
 use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, VSBox, CSBox, VSVec, CSVec};
-
 use iced::widget::canvas::{
     stroke, LineCap, Path, Stroke, LineDash, Frame, Text, Event,
 };
-
 use iced::Color;
 
 #[derive(Clone, Debug)]
@@ -51,6 +49,7 @@ impl Viewport {
     /// most zoomed out - every 1.0 unit is 1.0 pixels
     const MIN_SCALING: f32 = 1.;  
 
+    /// mutate viewport based on event
     pub fn events_handler(
         &mut self, 
         event: iced::widget::canvas::Event, 
@@ -150,14 +149,17 @@ impl Viewport {
         )
     }
 
+    /// returns the cursor position in canvas space
     pub fn curpos_csp(&self) -> CSPoint {
         self.curpos.0
     }
 
+    /// returns the cursor position in viewport space
     pub fn curpos_vsp(&self) -> VSPoint {
         self.curpos.1
     }
 
+    /// returns the cursor position in schematic space
     pub fn curpos_ssp(&self) -> SSPoint {
         self.curpos.2
     }

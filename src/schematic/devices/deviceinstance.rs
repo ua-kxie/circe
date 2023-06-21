@@ -5,18 +5,23 @@ use super::devicetype::{DeviceClass, r::ParamEditor};
 use iced::{widget::canvas::{Frame, Text}, Color, Element};
 
 use crate::{
-    schematic::{nets::Drawable, interactable::Interactive, Nets},
+    schematic::{Drawable, interactable::Interactive, Nets},
     transforms::{
         SSPoint, VSPoint, VCTransform, Point, SSTransform, ViewportSpace, sst_to_xxt
     }, 
 };
 use crate::schematic::interactable::Interactable;
 use std::hash::Hash;
+
+/// device identifier
 #[derive(Debug)]
 pub struct Identifier {
-    id_prefix: &'static str,  // prefix which determines device type in NgSpice
-    id: usize,  // avoid changing - otherwise, 
-    custom: Option<String>,  // if some, is set by the user - must use this as is for id - if multiple instances have same, both should be highlighted
+    /// prefix which determines device type in NgSpice - a few characters at most
+    id_prefix: &'static str,
+    /// watermark to efficiently generate unique identifiers
+    wm: usize,
+    /// if some, is set by the user - must use this as is for id - if multiple instances have same, both should be highlighted
+    custom: Option<String>,
 }
 /*
 id collision check:
@@ -29,18 +34,20 @@ immutable identifier:
     if mutation is desired, must acquire write lock - e.g. no read locks. 
  */
 impl Identifier {
+    /// returns a string denoting the device which starts a device line in netlist. E.g. V1, R0
     pub fn ng_id(&self) -> String {
         let mut ret = String::new();
         ret.push_str(self.id_prefix);
         if let Some(s) = &self.custom {
             ret.push_str(s);
         } else {
-            ret.push_str(&format!("{}", self.id));
+            ret.push_str(&format!("{}", self.wm));
         }
         ret
     }
-    pub fn new_with_prefix_ord(id_prefix: &'static str , ord: usize) -> Self {
-        Identifier { id_prefix, id: ord, custom: None }
+    /// creates a new identifier with a prefix and watermark
+    pub fn new_with_prefix_ord(id_prefix: &'static str , wm: usize) -> Self {
+        Identifier { id_prefix, wm, custom: None }
     }
 }
 impl PartialEq for Identifier {
@@ -54,31 +61,44 @@ impl Hash for Identifier {
     }
 }
 
+/// A device - e.g. a resistor, bjt, voltage source, ground
 #[derive(Debug)]
 pub struct Device  {
+    /// id which uniquely identifies the device in netlist
     id: Identifier,
+    /// device interactable
     pub interactable: Interactable,
+    /// device transform - determines the posisiton and orientation of the device in schematic space
     transform: SSTransform,
+    /// the class of the device - is the device a resistor, ground, voltage source... ?
     class: DeviceClass,
+
+    /// vector of the connected net names in order of device ports
     nets: Vec<String>,
+    /// vector of the connect net voltages in order of device ports
     op: Vec<f32>,
 }
 impl Device {
+    /// wip concept
     pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
         self.class.param_editor()
     }
-    pub fn set_ord(&mut self, ord: usize) {
-        self.id.id = ord;
+    /// sets the device identifier watermark
+    pub fn set_wm(&mut self, wm: usize) {
+        self.id.wm = wm;
     }
+    /// returns a reference to the device class
     pub fn class(&self) -> &DeviceClass {
         &self.class
     }
+    /// returns a mut reference to the device class
     pub fn class_mut(&mut self) -> &mut DeviceClass {
         &mut self.class
     }
-    pub fn new_with_ord_class(ord: usize, class: DeviceClass) -> Self {
+    /// creates a new device with watermark and class
+    pub fn new_with_ord_class(wm: usize, class: DeviceClass) -> Self {
         Device { 
-            id: Identifier::new_with_prefix_ord(class.id_prefix(), ord), 
+            id: Identifier::new_with_prefix_ord(class.id_prefix(), wm), 
             interactable: Interactable::new(), 
             transform: SSTransform::identity(), 
             class,
@@ -86,16 +106,11 @@ impl Device {
             op: vec![],
         }
     }
-
-    pub fn get_interactable(&self) -> Interactable {
-        self.interactable
-    }
-    pub fn clear_tentatives(&mut self) {
-        self.interactable.tentative = false;
-    }
+    /// returns the schematic coordiantes of the devices ports in order
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
         self.class.graphics().ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
-    }   
+    }
+    /// returns true if any port occupies ssp
     pub fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
         for p in self.class.graphics().ports() {
             if self.transform.transform_point(p.offset) == ssp {
@@ -104,14 +119,17 @@ impl Device {
         }
         false
     }
-    pub fn compose_transform(&self, vct: VCTransform) -> VCTransform {
+    /// returns the composite of the device's transform and the given vct
+    fn compose_transform(&self, vct: VCTransform) -> VCTransform {
         sst_to_xxt::<ViewportSpace>(self.transform).then(&vct)
     }
-    pub fn set_translation(&mut self, v: SSPoint) {
-        self.transform.m31 = v.x;
-        self.transform.m32 = v.y;
+    /// sets the position of the device
+    pub fn set_position(&mut self, ssp: SSPoint) {
+        self.transform.m31 = ssp.x;
+        self.transform.m32 = ssp.y;
         self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
     }
+    /// returns the device's spice netlist line
     pub fn spice_line(&mut self, nets: &mut Nets) -> String {
         self.nets.clear();
         let mut sline = self.id.ng_id();
@@ -127,6 +145,7 @@ impl Device {
         sline.push('\n');
         sline
     }
+    /// fill in the operating point for the device
     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
         self.op.clear();
         for n in &self.nets {

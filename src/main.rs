@@ -1,30 +1,31 @@
-mod transforms;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+mod transforms;
 use transforms::{Point, CSPoint, CSBox, SSPoint};
+
 mod viewport;
 use viewport::ViewportState;
+
 mod schematic;
 use schematic::{Schematic, SchematicState, RcRDevice};
 
-use iced::{executor, Size};
-use iced::widget::canvas::{
-    Cache, Cursor, Geometry,
-};
-use iced::widget::{canvas, column, row};
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
-    Theme,
+    Theme, executor, Size, mouse, widget::{
+        canvas, column, row, canvas::{
+            Cache, Cursor, Geometry, event::{self, Event}
+        }
+    }
 };
-use iced::widget::canvas::event::{self, Event};
-use iced::mouse;
-use euclid::{Box2D, Point2D};
+
 use infobar::infobar;
 use param_editor::param_editor;
 
 use paprika::*;
 use colored::Colorize;
+
+/// Spice Manager to facillitate interaction with NgSpice
 struct SpManager{
     tmp: Option<PkVecvaluesall>,
 }
@@ -75,27 +76,38 @@ pub fn main() -> iced::Result {
     })
 }
 
+/// main program
 struct Circe {
+    /// zoom scale of the viewport, used only for display in the infobar
     zoom_scale: f32,
+    /// cursor coordinate in schematic space, used only for display in the infobar
     curpos_ssp: SSPoint,
+    /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
 
+    /// iced canvas graphical cache, cleared every frame
     active_cache: Cache,
+    /// iced canvas graphical cache, cleared following some schematic actions
     passive_cache: Cache,
+    /// iced canvas graphical cache, almost never cleared
     background_cache: Cache,
 
+    /// parameter editor text
     text: String,
-    schematic: Schematic,
-    active_device: Option<RcRDevice>,
 
+    /// schematic
+    schematic: Schematic,
+    /// active device - some if only 1 device selected, otherwise is none
+    active_device: Option<RcRDevice>,
+    /// spice manager
     spmanager: Arc<SpManager>,
+    /// ngspice library
     lib: PkSpice<SpManager>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
     NewZoom(f32),
-
     TextInputChanged(String),
     TextInputSubmit,
     CanvasEvent(Event, SSPoint),
@@ -185,7 +197,10 @@ impl Application for Circe {
                 if let Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Space, modifiers: _}) = event {
                     self.lib.command("source netlist.cir");  // results pointer array starts at same address
                     self.lib.command("op");  // ngspice recommends sending in control statements separately, not as part of netlist
-                    self.schematic.op(self.spmanager.tmp.as_ref().unwrap());
+                    if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
+                        self.schematic.op(pkvecvaluesall);
+                    }
+                    
                 }
             },
         }
@@ -281,7 +296,7 @@ impl canvas::Program<Msg> for Circe {
         });
 
         let passive = self.passive_cache.draw(bounds.size(), |frame| {
-            viewport.draw_grid(frame, Box2D::new(CSPoint::origin(), Point2D::from([bounds.width, bounds.height])));
+            viewport.draw_grid(frame, CSBox::new(CSPoint::origin(), CSPoint::from([bounds.width, bounds.height])));
             self.schematic.draw_passive(viewport.vc_transform(), viewport.vc_scale(), frame);
         });
 

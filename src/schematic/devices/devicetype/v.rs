@@ -1,4 +1,5 @@
 use crate::transforms::{SSPoint, VSPoint, SSBox};
+use super::super::params;
 use super::{Graphics, Port};
 use lazy_static::lazy_static;
 
@@ -41,11 +42,11 @@ lazy_static! {
 
 #[derive(Debug)]
 pub enum ParamV  {
-    Raw(super::r::Raw),
+    Raw(params::Raw),
 }
 impl Default for ParamV {
     fn default() -> Self {
-        ParamV::Raw(super::r::Raw::new(String::from("3.3")))
+        ParamV::Raw(params::Raw::new(String::from("3.3")))
     }
 }
 impl ParamV {

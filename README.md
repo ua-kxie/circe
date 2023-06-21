@@ -14,6 +14,8 @@ R - resistor, rotate selected during move, placement
 
 G - ground
 
+V - voltage source
+
 M - move selected
 
 Space - run dc op simulation
@@ -28,6 +30,8 @@ right click drag to zoom to area
 left click drag for area select
 
 unconnected wires have unique names
+
+select single device to edit parameter
 
 
 Target application is EDA schematic capture

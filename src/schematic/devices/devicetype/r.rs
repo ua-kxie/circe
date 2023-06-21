@@ -1,5 +1,6 @@
 use crate::transforms::{SSPoint, VSPoint, SSBox};
 use super::{Graphics, Port};
+use super::super::params;
 use iced::Element;
 use lazy_static::lazy_static;
 
@@ -29,38 +30,18 @@ lazy_static! {
     };
 }
 
-#[derive(Debug)]
-pub struct Raw  {
-    pub raw: String,
-}
-impl Raw {
-    pub fn new(raw: String) -> Self {
-        Raw { raw }
-    }
-    pub fn set(&mut self, new: String) {
-        self.raw = new;
-    }
-}
 
-#[derive(Debug)]
-pub struct SingleValue  {
-    value: f32,
-}
-impl SingleValue {
-    fn new(value: f32) -> Self {
-        SingleValue { value }
-    }
-}
-
-
+/// Enumerates the different ways to specifify parameters for a resistor
 #[derive(Debug)]
 pub enum ParamR  {
-    Raw(Raw),
-    Value(SingleValue),
+    /// specify the spice line directly (after id and port connections)
+    Raw(params::Raw),
+    /// specify the spice line by a single value
+    Value(params::SingleValue),
 }
 impl Default for ParamR {
     fn default() -> Self {
-        ParamR::Raw(Raw::new(String::from("1000")))
+        ParamR::Raw(params::Raw::new(String::from("1000")))
     }
 }
 impl ParamR {
@@ -85,9 +66,12 @@ impl ParamR {
     }
 }
 
+/// resistor device class
 #[derive(Debug)]
 pub struct R {
+    /// parameters of the resistor
     pub params: ParamR,
+    /// graphic representation of the resistor
     pub graphics: &'static Graphics,
 }
 impl R {

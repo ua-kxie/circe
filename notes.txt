@@ -1,32 +1,37 @@
 todo:
 
 - immediate: 
+    click-drag-move
+    area selection - contains and intersects by selection area is positive/negative
+    device/wire copy/paste
+    ctrl-z/undo/redo
+
+    build script to copy ngspice.dll into directory
+
     zooming during device placement visual bug - maybe selection system not a good fit
 
-    make code/comment pristine - then code review
     traits for nets, devices, baseElement - org and tech debt
-    edit device parameters rework
+    edit device parameters rework - json serde, self contained
+
+    make code/comment pristine - then code review
 
 - medium term:
+    device designer, device saving/loading, device libraries
+
+    logging
+
     use pane_grid from iced
     
     schematic saving/loading (serde)
 
     schematic checking - mark floating nets, ports
 
-    device/wire copy/paste
-
 - long term:
-
-    device designer, device saving/loading, device libraries
-
-    logging
-    
     custom net names
     nets highlighting/color cycling
 
-    bypass iced and tesellate with lyon directly
-    drawing/stroke culling
+    bypass iced, tesellate with lyon directly
+    drawing/stroke culling (maybe?)
 
     additive/subtractive selection - waiting on better modifiers support
 

@@ -3,20 +3,31 @@ mod devices;
 mod interactable;
 
 use std::{collections::HashSet, fs};
+use nets::{Nets, NetEdge, NetVertex};
+use crate::transforms::{
+    self, SSPoint, VCTransform, VSBox, Point, SSBox, CSPoint, SSTransform, ViewportSpace, SSVec
+};
+use iced::{
+    widget::canvas::{
+        Frame, self, event::Event, path::Builder, Stroke, LineCap
+    }, 
+    Size, Color
+};
+use self::{devices::Devices, interactable::Interactive};
 
-use euclid::{Vector2D, Transform2D};
-pub use nets::{Drawable, Nets, graph::{NetEdge, NetVertex}};
-use crate::transforms::{SSPoint, VCTransform, VSBox, Point, SSBox, CSPoint, SSTransform, self, ViewportSpace};
-use iced::widget::canvas::{event::Event, path::Builder, Stroke, LineCap};
-use iced::{widget::canvas::{
-    Frame, self,
-}, Size, Color};
-pub use self::{devices::{Devices, RcRDevice}, interactable::Interactive};
+pub use self::devices::RcRDevice;
 
+/// trait for element which can be drawn on canvas
+pub trait Drawable {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+}
+
+/// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
     fn selectable(&mut self, curpos_ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<BaseElement>;
 }
-
 
 #[derive(Debug, Clone)]
 pub enum BaseElement {
@@ -63,12 +74,13 @@ impl Default for SchematicState {
 impl SchematicState {
     fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
         sst
-        .pre_translate(Vector2D::new(-ssp0.x, -ssp0.y))
-        .then_translate(Vector2D::new(ssp0.x, ssp0.y))
+        .pre_translate(SSVec::new(-ssp0.x, -ssp0.y))
+        .then_translate(SSVec::new(ssp0.x, ssp0.y))
         .then_translate(*ssp1-*ssp0)
     }
 }
 
+/// schematic
 #[derive(Default)]
 pub struct Schematic {
     nets: Nets,
@@ -80,6 +92,7 @@ pub struct Schematic {
 }
 
 impl Schematic {
+    /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
     pub fn active_device(&self) -> Option<RcRDevice> {
         let mut v: Vec<_> = self.selected.iter().filter_map(|x| {
             match x {
@@ -93,19 +106,23 @@ impl Schematic {
             None
         }
     }
+    /// clear selection
     fn clear_selected(&mut self) {
         self.selected.clear();
     }
+    /// clear tentative selections (cursor hover highlight)
     fn clear_tentatives(&mut self) {
         self.devices.clear_tentatives();
         self.nets.clear_tentatives();
     }
+    /// set tentative flags by intersection with ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         self.clear_tentatives();
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
         self.devices.tentatives_by_ssbox(&ssb_p);
         self.nets.tentatives_by_ssbox(&ssb_p);
     }
+    /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
         self.clear_tentatives();
         if let Some(be) = self.selectable(ssp, skip) {
@@ -124,12 +141,14 @@ impl Schematic {
             }
         } else {None}
     }
-    pub fn tentative_next_by_vspoint(&mut self, curpos_ssp: SSPoint) -> Option<String> {
+    /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
+    pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) -> Option<String> {
         let mut skip = self.selskip;
-        let s = self.tentative_by_sspoint(curpos_ssp, &mut skip);
+        let s = self.tentative_by_sspoint(ssp, &mut skip);
         self.selskip = skip;
         s
     }
+    /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
         let _: Vec<_> = self.devices.tentatives().map(
             |d| {
@@ -142,9 +161,11 @@ impl Schematic {
             }
         ).collect();
     }
+    /// returns true if ssp is occupied by an element
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
     }
+    /// draw onto active cache
     pub fn draw_active(
         &self, 
         vct: VCTransform,
@@ -202,7 +223,7 @@ impl Schematic {
             _ => {},
         }
     }
-
+    /// draw onto passive cache
     pub fn draw_passive(
         &self, 
         vct: VCTransform,
@@ -222,20 +243,20 @@ impl Schematic {
             }
         ).collect();
     }
-
+    /// returns the bouding box of all elements on canvas
     pub fn bounding_box(&self) -> VSBox {
         let bbn = VSBox::from_points(self.nets.graph.nodes().map(|x| x.0.cast().cast_unit()));
         let bbi = self.devices.bounding_box();
         bbn.union(&bbi)
     }
-
-    fn selectable(&mut self, curpos_ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
+    /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
             let mut count = 0;
-            if let Some(e) = self.nets.selectable(curpos_ssp, skip, &mut count) {
+            if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
                 return Some(e);
             }
-            if let Some(d) = self.devices.selectable(curpos_ssp, skip, &mut count) {
+            if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
                 return Some(d);
             }
             if count == 0 {
@@ -245,7 +266,7 @@ impl Schematic {
             *skip -= count;
         }
     }
-
+    /// delete all elements which appear in the selected array
     pub fn delete_selected(&mut self) {
         if let SchematicState::Idle = self.state {
             for be in &self.selected {
@@ -262,12 +283,8 @@ impl Schematic {
             self.prune_nets();
         }
     }
-    pub fn key_test(&mut self) {
-        // self.nets.tt();
-        let n = self.netlist();
-        fs::write("netlist.cir", n.as_bytes()).expect("Unable to write file");
-    }
-    fn netlist(&mut self) -> String {
+    /// create netlist for the current schematic and save it.
+    fn netlist(&mut self) {
         self.nets.pre_netlist();
         let mut netlist = String::from("Netlist Created by Circe\n");
         for d in self.devices.get_set() {
@@ -276,11 +293,13 @@ impl Schematic {
             );
         }
         netlist.push('\n');
-        netlist
+        fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
     }
+    /// clear up nets graph: merging segments, cleaning up segment net names, etc.
     fn prune_nets(&mut self) {
         self.nets.prune(self.devices.ports_ssp());
     }
+    /// move all elements in the selected array by sst
     fn move_selected(&mut self, sst: SSTransform) {
         let selected = self.selected.clone();
         self.selected.clear();
@@ -296,11 +315,11 @@ impl Schematic {
             }
         }
     }
-
+    /// register op sim results with schematic
     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
         self.devices.op(pkvecvaluesall);
     }
-
+    /// mutate schematic based on event
     pub fn events_handler(
         &mut self, 
         event: Event, 
@@ -381,7 +400,7 @@ impl Schematic {
             ) => {
                 self.selected.clear();
                 let d = self.devices.new_res();
-                d.0.borrow_mut().set_translation(curpos_ssp);
+                d.0.borrow_mut().set_position(curpos_ssp);
                 self.selected.insert(BaseElement::Device(d));
                 state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, SSTransform::identity())));
             },
@@ -391,7 +410,7 @@ impl Schematic {
             ) => {
                 self.selected.clear();
                 let d = self.devices.new_gnd();
-                d.0.borrow_mut().set_translation(curpos_ssp);
+                d.0.borrow_mut().set_position(curpos_ssp);
                 self.selected.insert(BaseElement::Device(d));
                 state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, SSTransform::identity())));
             },
@@ -401,7 +420,7 @@ impl Schematic {
             ) => {
                 self.selected.clear();
                 let d = self.devices.new_vs();
-                d.0.borrow_mut().set_translation(curpos_ssp);
+                d.0.borrow_mut().set_position(curpos_ssp);
                 self.selected.insert(BaseElement::Device(d));
                 state = SchematicState::Moving(Some((curpos_ssp, curpos_ssp, SSTransform::identity())));
             },
@@ -435,7 +454,7 @@ impl Schematic {
                     clear_passive = true;
                 } else {
                     let ssp: euclid::Point2D<_, _> = curpos_ssp;
-                    let sst = Transform2D::identity();
+                    let sst = SSTransform::identity();
                     state = SchematicState::Moving(Some((ssp, ssp, sst)));
                 }
             },
@@ -467,21 +486,21 @@ impl Schematic {
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::C, modifiers: _})
             ) => {
-                ret = self.tentative_next_by_vspoint(curpos_ssp);
+                ret = self.tentative_next_by_ssp(curpos_ssp);
             },
             // test
             (
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::T, modifiers: _})
             ) => {
-                self.key_test();
+                self.netlist();
             },
             // dc op
             (
                 SchematicState::Idle, 
                 Event::Keyboard(iced::keyboard::Event::KeyPressed{key_code: iced::keyboard::KeyCode::Space, modifiers: _})
             ) => {
-                self.key_test();
+                self.netlist();
                 clear_passive = true;
             },
             _ => {},
