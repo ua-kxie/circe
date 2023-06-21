@@ -1,6 +1,15 @@
-Experimention for 2D CAD drawn with Iced canvas
+Circe: Prototyping for 2D CAD drawn with Iced canvas
 
-Hotkeys: 
+###Preview:
+![preview](Capture.png)
+
+### Controls: 
+* click wires or device to select  
+* mouse wheel to zoom and pan  
+* right click drag to zoom to area  
+* left click drag for area select  
+* select single device to edit parameter (wonky)  
+#### Hotkeys:
 
 W - draw wire
 
@@ -18,20 +27,7 @@ V - voltage source
 
 M - move selected
 
-Space - run dc op simulation
-
-
-click wires or device to select
-
-mouse wheel to zoom and pan
-
-right click drag to zoom to area
-
-left click drag for area select
-
-unconnected wires have unique names
-
-select single device to edit parameter
+Space - run dc op simulation  
 
 
 Target application is EDA schematic capture

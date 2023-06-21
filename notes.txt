@@ -1,22 +1,24 @@
 todo:
 
-- immediate: 
+- schematic: 
     click-drag-move
     area selection - contains and intersects by selection area is positive/negative
     device/wire copy/paste
+    connect devices with wire if ports overlap
     ctrl-z/undo/redo
+    wiring pathfinder
+    grabbing (moves devices while keeping wire connections)
 
-    build script to copy ngspice.dll into directory
+- immediate: 
+    zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?
 
-    zooming during device placement visual bug - maybe selection system not a good fit
+    org and tech debt - make code/comment pristine - then code review
 
-    traits for nets, devices, baseElement - org and tech debt
-    edit device parameters rework - json serde, self contained
-
-    make code/comment pristine - then code review
+    device designer, place ports, device saving/loading, device libraries
+    devices rework - json serde graphics
 
 - medium term:
-    device designer, device saving/loading, device libraries
+    build script to copy ngspice.dll into directory
 
     logging
 
@@ -35,5 +37,4 @@ todo:
 
     additive/subtractive selection - waiting on better modifiers support
 
-    wiring pathfinder
-    grabbing (moves devices while keeping wire connections)
+
