@@ -9,6 +9,8 @@ use viewport::ViewportState;
 
 mod schematic;
 use schematic::{Schematic, SchematicState, RcRDevice};
+use std::process::{self, Command as Cmd, Stdio};
+
 
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
@@ -128,10 +130,9 @@ impl Application for Circe {
         }
         #[cfg(target_os = "macos")]
         {
-            use std::process::{self, Command, Stdio};
 
-            // dynamically retrieves libngspice from system
-            let ret = Command::new("find")
+            // retrieve libngspice.dylib from the following possible directories
+            let ret = Cmd::new("find")
                 .args(&["/usr/lib", "/usr/local/lib"])
                 .arg("-name")
                 .arg("*libngspice.dylib")
@@ -146,10 +147,9 @@ impl Application for Circe {
         }
         #[cfg(target_os = "linux")]
         {
-            use std::process::{self, Command, Stdio};
 
             // dynamically retrieves libngspice from system
-            let ret = Command::new("sh")
+            let ret = Cmd::new("sh")
                 .arg("-c")
                 .arg("ldconfig -p | grep ngspice | awk '/.*libngspice.so$/{print $4}'")
                 .stdout(Stdio::piped()).output().unwrap_or_else(|_| {
