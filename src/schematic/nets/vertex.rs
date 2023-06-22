@@ -1,3 +1,5 @@
+//! NetVertex, also used as keys to petgraph::GraphMap
+
 use std::cmp::Ordering;
 
 use crate::{

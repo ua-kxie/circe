@@ -1,43 +1,11 @@
-use crate::transforms::{SSPoint, VSPoint, SSBox};
 use super::super::params;
-use super::{Graphics, Port};
+use super::Graphics;
 use lazy_static::lazy_static;
 
 pub const ID_PREFIX: &str = "V";
 
 lazy_static! {
-    static ref DEFAULT_GRAPHICS: Graphics = Graphics { 
-        pts: vec![
-            vec![
-                VSPoint::new(0., 3.),
-                VSPoint::new(0., 1.5)
-            ],
-            vec![
-                VSPoint::new(0., -1.5),
-                VSPoint::new(0., -3.),
-            ],
-            vec![
-                VSPoint::new(-0.5, -1.),
-                VSPoint::new(0.5, -1.),
-            ],
-            vec![
-                VSPoint::new(0., 1.5),
-                VSPoint::new(0., 0.5),
-            ],
-            vec![
-                VSPoint::new(-0.5, 1.0),
-                VSPoint::new(0.5, 1.0),
-            ],
-        ],
-        circles: vec![
-            (VSPoint::origin(), 1.5),
-        ],
-        ports: vec![
-            Port {name: "+", offset: SSPoint::new(0, 3)},
-            Port {name: "-", offset: SSPoint::new(0, -3)},
-        ], 
-        bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
-    };
+    static ref DEFAULT_GRAPHICS: Graphics = serde_json::from_slice(&std::fs::read("src/schematic/devices/devicetype/v.json").unwrap()).unwrap();
 }
 
 #[derive(Debug)]
@@ -67,5 +35,20 @@ pub struct V {
 impl V {
     pub fn new() -> V {
         V {params: ParamV::default(), graphics: &DEFAULT_GRAPHICS}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    #[test]
+    fn it_works() {
+        let out = serde_json::json!(*super::DEFAULT_GRAPHICS);
+        std::fs::write("src/schematic/devices/devicetype/v.json", serde_json::to_string_pretty(&out).unwrap().as_bytes()).expect("Unable to write file");
+    }
+
+    fn parse() {
+        let a = std::fs::read("src/schematic/devices/devicetype/v.json").unwrap();
+        let b: super::Graphics = serde_json::from_slice(&a).unwrap();
     }
 }

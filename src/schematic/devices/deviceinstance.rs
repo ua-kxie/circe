@@ -1,3 +1,5 @@
+//! device instance. Every instance of a device in the schematic is a distinct device instance.
+
 use std::hash::Hasher;
 
 use super::devicetype::{DeviceClass, r::ParamEditor};

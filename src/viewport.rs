@@ -1,10 +1,11 @@
-/// the viewport handles visual transforms from the schematic to canvas and vice-versa
-/// CanvasSpace <-> ViewportSpace <-> SchematicSpace 
-/// CanvasSpace is the UI canvas coordinate
-/// ViewportSpace is the schematic coordinate in f32
-/// SchematicSpace is the schematic coordinate in i16
+//! the viewport handles visual transforms from the schematic to canvas and vice-versa
+//! CanvasSpace <-> ViewportSpace <-> SchematicSpace 
+//! CanvasSpace is the UI canvas coordinate
+//! ViewportSpace is the schematic coordinate in f32
+//! SchematicSpace is the schematic coordinate in i16
 
 use crate::transforms::{Point, CSPoint, VSPoint, SSPoint, VCTransform, CVTransform, VSBox, CSBox, VSVec, CSVec};
+use iced::widget::canvas::path::Builder;
 use iced::widget::canvas::{
     stroke, LineCap, Path, Stroke, LineDash, Frame, Text, Event,
 };
@@ -333,14 +334,20 @@ impl Viewport {
             } 
         }
         let ref_stroke = Stroke {
-            width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
+            width: (0.1 * self.vc_scale()).clamp(0.1, 3.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
+
+        let mut path_builder = Builder::new();
+        path_builder.move_to(Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, 1.0))).into());
+        path_builder.line_to(Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, -1.0))).into());
+        path_builder.move_to(Point::from(self.vc_transform().transform_point(VSPoint::new(1.0, 0.0))).into());
+        path_builder.line_to(Point::from(self.vc_transform().transform_point(VSPoint::new(-1.0, 0.0))).into());
         let p = self.vc_transform().transform_point(VSPoint::origin());
-        let r = self.vc_scale() * 8.;
-        let c = Path::circle(iced::Point::from([p.x, p.y]), r);
-        frame.stroke(&c, ref_stroke);
+        let r = self.vc_scale() * 0.5;
+        path_builder.circle(Point::from(p).into(), r);
+        frame.stroke(&path_builder.build(), ref_stroke);
     }
 }

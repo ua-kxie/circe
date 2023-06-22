@@ -8,7 +8,8 @@ edition = "2021"
 [dependencies]
 iced = {version="0.9", features = ["canvas"]}
 iced_lazy = "0.6.1"
-euclid = "0.22.9"
+iced_aw = {version="0.5", features = ["tabs"]}
+euclid = {version="0.22.9", features = ["serde"]}
 lyon = "1.0"
 petgraph = "0.6.3"
 flagset = "0.4.3"
@@ -16,6 +17,8 @@ by_address = "1.1.0"
 lazy_static = "1.4.0"
 paprika = { path = "./paprika", features = ["serde"] }
 colored = "2.0"
+serde_json = "1.0.97"
+serde = {version="1.0.164", features = ["derive"]}
 
 [workspace]
 members = [

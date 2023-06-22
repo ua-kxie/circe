@@ -1,3 +1,6 @@
+//! Schematic 
+//! Space in which devices and nets live in
+
 mod nets;
 mod devices;
 mod interactable;
