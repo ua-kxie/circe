@@ -1,3 +1,7 @@
+//! device parameter types
+//! multiple devices can use the same parameter specifier. e.g. all devices can use the `Raw` paramter specifier, R L C can use `SingleValue`, etc.
+//! a device should be able to choose between all compatible parameter specifier
+
 /// this struct to edit device parameters by specifying the spice netlist line (after port connects) directly
 #[derive(Debug)]
 pub struct Raw  {

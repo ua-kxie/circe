@@ -1,3 +1,5 @@
+//! devices, e.g. resistors, voltage sources, etc.
+
 use std::{rc::Rc, cell::RefCell, hash::Hasher, collections::HashSet};
 
 mod params;

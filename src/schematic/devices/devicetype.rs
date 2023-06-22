@@ -1,3 +1,5 @@
+//! device type. Resistors are a distinct type from capacitors, etc. 
+
 use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash, Frame, Stroke}, Color, Element};
 
 use crate::{
@@ -13,10 +15,10 @@ pub mod r;
 pub mod gnd;
 
 /// ports for devices, where wires may be connected
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct Port {
     /// the name of a port (necessary?)
-    pub name: &'static str,
+    pub name: String,
     /// the offset of the port - position of the port relative to the device center
     pub offset: SSPoint,
 }
@@ -82,7 +84,7 @@ impl Drawable for Port {
 const STROKE_WIDTH: f32 = 0.1;
 
 /// graphical representation for devices
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct Graphics {
     /// line is traced from point to point for each inner vector.
     pts: Vec<Vec<VSPoint>>,
@@ -134,7 +136,6 @@ impl Drawable for Graphics {
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
-        // self.stroke_bounds(vct, frame, stroke.clone());
         self.stroke_symbol(vct, vcscale, frame, stroke.clone());
         for p in &self.ports {
             p.draw_persistent(vct, vcscale, frame)

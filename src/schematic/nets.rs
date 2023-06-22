@@ -1,3 +1,5 @@
+//! schematic net/wires
+
 use std::collections::HashSet;
 use std::rc::Rc;
 

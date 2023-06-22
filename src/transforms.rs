@@ -1,16 +1,18 @@
+//! types and constants facillitating geometry and transforms
+
 use iced::Point as IcedPoint;
 use euclid::{Point2D, Transform2D};
 
 /// PhantomData tag used to denote the patch of screen being drawn on
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize)]
 pub struct CanvasSpace;
 
 /// PhantomData tag used to denote the f32 space on which the schematic is drawn
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ViewportSpace;
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize)]
 pub struct SchematicSpace;
 
 /// CanvasSpace Point

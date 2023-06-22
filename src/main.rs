@@ -1,3 +1,6 @@
+//! Circe
+//! Schematic Capture for EDA with ngspice integration
+
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -18,6 +21,8 @@ use iced::{
         }
     }
 };
+
+use iced_aw::{Tabs, TabLabel};
 
 use infobar::infobar;
 use param_editor::param_editor;
@@ -103,6 +108,9 @@ struct Circe {
     spmanager: Arc<SpManager>,
     /// ngspice library
     lib: PkSpice<SpManager>,
+
+    /// active tab index
+    active_tab: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -111,6 +119,8 @@ pub enum Msg {
     TextInputChanged(String),
     TextInputSubmit,
     CanvasEvent(Event, SSPoint),
+    
+    TabSel(usize),
 }
 
 impl Application for Circe {
@@ -160,6 +170,8 @@ impl Application for Circe {
 
                 lib,
                 spmanager: manager,
+
+                active_tab: 0,
             },
             Command::none(),
         )
@@ -203,6 +215,9 @@ impl Application for Circe {
                     
                 }
             },
+            Msg::TabSel(i) => {
+                self.active_tab = i;
+            },
         }
         Command::none()
     }
@@ -213,15 +228,20 @@ impl Application for Circe {
             .height(Length::Fill);
         let infobar = infobar(self.curpos_ssp, self.zoom_scale, self.net_name.clone());
         let pe = param_editor(self.text.clone(), Msg::TextInputChanged, || {Msg::TextInputSubmit});
-        row![
-            pe,
+        let schematic = row![
+            pe, 
             column![
-                canvas,
-                infobar,
-            ]
-            .width(Length::Fill),
-        ]
-        .into()
+                canvas, 
+                infobar
+                ].width(Length::Fill)
+            ];
+
+        let tabs = Tabs::with_tabs(self.active_tab, vec![
+            (TabLabel::Text("Schematic".to_string()), schematic.into()),
+            (TabLabel::Text("Device Creator".to_string()), iced::widget::text("placeholder").into())
+        ], Msg::TabSel);
+
+        tabs.into()
     }
 }
 

@@ -23,8 +23,8 @@ lazy_static! {
         ],
         circles: vec![],
         ports: vec![
-            Port {name: "+", offset: SSPoint::new(0, 3)},
-            Port {name: "-", offset: SSPoint::new(0, -3)},
+            Port {name: "+".to_string(), offset: SSPoint::new(0, 3)},
+            Port {name: "-".to_string(), offset: SSPoint::new(0, -3)},
         ], 
         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)), 
     };

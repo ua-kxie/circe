@@ -20,7 +20,7 @@ lazy_static! {
         ],
         circles: vec![],
         ports: vec![
-            Port {name: "gnd", offset: SSPoint::new(0, 2)}
+            Port {name: "gnd".to_string(), offset: SSPoint::new(0, 2)}
         ], 
         bounds: SSBox::new(SSPoint::new(-1, 2), SSPoint::new(1, -2)), 
     };

@@ -1,3 +1,5 @@
+//! common functionality for interactive schematic elements
+
 use crate::transforms::{SSBox, SchematicSpace, SSPoint, SSTransform};
 
 pub trait Interactive {
