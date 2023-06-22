@@ -10,6 +10,8 @@ use viewport::ViewportState;
 mod schematic;
 use schematic::{Schematic, SchematicState, RcRDevice};
 
+
+
 use iced::{
     Application, Color, Command, Element, Length, Rectangle, Settings,
     Theme, executor, Size, mouse, widget::{
@@ -24,6 +26,8 @@ use param_editor::param_editor;
 
 use paprika::*;
 use colored::Colorize;
+
+use std::process::{self, Command as Cmd, Stdio};
 
 /// Spice Manager to facillitate interaction with NgSpice
 struct SpManager{
@@ -126,12 +130,28 @@ impl Application for Circe {
         {
             lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
         }
-        #[cfg(target_family="unix")]
+        #[cfg(target_os = "macos")]
         {
-            use std::process::{self, Command, Stdio};
+
+            // retrieve libngspice.dylib from the following possible directories
+            let ret = Cmd::new("find")
+                .args(&["/usr/lib", "/usr/local/lib"])
+                .arg("-name")
+                .arg("*libngspice.dylib")
+                .stdout(Stdio::piped())
+                .output()
+                .unwrap_or_else(|_| {
+                    eprintln!("Error: Could not find libngspice.dylib. Make sure it is installed.");
+                    process::exit(1);
+                });
+            let path = String::from_utf8(ret.stdout).unwrap();
+            lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path.trim())).unwrap();
+        }
+        #[cfg(target_os = "linux")]
+        {
 
             // dynamically retrieves libngspice from system
-            let ret = Command::new("sh")
+            let ret = Cmd::new("sh")
                 .arg("-c")
                 .arg("ldconfig -p | grep ngspice | awk '/.*libngspice.so$/{print $4}'")
                 .stdout(Stdio::piped()).output().unwrap_or_else(|_| {
