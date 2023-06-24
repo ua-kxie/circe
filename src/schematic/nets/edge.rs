@@ -4,10 +4,8 @@ use std::rc::Rc;
 
 use super::SchematicNetLabel;
 use crate::{
-    schematic::{
-        interactable::{Interactable, Interactive},
-        nets::Drawable,
-    },
+    interactable::{Interactable, Interactive},
+    schematic::nets::Drawable,
     transforms::{SSBox, SSPoint, SSTransform, VCTransform},
 };
 

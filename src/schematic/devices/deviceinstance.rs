@@ -11,8 +11,9 @@ use iced::{
 
 use crate::schematic::interactable::Interactable;
 use crate::{
-    schematic::{interactable::Interactive, Drawable, Nets},
+    schematic::{interactable::Interactive, Nets},
     transforms::{sst_to_xxt, Point, SSPoint, SSTransform, VCTransform, VSPoint, ViewportSpace},
+    viewport::Drawable,
 };
 use std::hash::Hash;
 

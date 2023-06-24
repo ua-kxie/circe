@@ -6,8 +6,8 @@ use iced::{
 };
 
 use crate::{
-    schematic::Drawable,
     transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
+    viewport::Drawable,
 };
 
 use self::r::ParamEditor;

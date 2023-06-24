@@ -4,15 +4,17 @@
 use std::rc::Rc;
 
 use crate::{
-    transforms::{
-        SSPoint, VCTransform, SSBox, SSTransform
-    }, 
-    schematic::{interactable::{Interactable, Interactive}}, designer::Drawable
+    interactable::{Interactable, Interactive},
+    transforms::{SSBox, SSPoint, SSTransform, VCTransform},
+    viewport::Drawable,
 };
 
-use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap, LineDash}, Color};
+use iced::{
+    widget::canvas::{stroke, Frame, LineCap, LineDash, Path, Stroke},
+    Color,
+};
 
-/// A line segment. 
+/// A line segment.
 #[derive(Clone, Debug, Default)]
 pub struct LineSeg {
     /// source point of edge segment
@@ -41,7 +43,10 @@ impl std::hash::Hash for LineSeg {
 impl LineSeg {
     /// creates an interactable based on source and destination points, with settable 'tentative' flag
     pub fn interactable(src: SSPoint, dst: SSPoint, tentative: bool) -> Interactable {
-        Interactable { bounds: LineSeg::bounds_from_pts(src, dst), tentative, }
+        Interactable {
+            bounds: LineSeg::bounds_from_pts(src, dst),
+            tentative,
+        }
     }
     /// creates a bound based on source and destination points - return value is guaranteed to have positive area
     pub fn bounds_from_pts(src: SSPoint, dst: SSPoint) -> SSBox {
@@ -56,10 +61,7 @@ impl LineSeg {
 impl Interactive for LineSeg {
     /// transform the edge based on SSTransform argument
     fn transform(&mut self, sst: SSTransform) {
-        (self.src, self.dst) = (
-            sst.transform_point(self.src),
-            sst.transform_point(self.dst),
-        );
+        (self.src, self.dst) = (sst.transform_point(self.src), sst.transform_point(self.dst));
         self.interactable.bounds = LineSeg::bounds_from_pts(self.src, self.dst);
     }
 }
@@ -110,7 +112,10 @@ impl Drawable for LineSeg {
             width: (wire_width * vcscale).max(wire_width * zoom_thshld),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Butt,
-            line_dash: LineDash{segments: &[3. * (wire_width * vcscale).max(wire_width * 2.0)], offset: 0},
+            line_dash: LineDash {
+                segments: &[3. * (wire_width * vcscale).max(wire_width * 2.0)],
+                offset: 0,
+            },
             ..Stroke::default()
         };
         draw_with(self.src, self.dst, vct, frame, wire_stroke);

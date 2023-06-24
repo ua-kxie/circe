@@ -13,7 +13,7 @@ use crate::{
         self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
         ViewportSpace,
     },
-    viewport::{Viewport, ViewportState},
+    viewport::{Drawable, Viewport, ViewportState},
     Msg,
 };
 use iced::{
@@ -28,13 +28,6 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::{collections::HashSet, fs};
-
-/// trait for element which can be drawn on canvas
-pub trait Drawable {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
-}
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {

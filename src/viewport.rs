@@ -11,6 +11,13 @@ use iced::widget::canvas::path::Builder;
 use iced::widget::canvas::{stroke, Event, Frame, LineCap, LineDash, Path, Stroke, Text};
 use iced::Color;
 
+/// trait for element which can be drawn on canvas
+pub trait Drawable {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+}
+
 #[derive(Clone, Debug)]
 pub enum ViewportState {
     Panning(CSPoint),
@@ -322,7 +329,7 @@ impl Viewport {
             let spacing = 16.0 / self.snap_scale;
 
             let grid_stroke = Stroke {
-                width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
+                width: (0.5 * self.vc_scale() / self.snap_scale).clamp(0.5, 3.0),
                 style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
                 line_cap: LineCap::Round,
                 line_dash: LineDash {

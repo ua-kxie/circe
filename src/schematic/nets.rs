@@ -16,7 +16,7 @@ pub use vertex::NetVertex;
 mod edge;
 pub use edge::NetEdge;
 
-use super::Drawable;
+use crate::viewport::Drawable;
 
 /// This struct facillitates the creation of unique net names
 #[derive(Clone, Debug, Default)]

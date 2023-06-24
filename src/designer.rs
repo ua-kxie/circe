@@ -2,6 +2,7 @@
 //! editor for designing devices - draw the appearance and place ports
 
 use crate::interactable::{Interactable, Interactive};
+use crate::viewport::Drawable;
 use crate::{
     transforms::{
         self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
@@ -22,7 +23,9 @@ use iced::{
 };
 use std::{collections::HashSet, fs};
 
-// mod graphics;  // wip
+use self::graphics::line::LineSeg;
+
+mod graphics;
 
 pub struct DesignerViewport(Viewport);
 
@@ -30,17 +33,8 @@ impl Default for DesignerViewport {
     fn default() -> Self {
         let mut v = Viewport::default();
         v.snap_scale = transforms::DESIGNER_GRID;
-        DesignerViewport(
-            v
-        )
+        DesignerViewport(v)
     }
-}
-
-/// trait for element which can be drawn on canvas
-pub trait Drawable {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
 }
 
 #[derive(Clone)]
@@ -48,7 +42,7 @@ pub enum DesignerState {
     Idle,
     Selecting(SSBox),
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
-    // first click, second click, transform for rotation/flip ONLY
+    DrawLine(Option<(SSPoint, SSPoint)>), // first click, second click, transform for rotation/flip ONLY
 }
 
 impl Default for DesignerState {
@@ -79,6 +73,8 @@ pub struct Designer {
 
     selskip: usize,
     selected: Vec<()>, // todo
+
+    dev: Vec<LineSeg>,
 }
 
 impl canvas::Program<Msg> for Designer {
@@ -239,10 +235,24 @@ impl Designer {
     /// draw onto active cache
     pub fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         // draw elements which may need to be redrawn at any event
+        match &self.state {
+            DesignerState::DrawLine(Some(pts)) => {
+                let l = LineSeg {
+                    src: pts.0,
+                    dst: pts.1,
+                    interactable: LineSeg::interactable(pts.0, pts.1, false),
+                };
+                l.draw_preview(vct, vcscale, frame);
+            },
+            _ => {}
+        }
     }
     /// draw onto passive cache
     pub fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         // draw elements which may need to be redrawn at any event
+        for l in &self.dev {
+            l.draw_persistent(vct, vcscale, frame);
+        }
     }
     /// returns the bouding box of all elements on canvas
     pub fn bounding_box(&self) -> VSBox {
@@ -268,6 +278,43 @@ impl Designer {
 
         let mut state = self.state.clone();
         match (&mut state, event) {
+            // drawing line
+            (
+                _,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::W,
+                    modifiers: _,
+                }),
+            ) => {
+                state = DesignerState::DrawLine(None);
+            }
+            (
+                DesignerState::DrawLine(opt_pts),
+                Event::Mouse(iced::mouse::Event::ButtonPressed(mouse::Button::Left)),
+            ) => match opt_pts {
+                Some(pts) => {
+                    let l = LineSeg {
+                        src: pts.0,
+                        dst: pts.1,
+                        interactable: LineSeg::interactable(pts.0, pts.1, false),
+                    };
+                    self.dev.push(l);
+                    self.passive_cache.clear();
+                    *opt_pts = None;
+                }
+                None => {
+                    *opt_pts = Some((curpos_ssp, curpos_ssp));
+                }
+            },
+            (
+                DesignerState::DrawLine(opt_pts),
+                Event::Mouse(iced::mouse::Event::CursorMoved { position: _ }),
+            ) => match opt_pts {
+                Some(pts) => {
+                    pts.1 = curpos_ssp;
+                }
+                None => {}
+            },
             // esc
             (
                 st,

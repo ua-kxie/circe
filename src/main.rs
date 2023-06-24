@@ -279,7 +279,10 @@ mod device_designer {
     use crate::Msg;
 
     pub fn device_designer(circe: &Circe) -> Element<Msg> {
-        let str_vsp = format!("x: {}; y: {}", circe.designer_curpos_vsp.x, circe.designer_curpos_vsp.y);
+        let str_vsp = format!(
+            "x: {}; y: {}",
+            circe.designer_curpos_vsp.x, circe.designer_curpos_vsp.y
+        );
         let net_name = circe.net_name.as_deref().unwrap_or_default();
 
         let canvas = canvas(&circe.designer)
@@ -319,7 +322,10 @@ mod schematic_component {
     use crate::{param_editor::param_editor, Msg};
 
     pub fn schematic_component(circe: &Circe) -> Element<Msg> {
-        let str_ssp = format!("x: {}; y: {}", circe.schematic_curpos_ssp.x, circe.schematic_curpos_ssp.y);
+        let str_ssp = format!(
+            "x: {}; y: {}",
+            circe.schematic_curpos_ssp.x, circe.schematic_curpos_ssp.y
+        );
         let net_name = circe.net_name.as_deref().unwrap_or_default();
 
         let canvas = canvas(&circe.schematic)

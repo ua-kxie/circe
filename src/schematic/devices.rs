@@ -8,8 +8,8 @@ mod params;
 
 use super::{BaseElement, SchematicSet};
 use crate::{
-    schematic::Drawable,
     transforms::{SSBox, SSPoint, VCTransform, VSBox},
+    viewport::Drawable,
 };
 use deviceinstance::Device;
 use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};

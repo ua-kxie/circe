@@ -1,2 +1,2 @@
-mod arc;
-mod line;
+pub mod arc;
+pub mod line;
