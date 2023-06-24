@@ -2,17 +2,18 @@
 
 use std::hash::Hasher;
 
-use super::devicetype::{DeviceClass, r::ParamEditor};
+use super::devicetype::{r::ParamEditor, DeviceClass};
 
-use iced::{widget::canvas::{Frame, Text}, Color, Element};
-
-use crate::{
-    schematic::{Drawable, interactable::Interactive, Nets},
-    transforms::{
-        SSPoint, VSPoint, VCTransform, Point, SSTransform, ViewportSpace, sst_to_xxt
-    }, 
+use iced::{
+    widget::canvas::{Frame, Text},
+    Color, Element,
 };
+
 use crate::schematic::interactable::Interactable;
+use crate::{
+    schematic::{interactable::Interactive, Drawable, Nets},
+    transforms::{sst_to_xxt, Point, SSPoint, SSTransform, VCTransform, VSPoint, ViewportSpace},
+};
 use std::hash::Hash;
 
 /// device identifier
@@ -33,7 +34,7 @@ id collision check:
 
 immutable identifier:
     abuse rwlock? references take read lock
-    if mutation is desired, must acquire write lock - e.g. no read locks. 
+    if mutation is desired, must acquire write lock - e.g. no read locks.
  */
 impl Identifier {
     /// returns a string denoting the device which starts a device line in netlist. E.g. V1, R0
@@ -48,8 +49,12 @@ impl Identifier {
         ret
     }
     /// creates a new identifier with a prefix and watermark
-    pub fn new_with_prefix_ord(id_prefix: &'static str , wm: usize) -> Self {
-        Identifier { id_prefix, wm, custom: None }
+    pub fn new_with_prefix_ord(id_prefix: &'static str, wm: usize) -> Self {
+        Identifier {
+            id_prefix,
+            wm,
+            custom: None,
+        }
     }
 }
 impl PartialEq for Identifier {
@@ -65,7 +70,7 @@ impl Hash for Identifier {
 
 /// A device - e.g. a resistor, bjt, voltage source, ground
 #[derive(Debug)]
-pub struct Device  {
+pub struct Device {
     /// id which uniquely identifies the device in netlist
     id: Identifier,
     /// device interactable
@@ -99,10 +104,10 @@ impl Device {
     }
     /// creates a new device with watermark and class
     pub fn new_with_ord_class(wm: usize, class: DeviceClass) -> Self {
-        Device { 
-            id: Identifier::new_with_prefix_ord(class.id_prefix(), wm), 
-            interactable: Interactable::new(), 
-            transform: SSTransform::identity(), 
+        Device {
+            id: Identifier::new_with_prefix_ord(class.id_prefix(), wm),
+            interactable: Interactable::new(),
+            transform: SSTransform::identity(),
             class,
             nets: vec![],
             op: vec![],
@@ -110,7 +115,12 @@ impl Device {
     }
     /// returns the schematic coordiantes of the devices ports in order
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
-        self.class.graphics().ports().iter().map(|p| self.transform.transform_point(p.offset)).collect()
+        self.class
+            .graphics()
+            .ports()
+            .iter()
+            .map(|p| self.transform.transform_point(p.offset))
+            .collect()
     }
     /// returns true if any port occupies ssp
     pub fn ports_occupy_ssp(&self, ssp: SSPoint) -> bool {
@@ -129,7 +139,9 @@ impl Device {
     pub fn set_position(&mut self, ssp: SSPoint) {
         self.transform.m31 = ssp.x;
         self.transform.m32 = ssp.y;
-        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
+        self.interactable.bounds = self
+            .transform
+            .outer_transformed_box(self.class.graphics().bounds());
     }
     /// returns the device's spice netlist line
     pub fn spice_line(&mut self, nets: &mut Nets) -> String {
@@ -165,7 +177,7 @@ impl Drawable for Device {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let vct_c = self.compose_transform(vct);
         self.class.graphics().draw_persistent(vct_c, vcscale, frame);
-        
+
         let a = Text {
             content: self.id.ng_id(),
             position: Point::from(vct_c.transform_point(VSPoint::new(1.0, 1.0))).into(),
@@ -188,7 +200,8 @@ impl Drawable for Device {
         for (i, v) in self.op.iter().enumerate() {
             let b = Text {
                 content: v.to_string(),
-                position: Point::from(vct_c.transform_point(ports[i].offset.cast().cast_unit())).into(),
+                position: Point::from(vct_c.transform_point(ports[i].offset.cast().cast_unit()))
+                    .into(),
                 color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
                 size: vcscale,
                 ..Default::default()
@@ -209,6 +222,8 @@ impl Drawable for Device {
 impl Interactive for Device {
     fn transform(&mut self, sst: SSTransform) {
         self.transform = self.transform.then(&sst);
-        self.interactable.bounds = self.transform.outer_transformed_box(self.class.graphics().bounds());
+        self.interactable.bounds = self
+            .transform
+            .outer_transformed_box(self.class.graphics().bounds());
     }
 }

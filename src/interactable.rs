@@ -1,6 +1,6 @@
 //! common functionality for interactive schematic elements
 
-use crate::transforms::{SSBox, SchematicSpace, SSPoint, SSTransform};
+use crate::transforms::{SSBox, SSPoint, SSTransform, SchematicSpace};
 
 pub trait Interactive {
     fn transform(&mut self, sst: SSTransform);
@@ -16,7 +16,10 @@ pub struct Interactable {
 
 impl Interactable {
     pub fn new() -> Self {
-        Interactable { bounds: SSBox::default(), tentative: false }
+        Interactable {
+            bounds: SSBox::default(),
+            tentative: false,
+        }
     }
     /// sets tentative flag based on Schematic Space Box argument. Set to true if argument intersects with bounds.
     pub fn tentative_by_ssb(&mut self, ssb: &SSBox) {

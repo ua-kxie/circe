@@ -4,7 +4,7 @@
 
 /// this struct to edit device parameters by specifying the spice netlist line (after port connects) directly
 #[derive(Debug)]
-pub struct Raw  {
+pub struct Raw {
     pub raw: String,
 }
 impl Raw {
@@ -18,7 +18,7 @@ impl Raw {
 
 /// this struct to edit device paramters by specying a single characteristic value (resistance, capacitance, inductance)
 #[derive(Debug)]
-pub struct SingleValue  {
+pub struct SingleValue {
     pub value: f32,
 }
 impl SingleValue {

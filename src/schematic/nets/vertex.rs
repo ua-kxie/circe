@@ -3,15 +3,18 @@
 use std::cmp::Ordering;
 
 use crate::{
-    transforms::{SSPoint, VCTransform}, 
-    schematic::nets::Drawable
+    schematic::nets::Drawable,
+    transforms::{SSPoint, VCTransform},
 };
-use iced::{widget::canvas::{Frame, Path, Stroke, stroke, LineCap}, Color};
+use iced::{
+    widget::canvas::{stroke, Frame, LineCap, Path, Stroke},
+    Color,
+};
 
-/// petgraph vertices weight. 
+/// petgraph vertices weight.
 /// In GraphMap, also serve as the keys.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct NetVertex (pub SSPoint);
+pub struct NetVertex(pub SSPoint);
 
 /// two vertices are equal if their coordinates are equal
 impl PartialOrd for NetVertex {
@@ -31,7 +34,7 @@ impl Ord for NetVertex {
 fn draw_with(ssp: SSPoint, vct: VCTransform, frame: &mut Frame, stroke: Stroke) {
     let p = vct.transform_point(ssp.cast().cast_unit());
     let p = iced::Point::from([p.x, p.y]);
-    let c = Path::line(p, p,);
+    let c = Path::line(p, p);
     frame.stroke(&c, stroke);
 }
 

@@ -10,9 +10,14 @@ todo:
     grabbing (moves devices while keeping wire connections)
     click-drag-move for wires (reroute based on new coord)
 
+- designer:
+    arc drawing (nor, nand gates curved portion)
+    serde save graphics
+
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?
 
+    clean up colors, use iced theme?
     org and tech debt - make code/comment pristine - then code review
 
     device designer, place ports, device saving/loading, device libraries

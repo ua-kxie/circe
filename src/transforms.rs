@@ -1,18 +1,54 @@
 //! types and constants facillitating geometry and transforms
 
-use iced::Point as IcedPoint;
 use euclid::{Point2D, Transform2D};
+use iced::Point as IcedPoint;
 
 /// PhantomData tag used to denote the patch of screen being drawn on
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 pub struct CanvasSpace;
 
 /// PhantomData tag used to denote the f32 space on which the schematic is drawn
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 pub struct ViewportSpace;
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 pub struct SchematicSpace;
 
 /// CanvasSpace Point
@@ -44,14 +80,18 @@ pub type CVTransform = euclid::Transform2D<f32, CanvasSpace, ViewportSpace>;
 pub type SSTransform = euclid::Transform2D<i16, SchematicSpace, SchematicSpace>;
 
 /// 90 deg clockwise rotation transform
-pub const SST_CWR: SSTransform = SSTransform::new(
-    0, -1, 1, 0, 0, 0
-);
+pub const SST_CWR: SSTransform = SSTransform::new(0, -1, 1, 0, 0, 0);
 
 /// 90 deg counter clockwise rotation transform
-pub const SST_CCWR: SSTransform = SSTransform::new(
-    0, 1, -1, 0, 0, 0
-);
+pub const SST_CCWR: SSTransform = SSTransform::new(0, 1, -1, 0, 0, 0);
+
+///
+pub const DESIGNER_GRID: f32 = 0.25;
+
+/// 90 deg counter clockwise rotation transform
+pub fn designer_ssp_to_schematic_vsp(ssp: SSPoint) -> VSPoint {
+    ssp.cast::<f32>().cast_unit() * self::DESIGNER_GRID
+}
 
 /// converts SSTransform to VVTransform so that it can be composited with VCTransform
 pub fn sst_to_xxt<T>(sst: SSTransform) -> Transform2D<f32, T, T> {
@@ -64,10 +104,7 @@ pub struct Point(CSPoint);
 
 impl From<IcedPoint> for Point {
     fn from(src: IcedPoint) -> Self {
-        Point(Point2D::new(
-            src.x,
-            src.y
-        ))
+        Point(Point2D::new(src.x, src.y))
     }
 }
 

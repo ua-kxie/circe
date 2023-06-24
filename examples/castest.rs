@@ -1,4 +1,4 @@
-use euclid::{Vector2D, Transform2D, Box2D, Point2D};
+use euclid::{Box2D, Point2D, Transform2D, Vector2D};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Canvas;

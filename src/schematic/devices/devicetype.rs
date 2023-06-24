@@ -1,18 +1,20 @@
-//! device type. Resistors are a distinct type from capacitors, etc. 
+//! device type. Resistors are a distinct type from capacitors, etc.
 
-use iced::{Size, widget::canvas::{self, stroke, LineCap, path::Builder, LineDash, Frame, Stroke}, Color, Element};
+use iced::{
+    widget::canvas::{self, path::Builder, stroke, Frame, LineCap, LineDash, Stroke},
+    Color, Element, Size,
+};
 
 use crate::{
-    transforms::{
-        SSPoint, VSBox, VSPoint, VCTransform, Point, SSBox, VSVec
-    }, schematic::Drawable,
+    schematic::Drawable,
+    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
 };
 
 use self::r::ParamEditor;
 
-pub mod v;
-pub mod r;
 pub mod gnd;
+pub mod r;
+pub mod v;
 
 /// ports for devices, where wires may be connected
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
@@ -24,25 +26,35 @@ pub struct Port {
 }
 
 impl Drawable for Port {
-    fn draw_persistent(&self, vct: VCTransform, _vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
+    fn draw_persistent(
+        &self,
+        vct: VCTransform,
+        _vcscale: f32,
+        frame: &mut iced::widget::canvas::Frame,
+    ) {
         let f = canvas::Fill {
             style: canvas::Style::Solid(Color::from_rgba(1.0, 0.0, 0.0, 1.0)),
             ..canvas::Fill::default()
         };
         let dim = 0.4;
         let ssb = VSBox::new(
-            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim/2.0, dim/2.0), 
-            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim / 2.0, dim / 2.0),
+            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim / 2.0, dim / 2.0),
         );
 
         let csbox = vct.outer_transformed_box(&ssb);
-        
+
         let top_left = csbox.min;
         let size = Size::new(csbox.width(), csbox.height());
         frame.fill_rectangle(Point::from(top_left).into(), size, f);
     }
 
-    fn draw_selected(&self, vct: crate::transforms::VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
+    fn draw_selected(
+        &self,
+        vct: crate::transforms::VCTransform,
+        vcscale: f32,
+        frame: &mut iced::widget::canvas::Frame,
+    ) {
         let stroke = Stroke {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.0)),
@@ -52,16 +64,21 @@ impl Drawable for Port {
         let mut path_builder = Builder::new();
         let dim = 0.4;
         let vsb = VSBox::new(
-            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim/2.0, dim/2.0), 
-            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim / 2.0, dim / 2.0),
+            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim / 2.0, dim / 2.0),
         );
         let csb = vct.outer_transformed_box(&vsb);
         let size = Size::new(csb.width(), csb.height());
         path_builder.rectangle(Point::from(csb.min).into(), size);
-        frame.stroke(&path_builder.build(), stroke);     
+        frame.stroke(&path_builder.build(), stroke);
     }
 
-    fn draw_preview(&self, vct: crate::transforms::VCTransform, vcscale: f32, frame: &mut iced::widget::canvas::Frame) {
+    fn draw_preview(
+        &self,
+        vct: crate::transforms::VCTransform,
+        vcscale: f32,
+        frame: &mut iced::widget::canvas::Frame,
+    ) {
         let stroke = Stroke {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.),
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
@@ -71,13 +88,13 @@ impl Drawable for Port {
         let mut path_builder = Builder::new();
         let dim = 0.4;
         let vsb = VSBox::new(
-            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim/2.0, dim/2.0), 
-            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim/2.0, dim/2.0), 
+            self.offset.cast::<f32>().cast_unit() - VSVec::new(dim / 2.0, dim / 2.0),
+            self.offset.cast::<f32>().cast_unit() + VSVec::new(dim / 2.0, dim / 2.0),
         );
         let csb = vct.outer_transformed_box(&vsb);
         let size = Size::new(csb.width(), csb.height());
         path_builder.rectangle(Point::from(csb.min).into(), size);
-        frame.stroke(&path_builder.build(), stroke);     
+        frame.stroke(&path_builder.build(), stroke);
     }
 }
 
@@ -108,9 +125,15 @@ impl Graphics {
         let csb = vct_composite.outer_transformed_box(&vsb);
         let size = Size::new(csb.width(), csb.height());
         path_builder.rectangle(Point::from(csb.min).into(), size);
-        frame.stroke(&path_builder.build(), stroke);    
+        frame.stroke(&path_builder.build(), stroke);
     }
-    pub fn stroke_symbol(&self, vct_composite: VCTransform, vcscale: f32, frame: &mut Frame, stroke: Stroke) {
+    pub fn stroke_symbol(
+        &self,
+        vct_composite: VCTransform,
+        vcscale: f32,
+        frame: &mut Frame,
+        stroke: Stroke,
+    ) {
         // let mut path_builder = Builder::new();
         for v1 in &self.pts {
             // there's a bug where dashed stroke can draw a solid line across a move
@@ -123,7 +146,10 @@ impl Graphics {
         }
         let mut path_builder = Builder::new();
         for (p, r) in &self.circles {
-            path_builder.circle(Point::from(vct_composite.transform_point(*p)).into(), *r * vcscale);
+            path_builder.circle(
+                Point::from(vct_composite.transform_point(*p)).into(),
+                *r * vcscale,
+            );
         }
         frame.stroke(&path_builder.build(), stroke.clone());
     }
@@ -159,7 +185,10 @@ impl Drawable for Graphics {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Butt,
-            line_dash: LineDash{segments: &[3. * (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0)], offset: 0},
+            line_dash: LineDash {
+                segments: &[3. * (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0)],
+                offset: 0,
+            },
             ..Stroke::default()
         };
         self.stroke_bounds(vct, frame, stroke.clone());
@@ -170,7 +199,7 @@ impl Drawable for Graphics {
     }
 }
 
-pub trait DeviceType  {
+pub trait DeviceType {
     fn default_graphics() -> Graphics;
 }
 
@@ -185,15 +214,9 @@ impl DeviceClass {
     /// todo wip concept
     pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
         match self {
-            DeviceClass::Gnd(_) => {
-                None
-            },
-            DeviceClass::R(r) => {
-                r.params.param_editor()
-            },
-            DeviceClass::V(v) => {
-                None
-            },
+            DeviceClass::Gnd(_) => None,
+            DeviceClass::R(r) => r.params.param_editor(),
+            DeviceClass::V(v) => None,
         }
     }
     /// sets the raw parameter of the device
@@ -201,9 +224,9 @@ impl DeviceClass {
         match self {
             DeviceClass::R(x) => match &mut x.params {
                 r::ParamR::Raw(y) => y.set(new),
-                r::ParamR::Value(_) => {},
+                r::ParamR::Value(_) => {}
             },
-            DeviceClass::Gnd(_) => {},
+            DeviceClass::Gnd(_) => {}
             DeviceClass::V(x) => match &mut x.params {
                 v::ParamV::Raw(y) => y.set(new),
             },
@@ -220,15 +243,9 @@ impl DeviceClass {
     /// returns a summary of the device parameter for display on canvas
     pub fn param_summary(&self) -> String {
         match self {
-            DeviceClass::Gnd(x) => {
-                x.params.summary()
-            },
-            DeviceClass::R(x) => {
-                x.params.summary()
-            },
-            DeviceClass::V(x) => {
-                x.params.summary()
-            },
+            DeviceClass::Gnd(x) => x.params.summary(),
+            DeviceClass::R(x) => x.params.summary(),
+            DeviceClass::V(x) => x.params.summary(),
         }
     }
     /// returns the id prefix of the device class
