@@ -2,7 +2,7 @@
 //! editor for designing devices - draw the appearance and place ports
 
 use crate::interactable::{Interactable, Interactive};
-use crate::viewport::{Drawable, self};
+use crate::viewport::{self, Drawable};
 use crate::{
     transforms::{
         self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
@@ -11,8 +11,8 @@ use crate::{
     viewport::{Viewport, ViewportState},
     Msg,
 };
-use iced::{Length, alignment};
 use iced::widget::{canvas, text};
+use iced::{alignment, Length};
 use iced::{
     mouse,
     widget::canvas::{
@@ -105,8 +105,14 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
 
         self.active_cache.clear();
         if let Some(p) = curpos {
-            if let Some(msg) = self.viewport.events_handler(viewport_st, event, csb, Point::from(p).into()) {
-                return (event::Status::Captured, Some(DeviceDesignerMsg::ViewportMsg(msg)));
+            if let Some(msg) =
+                self.viewport
+                    .events_handler(viewport_st, event, csb, Point::from(p).into())
+            {
+                return (
+                    event::Status::Captured,
+                    Some(DeviceDesignerMsg::ViewportMsg(msg)),
+                );
             }
         }
 
@@ -213,7 +219,10 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
                     modifiers: _,
                 }),
             ) => {
-                msg = Some(DeviceDesignerMsg::Fit(CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)])));
+                msg = Some(DeviceDesignerMsg::Fit(CSBox::from_points([
+                    CSPoint::origin(),
+                    CSPoint::new(bounds.x, bounds.y),
+                ])));
             }
             _ => {}
         }
@@ -233,7 +242,11 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
         _cursor: Cursor,
     ) -> Vec<Geometry> {
         let active = self.active_cache.draw(bounds.size(), |frame| {
-            self.draw_active(self.viewport.vc_transform(), self.viewport.vc_scale(), frame);
+            self.draw_active(
+                self.viewport.vc_transform(),
+                self.viewport.vc_scale(),
+                frame,
+            );
             self.viewport.draw_cursor(frame);
 
             if let ViewportState::NewView(vsp0, vsp1) = viewport_st {
@@ -263,7 +276,11 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
                     CSPoint::from([bounds.width, bounds.height]),
                 ),
             );
-            self.draw_passive(self.viewport.vc_transform(), self.viewport.vc_scale(), frame);
+            self.draw_passive(
+                self.viewport.vc_transform(),
+                self.viewport.vc_scale(),
+                frame,
+            );
         });
 
         let background = self.background_cache.draw(bounds.size(), |frame| {
@@ -307,23 +324,18 @@ impl DeviceDesigner {
                 let msg = self.viewport.display_bounds(csb, vsb, csp);
                 self.viewport.update(msg);
                 self.passive_cache.clear();
-            },
+            }
             DeviceDesignerMsg::ViewportMsg(vp_msg) => {
                 self.viewport.update(vp_msg);
                 self.passive_cache.clear();
-            },
+            }
         }
     }
 
     pub fn view(&self) -> iced::Element<DeviceDesignerMsg> {
-        let str_vsp = format!(
-            "x: {}; y: {}",
-            self.curpos_vsp.x, self.curpos_vsp.y
-        );
+        let str_vsp = format!("x: {}; y: {}", self.curpos_vsp.x, self.curpos_vsp.y);
 
-        let canvas = canvas(self)
-            .width(Length::Fill)
-            .height(Length::Fill);
+        let canvas = canvas(self).width(Length::Fill).height(Length::Fill);
         let dd = iced::widget::column![
             canvas,
             iced::widget::row![
@@ -377,7 +389,7 @@ impl DeviceDesigner {
                     interactable: LineSeg::interactable(pts.0, pts.1, false),
                 };
                 l.draw_preview(vct, vcscale, frame);
-            },
+            }
             _ => {}
         }
     }

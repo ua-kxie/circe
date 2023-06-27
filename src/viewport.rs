@@ -72,18 +72,18 @@ impl Default for Viewport {
     }
 }
 
-impl Viewport { 
-    pub fn update(&mut self, viewport_msg: ViewportMsg) { 
+impl Viewport {
+    pub fn update(&mut self, viewport_msg: ViewportMsg) {
         match viewport_msg {
             ViewportMsg::NewView(cvt, scale, curpos_csp) => {
                 self.transform = cvt;
                 self.scale = scale;
                 // update cursor position, otherwise it may be wrong until cursor is moved again
                 self.curpos_update(curpos_csp);
-            },
+            }
             ViewportMsg::CursorMoved(csp) => {
                 self.curpos_update(csp);
-            },
+            }
         }
     }
     /// marked for rework
@@ -99,22 +99,17 @@ impl Viewport {
         let mut stcp = state.clone();
         match (&mut stcp, event) {
             // cursor move
-            (
-                ViewportState::None, 
-                Event::Mouse(iced::mouse::Event::CursorMoved { .. })
-            ) => {
+            (ViewportState::None, Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
                 msg = Some(ViewportMsg::CursorMoved(curpos_csp));
             }
             // zooming
-            (_, Event::Mouse(iced::mouse::Event::WheelScrolled { delta })) => {
-                match delta {
-                    iced::mouse::ScrollDelta::Lines { y, .. }
-                    | iced::mouse::ScrollDelta::Pixels { y, .. } => {
-                        let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                        msg = Some(self.zoom(scale, curpos_csp));
-                    }
+            (_, Event::Mouse(iced::mouse::Event::WheelScrolled { delta })) => match delta {
+                iced::mouse::ScrollDelta::Lines { y, .. }
+                | iced::mouse::ScrollDelta::Pixels { y, .. } => {
+                    let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
+                    msg = Some(self.zoom(scale, curpos_csp));
                 }
-            }
+            },
             // panning
             (
                 ViewportState::None,
@@ -287,7 +282,11 @@ impl Viewport {
         let translation = csp - csp1;
         new_transform = new_transform.then_translate(translation);
 
-        ViewportMsg::NewView(new_transform, new_transform.determinant().abs().sqrt(), curpos_csp)
+        ViewportMsg::NewView(
+            new_transform,
+            new_transform.determinant().abs().sqrt(),
+            curpos_csp,
+        )
     }
 
     /// draw the cursor onto canvas

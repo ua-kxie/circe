@@ -15,8 +15,8 @@ use crate::{
     },
     viewport::{Drawable, Viewport, ViewportState},
 };
+use iced::widget::{row, text};
 use iced::Length;
-use iced::widget::row;
 use iced::{
     mouse,
     widget::canvas::{
@@ -167,7 +167,6 @@ pub struct Schematic {
     spmanager: Arc<SpManager>,
     /// ngspice library
     lib: PkSpice<SpManager>,
-    
 
     nets: Nets,
     devices: Devices,
@@ -217,7 +216,7 @@ impl Default for Schematic {
             lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path.trim())).unwrap();
         }
         lib.init(Some(spmanager.clone()));
-        Schematic{
+        Schematic {
             active_cache: Default::default(),
             passive_cache: Default::default(),
             background_cache: Default::default(),
@@ -254,8 +253,14 @@ impl canvas::Program<SchematicMsg> for Schematic {
         self.active_cache.clear();
 
         if let Some(p) = curpos {
-            if let Some(msg) = self.viewport.events_handler(viewport_st, event, csb, Point::from(p).into()) {
-                return (event::Status::Captured, Some(SchematicMsg::ViewportMsg(msg)));
+            if let Some(msg) =
+                self.viewport
+                    .events_handler(viewport_st, event, csb, Point::from(p).into())
+            {
+                return (
+                    event::Status::Captured,
+                    Some(SchematicMsg::ViewportMsg(msg)),
+                );
             }
         }
 
@@ -271,12 +276,18 @@ impl canvas::Program<SchematicMsg> for Schematic {
                         modifiers: _,
                     }),
                 ) => {
-                    msg = Some(SchematicMsg::Fit(CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)])));
-                },
-                _ => {},
+                    msg = Some(SchematicMsg::Fit(CSBox::from_points([
+                        CSPoint::origin(),
+                        CSPoint::new(bounds.x, bounds.y),
+                    ])));
+                }
+                _ => {}
             }
             if msg.is_none() {
-                msg = Some(SchematicMsg::SchematicEvt(event, self.viewport.curpos_ssp()));
+                msg = Some(SchematicMsg::SchematicEvt(
+                    event,
+                    self.viewport.curpos_ssp(),
+                ));
             }
         }
 
@@ -295,7 +306,11 @@ impl canvas::Program<SchematicMsg> for Schematic {
         _cursor: Cursor,
     ) -> Vec<Geometry> {
         let active = self.active_cache.draw(bounds.size(), |frame| {
-            self.draw_active(self.viewport.vc_transform(), self.viewport.vc_scale(), frame);
+            self.draw_active(
+                self.viewport.vc_transform(),
+                self.viewport.vc_scale(),
+                frame,
+            );
             self.viewport.draw_cursor(frame);
 
             if let ViewportState::NewView(vsp0, vsp1) = viewport_st {
@@ -325,7 +340,11 @@ impl canvas::Program<SchematicMsg> for Schematic {
                     CSPoint::from([bounds.width, bounds.height]),
                 ),
             );
-            self.draw_passive(self.viewport.vc_transform(), self.viewport.vc_scale(), frame);
+            self.draw_passive(
+                self.viewport.vc_transform(),
+                self.viewport.vc_scale(),
+                frame,
+            );
         });
 
         let background = self.background_cache.draw(bounds.size(), |frame| {
@@ -372,7 +391,7 @@ impl Schematic {
             SchematicState::Wiring(Some((g, prev_ssp))) => {
                 g.as_mut().clear();
                 g.route(*prev_ssp, ssp);
-            },
+            }
             SchematicState::Selecting(ssb) => {
                 ssb.max = ssp;
                 self.tentatives_by_ssbox(ssb);
@@ -380,7 +399,7 @@ impl Schematic {
             SchematicState::Moving(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = ssp;
             }
-            _ => {},
+            _ => {}
         }
         self.state = st;
     }
@@ -398,14 +417,15 @@ impl Schematic {
             SchematicMsg::Fit(csb) => {
                 let vsb = self.bounding_box().inflate(5.0, 5.0);
                 let csp = self.viewport.curpos_csp();
-                self.viewport.update(self.viewport.display_bounds(csb, vsb, csp));
+                self.viewport
+                    .update(self.viewport.display_bounds(csb, vsb, csp));
                 self.passive_cache.clear();
-            },
+            }
             SchematicMsg::ViewportMsg(viewport_msg) => {
                 self.viewport.update(viewport_msg);
                 self.update_cursor_ssp(self.viewport.curpos_ssp());
                 self.passive_cache.clear();
-            },
+            }
             SchematicMsg::SchematicEvt(event, curpos_ssp) => {
                 self.events_handler(event, curpos_ssp);
 
@@ -420,18 +440,20 @@ impl Schematic {
     }
 
     pub fn view(&self) -> iced::Element<SchematicMsg> {
-        let str_ssp = format!(
-            "x: {}; y: {}",
-            self.curpos_ssp.x, self.curpos_ssp.y
-        );
+        let str_ssp = format!("x: {}; y: {}", self.curpos_ssp.x, self.curpos_ssp.y);
         let net_name = self.net_name.as_deref().unwrap_or_default();
 
         let canvas = iced::widget::canvas(self)
             .width(Length::Fill)
             .height(Length::Fill);
-        let pe = param_editor::param_editor(self.text.clone(), SchematicMsg::TextInputChanged, || {
-            SchematicMsg::TextInputSubmit
-        });
+        let pe =
+            param_editor::param_editor(self.text.clone(), SchematicMsg::TextInputChanged, || {
+                SchematicMsg::TextInputSubmit
+            });
+        // let mut pe = text("");
+        // if let Some(active_device) = &self.active_device {
+        //     active_device.0.borrow().class().
+        // }
         let schematic = iced::widget::row![
             pe,
             iced::widget::column![
@@ -910,7 +932,7 @@ impl Schematic {
 }
 
 mod param_editor {
-    use iced::widget::{button, column, text_input, text};
+    use iced::widget::{button, column, text, text_input};
     use iced::{Element, Length, Renderer};
     use iced_lazy::{component, Component};
 

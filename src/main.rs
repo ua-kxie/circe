@@ -17,17 +17,10 @@ mod designer;
 mod interactable;
 
 use iced::{
-    executor, 
-    widget::{
-        canvas::{
-            event::Event,
-        },
-    },
-    Application, Command, Element, Settings, Theme,
+    executor, widget::canvas::event::Event, Application, Command, Element, Settings, Theme,
 };
 
 use iced_aw::{TabLabel, Tabs};
-
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -88,10 +81,10 @@ impl Application for Circe {
             }
             Msg::DeviceDesignerMsg(device_designer_msg) => {
                 self.designer.update(device_designer_msg);
-            },
+            }
             Msg::SchematicMsg(schematic_msg) => {
                 self.schematic.update(schematic_msg);
-            },
+            }
         }
         Command::none()
     }

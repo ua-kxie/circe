@@ -1,10 +1,12 @@
-use iced::{Sandbox, Element, Renderer, widget::{text, canvas, button}, mouse};
-use iced_lazy::{Component, component};
+use iced::{
+    mouse,
+    widget::{button, canvas, text},
+    Element, Renderer, Sandbox,
+};
+use iced_lazy::{component, Component};
 
 #[derive(Debug, Default)]
-pub struct DeviceDesigner {
-
-}
+pub struct DeviceDesigner {}
 
 #[derive(Debug, Clone, Copy)]
 enum DeviceDesignerMsg {
@@ -17,9 +19,7 @@ impl DeviceDesigner {
     }
 
     fn view(&self) -> iced::Element<DeviceDesignerMsg> {
-        iced::widget::column![
-            canvas(self),
-        ].into()
+        iced::widget::column![canvas(self),].into()
     }
 }
 
@@ -37,27 +37,30 @@ impl iced::widget::canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
     }
 
     fn update(
-            &self,
-            _state: &mut Self::State,
-            _event: iced::widget::canvas::Event,
-            _bounds: iced::Rectangle,
-            _cursor: iced::widget::canvas::Cursor,
-        ) -> (iced::widget::canvas::event::Status, Option<DeviceDesignerMsg>) {
+        &self,
+        _state: &mut Self::State,
+        _event: iced::widget::canvas::Event,
+        _bounds: iced::Rectangle,
+        _cursor: iced::widget::canvas::Cursor,
+    ) -> (
+        iced::widget::canvas::event::Status,
+        Option<DeviceDesignerMsg>,
+    ) {
         todo!()
     }
 
     fn mouse_interaction(
-            &self,
-            _state: &Self::State,
-            _bounds: iced::Rectangle,
-            _cursor: iced::widget::canvas::Cursor,
-        ) -> mouse::Interaction {
+        &self,
+        _state: &Self::State,
+        _bounds: iced::Rectangle,
+        _cursor: iced::widget::canvas::Cursor,
+    ) -> mouse::Interaction {
         todo!()
     }
 }
 /// main program
 pub struct Top {
-    designer: DeviceDesigner
+    designer: DeviceDesigner,
 }
 
 #[derive(Debug)]
@@ -79,28 +82,25 @@ impl Sandbox for Top {
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message> {
-        let d = DesignerComponent{designer: &self.designer};
+        let d = DesignerComponent {
+            designer: &self.designer,
+        };
         d.into()
     }
 }
 
 pub struct DesignerComponent<'a> {
-    designer: &'a DeviceDesigner
+    designer: &'a DeviceDesigner,
 }
 
-pub enum DesignerEvt {
-}
+pub enum DesignerEvt {}
 
 impl<'a, Message> Component<Message, Renderer> for DesignerComponent<'a> {
     type State = DeviceDesigner;
 
     type Event = DesignerEvt;
 
-    fn update(
-        &mut self,
-        state: &mut Self::State,
-        event: Self::Event,
-    ) -> Option<Message> {
+    fn update(&mut self, state: &mut Self::State, event: Self::Event) -> Option<Message> {
         todo!()
     }
 
@@ -123,15 +123,9 @@ where
     }
 }
 
-pub enum DesignerCanvasMsg {
-}
+pub enum DesignerCanvasMsg {}
 
 #[derive(Default)]
-pub struct DesignerCanvasSt {
-}
+pub struct DesignerCanvasSt {}
 
-
-
-
-fn main() {
-}
+fn main() {}
