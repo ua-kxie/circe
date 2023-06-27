@@ -16,7 +16,7 @@ use crate::{
     viewport::{Drawable, Viewport, ViewportState},
 };
 use iced::widget::{row, text};
-use iced::Length;
+use iced::{Length, Element};
 use iced::{
     mouse,
     widget::canvas::{
@@ -117,6 +117,8 @@ pub enum SchematicMsg {
     Fit(CSBox),
     ViewportMsg(viewport::ViewportMsg),
     SchematicEvt(Event, SSPoint),
+
+    ParamMsg(devices::devicetype::ParamEditorMsg),
 }
 
 #[derive(Clone)]
@@ -436,6 +438,11 @@ impl Schematic {
                     self.text = String::from("");
                 }
             }
+            SchematicMsg::ParamMsg(msg) => {
+                if let Some(ad) = &self.active_device {
+                    ad.0.borrow_mut().class_mut().update(msg)
+                }
+            },
         }
     }
 
@@ -446,14 +453,17 @@ impl Schematic {
         let canvas = iced::widget::canvas(self)
             .width(Length::Fill)
             .height(Length::Fill);
-        let pe =
-            param_editor::param_editor(self.text.clone(), SchematicMsg::TextInputChanged, || {
-                SchematicMsg::TextInputSubmit
-            });
-        // let mut pe = text("");
-        // if let Some(active_device) = &self.active_device {
-        //     active_device.0.borrow().class().
-        // }
+        // let pe =
+        //     param_editor::param_editor(self.text.clone(), SchematicMsg::TextInputChanged, || {
+        //         SchematicMsg::TextInputSubmit
+        //     });
+        let pe;
+        if let Some(active_device) = &self.active_device {
+            // pe = text("").into();
+            pe = active_device.0.borrow().class().view().map(SchematicMsg::ParamMsg);
+        } else {
+            pe = text("").into();
+        }
         let schematic = iced::widget::row![
             pe,
             iced::widget::column![

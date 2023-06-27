@@ -211,14 +211,6 @@ pub enum DeviceClass {
     V(v::V),
 }
 impl DeviceClass {
-    /// todo wip concept
-    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
-        match self {
-            DeviceClass::Gnd(_) => None,
-            DeviceClass::R(r) => r.params.param_editor(),
-            DeviceClass::V(v) => None,
-        }
-    }
     /// sets the raw parameter of the device
     pub fn set(&mut self, new: String) {
         match self {
@@ -256,4 +248,39 @@ impl DeviceClass {
             DeviceClass::V(_) => v::ID_PREFIX,
         }
     }
+    /// parameter editor view
+    pub fn view(&self) -> Element<ParamEditorMsg> {
+        match self {
+            DeviceClass::Gnd(gnd) => {
+                iced::widget::text("").into()
+            },
+            DeviceClass::R(r) => {
+                r.params.view().map(ParamEditorMsg::ParamRMsg)
+            },
+            DeviceClass::V(v) => {
+                v.params.view().map(ParamEditorMsg::ParamVMsg)
+            },
+        }
+    }
+    /// parameter editor update
+    pub fn update(&mut self, msg: ParamEditorMsg) {
+        match msg {
+            ParamEditorMsg::ParamRMsg(msg) => {
+                if let DeviceClass::R(r)= self {
+                    r.params.update(msg)
+                }
+            },
+            ParamEditorMsg::ParamVMsg(msg) => {
+                if let DeviceClass::V(v)= self {
+                    v.params.update(msg)
+                }
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ParamEditorMsg {
+    ParamRMsg(r::ParamRMsg),
+    ParamVMsg(v::ParamVMsg),
 }

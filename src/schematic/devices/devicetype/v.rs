@@ -1,5 +1,6 @@
 use super::super::params;
 use super::Graphics;
+use iced::Element;
 use lazy_static::lazy_static;
 
 pub const ID_PREFIX: &str = "V";
@@ -8,6 +9,11 @@ lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics =
         serde_json::from_slice(&std::fs::read("src/schematic/devices/devicetype/v.json").unwrap())
             .unwrap();
+}
+
+#[derive(Debug, Clone)]
+pub enum ParamVMsg {
+    RawPEMsg(params::RawPEMsg)
 }
 
 #[derive(Debug)]
@@ -23,6 +29,21 @@ impl ParamV {
     pub fn summary(&self) -> String {
         match self {
             ParamV::Raw(s) => s.raw.clone(),
+        }
+    }
+    pub fn view(&self) -> Element<ParamVMsg> {
+        match self {
+            ParamV::Raw(raw) => {
+                raw.view().map(ParamVMsg::RawPEMsg)
+            },
+        }
+    }
+    pub fn update(&mut self, msg: ParamVMsg) {
+        match msg {
+            ParamVMsg::RawPEMsg(msg) => {
+                let ParamV::Raw(raw) = self;
+                raw.update(msg)
+            },
         }
     }
 }

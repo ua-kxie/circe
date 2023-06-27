@@ -33,6 +33,12 @@ lazy_static! {
     };
 }
 
+
+#[derive(Debug, Clone)]
+pub enum ParamRMsg {
+    RawPEMsg(params::RawPEMsg)
+}
+
 /// Enumerates the different ways to specifify parameters for a resistor
 #[derive(Debug)]
 pub enum ParamR {
@@ -55,14 +61,22 @@ impl ParamR {
             ParamR::Raw(s) => s.raw.clone(),
         }
     }
-    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
-        None::<param_editor::RawParamEditor>
-        // match self {
-        //     ParamR::Raw(raw) => {
-        //         Some(raw.param_editor())
-        //     },
-        //     ParamR::Value(_) => None,
-        // }
+    pub fn view(&self) -> Element<ParamRMsg> {
+        match self {
+            ParamR::Raw(raw) => {
+                raw.view().map(ParamRMsg::RawPEMsg)
+            },
+            ParamR::Value(_) => todo!(),
+        }
+    }
+    pub fn update(&mut self, msg: ParamRMsg) {
+        match msg {
+            ParamRMsg::RawPEMsg(msg) => {
+                if let ParamR::Raw(raw) = self {
+                    raw.update(msg)
+                }
+            },
+        }
     }
 }
 

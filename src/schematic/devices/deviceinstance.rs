@@ -87,10 +87,6 @@ pub struct Device {
     op: Vec<f32>,
 }
 impl Device {
-    /// wip concept
-    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
-        self.class.param_editor()
-    }
     /// sets the device identifier watermark
     pub fn set_wm(&mut self, wm: usize) {
         self.id.wm = wm;

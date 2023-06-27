@@ -3,8 +3,8 @@
 use std::{cell::RefCell, collections::HashSet, hash::Hasher, rc::Rc};
 
 mod deviceinstance;
-mod devicetype;
-mod params;
+pub mod devicetype;
+pub mod params;
 
 use super::{BaseElement, SchematicSet};
 use crate::{
