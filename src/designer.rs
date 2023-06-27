@@ -2,7 +2,7 @@
 //! editor for designing devices - draw the appearance and place ports
 
 use crate::interactable::{Interactable, Interactive};
-use crate::viewport::Drawable;
+use crate::viewport::{Drawable, self};
 use crate::{
     transforms::{
         self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
@@ -11,17 +11,16 @@ use crate::{
     viewport::{Viewport, ViewportState},
     Msg,
 };
+use iced::{Length, alignment};
+use iced::widget::{canvas, text};
 use iced::{
     mouse,
     widget::canvas::{
-        self,
         event::{self, Event},
-        path::Builder,
         Cache, Cursor, Frame, Geometry, LineCap, Stroke,
     },
     Color, Rectangle, Size, Theme,
 };
-use std::{collections::HashSet, fs};
 
 use self::graphics::line::LineSeg;
 
@@ -61,15 +60,21 @@ impl DesignerState {
 
 /// schematic
 #[derive(Default)]
-pub struct Designer {
-    /// iced canvas graphical cache, cleared every frame
-    pub active_cache: Cache,
-    /// iced canvas graphical cache, cleared following some schematic actions
-    pub passive_cache: Cache,
-    /// iced canvas graphical cache, almost never cleared
-    pub background_cache: Cache,
+pub struct DeviceDesigner {
+    /// Viewport
+    viewport: Viewport,
 
-    pub state: DesignerState,
+    /// iced canvas graphical cache, cleared every frame
+    active_cache: Cache,
+    /// iced canvas graphical cache, cleared following some schematic actions
+    passive_cache: Cache,
+    /// iced canvas graphical cache, almost never cleared
+    background_cache: Cache,
+
+    state: DesignerState,
+
+    curpos_vsp: VSPoint,
+    zoom_scale: f32,
 
     selskip: usize,
     selected: Vec<()>, // todo
@@ -77,53 +82,140 @@ pub struct Designer {
     dev: Vec<LineSeg>,
 }
 
-impl canvas::Program<Msg> for Designer {
-    type State = DesignerViewport;
+#[derive(Debug, Clone, Copy)]
+pub enum DeviceDesignerMsg {
+    Fit(CSBox),
+    ViewportMsg(viewport::ViewportMsg),
+}
+
+impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
+    type State = ViewportState;
 
     fn update(
         &self,
-        viewport: &mut DesignerViewport,
+        viewport_st: &mut ViewportState,
         event: Event,
         bounds: Rectangle,
         cursor: Cursor,
-    ) -> (event::Status, Option<Msg>) {
+    ) -> (event::Status, Option<DeviceDesignerMsg>) {
         let curpos = cursor.position_in(&bounds);
-        let vstate = viewport.0.state.clone();
+        let vstate = viewport_st.clone();
         let mut msg = None;
+        let csb = CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)]);
 
-        if let Some(curpos_csp) = curpos.map(|x| Point::from(x).into()) {
-            if let Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                key_code,
-                modifiers,
-            }) = event
-            {
-                if let (_, iced::keyboard::KeyCode::F, 0, _) =
-                    (vstate, key_code, modifiers.bits(), curpos)
-                {
-                    let vsb = self.bounding_box().inflate(5., 5.);
-                    viewport.0.display_bounds(
-                        CSBox::from_points([
-                            CSPoint::origin(),
-                            CSPoint::new(bounds.width, bounds.height),
-                        ]),
-                        vsb,
-                    );
-                    self.passive_cache.clear();
-                }
+        self.active_cache.clear();
+        if let Some(p) = curpos {
+            if let Some(msg) = self.viewport.events_handler(viewport_st, event, csb, Point::from(p).into()) {
+                return (event::Status::Captured, Some(DeviceDesignerMsg::ViewportMsg(msg)));
             }
+        }
 
-            let (msg0, clear_passive0, processed) =
-                viewport.0.events_handler(event, curpos_csp, bounds);
-            if !processed {
-                msg = Some(Msg::DesignerEvent(event, viewport.0.curpos_ssp()));
-            } else {
-                if clear_passive0 {
-                    self.passive_cache.clear()
-                }
-                msg = msg0;
+        // if let Some(p) = curpos {
+        //     self.viewport.curpos_update(Point::from(p).into());
+        //     let curpos_ssp = self.viewport.curpos_ssp();
+
+        //     if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
+        //         let mut skip = self.selskip.saturating_sub(1);
+        //         self.tentative_by_vspoint(curpos_ssp, &mut skip);
+        //         self.selskip = skip;
+        //     }
+        // }
+
+        let mut state = self.state.clone();
+        match (&mut state, event) {
+            // drawing line
+            // (
+            //     _,
+            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::W,
+            //         modifiers: _,
+            //     }),
+            // ) => {
+            //     state = DesignerState::DrawLine(None);
+            // }
+            // (
+            //     DesignerState::DrawLine(opt_pts),
+            //     Event::Mouse(iced::mouse::Event::ButtonPressed(mouse::Button::Left)),
+            // ) => match opt_pts {
+            //     Some(pts) => {
+            //         let l = LineSeg {
+            //             src: pts.0,
+            //             dst: pts.1,
+            //             interactable: LineSeg::interactable(pts.0, pts.1, false),
+            //         };
+            //         self.dev.push(l);
+            //         self.passive_cache.clear();
+            //         *opt_pts = None;
+            //     }
+            //     None => {
+            //         if let Some(p) = curpos {
+            //             let (_, curpos_ssp) = self.viewport.curpos(Point::from(p).into());
+            //             *opt_pts = Some((curpos_ssp, curpos_ssp));
+            //         }
+            //     }
+            // },
+            // (
+            //     DesignerState::DrawLine(opt_pts),
+            //     Event::Mouse(iced::mouse::Event::CursorMoved { position: _ }),
+            // ) => match opt_pts {
+            //     Some(pts) => {
+            //         if let Some(p) = curpos {
+            //             let (_, curpos_ssp) = self.viewport.curpos(Point::from(p).into());
+            //             pts.1 = curpos_ssp;
+            //         }
+            //     }
+            //     None => {}
+            // },
+
+            // // esc
+            // (
+            //     st,
+            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::Escape,
+            //         modifiers: _,
+            //     }),
+            // ) => match st {
+            //     DesignerState::Idle => {
+            //         self.clear_selected();
+            //     }
+            //     _ => {
+            //         state = DesignerState::Idle;
+            //     }
+            // },
+            // // delete
+            // (
+            //     DesignerState::Idle,
+            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::Delete,
+            //         modifiers: _,
+            //     }),
+            // ) => {
+            //     self.delete_selected();
+            // }
+            // // cycle
+            // (
+            //     DesignerState::Idle,
+            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::C,
+            //         modifiers: _,
+            //     }),
+            // ) => {
+            //     if let Some(p) = curpos {
+            //         let (_, curpos_ssp) = self.viewport.curpos(Point::from(p).into());
+            //         self.tentative_next_by_vsp(curpos_ssp);
+            //     }
+            // }
+            // fit msg
+            (
+                DesignerState::Idle,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::F,
+                    modifiers: _,
+                }),
+            ) => {
+                msg = Some(DeviceDesignerMsg::Fit(CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)])));
             }
-
-            self.active_cache.clear();
+            _ => {}
         }
 
         if msg.is_some() {
@@ -135,18 +227,18 @@ impl canvas::Program<Msg> for Designer {
 
     fn draw(
         &self,
-        viewport: &DesignerViewport,
+        viewport_st: &ViewportState,
         _theme: &Theme,
         bounds: Rectangle,
         _cursor: Cursor,
     ) -> Vec<Geometry> {
         let active = self.active_cache.draw(bounds.size(), |frame| {
-            self.draw_active(viewport.0.vc_transform(), viewport.0.vc_scale(), frame);
-            viewport.0.draw_cursor(frame);
+            self.draw_active(self.viewport.vc_transform(), self.viewport.vc_scale(), frame);
+            self.viewport.draw_cursor(frame);
 
-            if let ViewportState::NewView(vsp0, vsp1) = viewport.0.state {
-                let csp0 = viewport.0.vc_transform().transform_point(vsp0);
-                let csp1 = viewport.0.vc_transform().transform_point(vsp1);
+            if let ViewportState::NewView(vsp0, vsp1) = viewport_st {
+                let csp0 = self.viewport.vc_transform().transform_point(*vsp0);
+                let csp1 = self.viewport.vc_transform().transform_point(*vsp1);
                 let selsize = Size {
                     width: csp1.x - csp0.x,
                     height: csp1.y - csp0.y,
@@ -164,14 +256,14 @@ impl canvas::Program<Msg> for Designer {
         });
 
         let passive = self.passive_cache.draw(bounds.size(), |frame| {
-            viewport.0.draw_grid(
+            self.viewport.draw_grid(
                 frame,
                 CSBox::new(
                     CSPoint::origin(),
                     CSPoint::from([bounds.width, bounds.height]),
                 ),
             );
-            self.draw_passive(viewport.0.vc_transform(), viewport.0.vc_scale(), frame);
+            self.draw_passive(self.viewport.vc_transform(), self.viewport.vc_scale(), frame);
         });
 
         let background = self.background_cache.draw(bounds.size(), |frame| {
@@ -187,12 +279,12 @@ impl canvas::Program<Msg> for Designer {
 
     fn mouse_interaction(
         &self,
-        viewport: &DesignerViewport,
+        viewport_st: &ViewportState,
         bounds: Rectangle,
         cursor: Cursor,
     ) -> mouse::Interaction {
         if cursor.is_over(&bounds) {
-            match (&viewport.0.state, &self.state) {
+            match (&viewport_st, &self.state) {
                 (ViewportState::Panning(_), _) => mouse::Interaction::Grabbing,
                 (ViewportState::None, DesignerState::Idle) => mouse::Interaction::default(),
                 (ViewportState::None, DesignerState::Moving(_)) => {
@@ -206,7 +298,49 @@ impl canvas::Program<Msg> for Designer {
     }
 }
 
-impl Designer {
+impl DeviceDesigner {
+    pub fn update(&mut self, msg: DeviceDesignerMsg) {
+        match msg {
+            DeviceDesignerMsg::Fit(csb) => {
+                let vsb = self.bounding_box().inflate(5.0, 5.0);
+                let csp = self.viewport.curpos_csp();
+                let msg = self.viewport.display_bounds(csb, vsb, csp);
+                self.viewport.update(msg);
+                self.passive_cache.clear();
+            },
+            DeviceDesignerMsg::ViewportMsg(vp_msg) => {
+                self.viewport.update(vp_msg);
+                self.passive_cache.clear();
+            },
+        }
+    }
+
+    pub fn view(&self) -> iced::Element<DeviceDesignerMsg> {
+        let str_vsp = format!(
+            "x: {}; y: {}",
+            self.curpos_vsp.x, self.curpos_vsp.y
+        );
+
+        let canvas = canvas(self)
+            .width(Length::Fill)
+            .height(Length::Fill);
+        let dd = iced::widget::column![
+            canvas,
+            iced::widget::row![
+                text(str_vsp)
+                    .size(16)
+                    .height(16)
+                    .vertical_alignment(alignment::Vertical::Center),
+                text(&format!("{:04.1}", self.zoom_scale))
+                    .size(16)
+                    .height(16)
+                    .vertical_alignment(alignment::Vertical::Center),
+            ]
+            .spacing(10)
+        ]
+        .width(Length::Fill);
+        dd.into()
+    }
     /// clear selection
     fn clear_selected(&mut self) {
         self.selected.clear();
@@ -266,95 +400,4 @@ impl Designer {
     pub fn delete_selected(&mut self) {}
     /// move all elements in the selected array by sst
     fn move_selected(&mut self, sst: SSTransform) {}
-    /// mutate schematic based on event
-    pub fn events_handler(&mut self, event: Event, curpos_ssp: SSPoint) -> bool {
-        let mut clear_passive = false;
-
-        if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-            let mut skip = self.selskip.saturating_sub(1);
-            self.tentative_by_vspoint(curpos_ssp, &mut skip);
-            self.selskip = skip;
-        }
-
-        let mut state = self.state.clone();
-        match (&mut state, event) {
-            // drawing line
-            (
-                _,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::W,
-                    modifiers: _,
-                }),
-            ) => {
-                state = DesignerState::DrawLine(None);
-            }
-            (
-                DesignerState::DrawLine(opt_pts),
-                Event::Mouse(iced::mouse::Event::ButtonPressed(mouse::Button::Left)),
-            ) => match opt_pts {
-                Some(pts) => {
-                    let l = LineSeg {
-                        src: pts.0,
-                        dst: pts.1,
-                        interactable: LineSeg::interactable(pts.0, pts.1, false),
-                    };
-                    self.dev.push(l);
-                    self.passive_cache.clear();
-                    *opt_pts = None;
-                }
-                None => {
-                    *opt_pts = Some((curpos_ssp, curpos_ssp));
-                }
-            },
-            (
-                DesignerState::DrawLine(opt_pts),
-                Event::Mouse(iced::mouse::Event::CursorMoved { position: _ }),
-            ) => match opt_pts {
-                Some(pts) => {
-                    pts.1 = curpos_ssp;
-                }
-                None => {}
-            },
-            // esc
-            (
-                st,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::Escape,
-                    modifiers: _,
-                }),
-            ) => match st {
-                DesignerState::Idle => {
-                    self.clear_selected();
-                    clear_passive = true;
-                }
-                _ => {
-                    state = DesignerState::Idle;
-                }
-            },
-            // delete
-            (
-                DesignerState::Idle,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::Delete,
-                    modifiers: _,
-                }),
-            ) => {
-                self.delete_selected();
-                clear_passive = true;
-            }
-            // cycle
-            (
-                DesignerState::Idle,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::C,
-                    modifiers: _,
-                }),
-            ) => {
-                self.tentative_next_by_vsp(curpos_ssp);
-            }
-            _ => {}
-        }
-        self.state = state;
-        clear_passive
-    }
 }

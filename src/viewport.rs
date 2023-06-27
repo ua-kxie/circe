@@ -3,6 +3,7 @@
 //! CanvasSpace is the UI canvas coordinate
 //! ViewportSpace is the schematic coordinate in f32
 //! SchematicSpace is the schematic coordinate in i16
+//! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
 use crate::transforms::{
     CSBox, CSPoint, CSVec, CVTransform, Point, SSPoint, VCTransform, VSBox, VSPoint, VSVec,
@@ -31,8 +32,13 @@ impl Default for ViewportState {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ViewportMsg {
+    NewView(VCTransform, f32, CSPoint),
+    CursorMoved(CSPoint),
+}
+
 pub struct Viewport {
-    pub state: ViewportState,
     transform: VCTransform,
     scale: f32,
 
@@ -46,7 +52,7 @@ pub struct Viewport {
 impl Default for Viewport {
     fn default() -> Self {
         Viewport {
-            state: Default::default(),
+            // state: Default::default(),
             transform: VCTransform::default()
                 .pre_scale(10., 10.)
                 .then_scale(1., -1.),
@@ -66,53 +72,68 @@ impl Default for Viewport {
     }
 }
 
-impl Viewport {
+impl Viewport { 
+    pub fn update(&mut self, viewport_msg: ViewportMsg) { 
+        match viewport_msg {
+            ViewportMsg::NewView(cvt, scale, curpos_csp) => {
+                self.transform = cvt;
+                self.scale = scale;
+                // update cursor position, otherwise it may be wrong until cursor is moved again
+                self.curpos_update(curpos_csp);
+            },
+            ViewportMsg::CursorMoved(csp) => {
+                self.curpos_update(csp);
+            },
+        }
+    }
+    /// marked for rework
     /// mutate viewport based on event
     pub fn events_handler(
-        &mut self,
+        &self,
+        state: &mut ViewportState,
         event: iced::widget::canvas::Event,
+        bounds_csb: CSBox,
         curpos_csp: CSPoint,
-        bounds: iced::Rectangle,
-    ) -> (Option<crate::Msg>, bool, bool) {
-        self.curpos_update(curpos_csp);
-
+    ) -> Option<ViewportMsg> {
         let mut msg = None;
-        let mut clear_passive = false;
-        let mut processed = true;
-        let mut state = self.state.clone();
-        match (&mut state, event) {
+        let mut stcp = state.clone();
+        match (&mut stcp, event) {
+            // cursor move
+            (
+                ViewportState::None, 
+                Event::Mouse(iced::mouse::Event::CursorMoved { .. })
+            ) => {
+                msg = Some(ViewportMsg::CursorMoved(curpos_csp));
+            }
             // zooming
             (_, Event::Mouse(iced::mouse::Event::WheelScrolled { delta })) => {
                 match delta {
                     iced::mouse::ScrollDelta::Lines { y, .. }
                     | iced::mouse::ScrollDelta::Pixels { y, .. } => {
                         let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                        self.zoom(scale);
+                        msg = Some(self.zoom(scale, curpos_csp));
                     }
                 }
-                msg = Some(crate::Msg::NewZoom(self.vc_scale()));
-                clear_passive = true;
             }
             // panning
             (
                 ViewportState::None,
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle)),
             ) => {
-                state = ViewportState::Panning(curpos_csp);
+                stcp = ViewportState::Panning(curpos_csp);
             }
             (
                 ViewportState::Panning(csp_prev),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
             ) => {
-                self.pan(self.cv_transform().transform_vector(curpos_csp - *csp_prev));
+                msg = Some(self.pan(curpos_csp, *csp_prev));
                 *csp_prev = curpos_csp;
-                clear_passive = true;
             }
             (
                 ViewportState::Panning(_),
                 Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle)),
             ) => {
-                state = ViewportState::None;
+                stcp = ViewportState::None;
             }
             // newview
             (
@@ -120,7 +141,7 @@ impl Viewport {
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right)),
             ) => {
                 let vsp = self.cv_transform().transform_point(curpos_csp);
-                state = ViewportState::NewView(vsp, vsp);
+                stcp = ViewportState::NewView(vsp, vsp);
             }
             (
                 ViewportState::NewView(vsp0, vsp1),
@@ -132,6 +153,7 @@ impl Viewport {
                 } else {
                     *vsp1 = *vsp0;
                 }
+                msg = Some(ViewportMsg::CursorMoved(curpos_csp));
             }
             (
                 ViewportState::NewView(_vsp0, _vsp1),
@@ -141,7 +163,7 @@ impl Viewport {
                 }),
             ) => {
                 if let (iced::keyboard::KeyCode::Escape, 0) = (key_code, modifiers.bits()) {
-                    state = ViewportState::None;
+                    stcp = ViewportState::None;
                 }
             }
             (
@@ -149,24 +171,18 @@ impl Viewport {
                 Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Right)),
             ) => {
                 if vsp1 != vsp0 {
-                    self.display_bounds(
-                        CSBox::from_points([
-                            CSPoint::origin(),
-                            CSPoint::new(bounds.width, bounds.height),
-                        ]),
+                    msg = Some(self.display_bounds(
+                        bounds_csb,
                         VSBox::from_points([vsp0, vsp1]),
-                    );
+                        curpos_csp,
+                    ));
                 }
-                msg = Some(crate::Msg::NewZoom(self.vc_scale()));
-                state = ViewportState::None;
-                clear_passive = true;
+                stcp = ViewportState::None;
             }
-            _ => {
-                processed = false;
-            }
+            _ => {}
         }
-        self.state = state;
-        (msg, clear_passive, processed)
+        *state = stcp;
+        msg
     }
 
     /// returns the cursor position in canvas space
@@ -200,15 +216,16 @@ impl Viewport {
     }
 
     /// change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
-    pub fn display_bounds(&mut self, csb: CSBox, vsb: VSBox) {
-        (self.transform, self.scale) = self.bounds_transform(csb, vsb);
-        // recalculate cursor in viewport, or it will be wrong until cursor is moved
-        self.curpos_update(self.curpos.0);
+    pub fn display_bounds(&self, csb: CSBox, vsb: VSBox, csp: CSPoint) -> ViewportMsg {
+        let (vct, scale) = self.bounds_transform(csb, vsb);
+        ViewportMsg::NewView(vct, scale, csp)
     }
 
     /// pan by vector v
-    pub fn pan(&mut self, v: VSVec) {
-        self.transform = self.transform.pre_translate(v);
+    pub fn pan(&self, csp_now: CSPoint, csp_prev: CSPoint) -> ViewportMsg {
+        let v = self.cv_transform().transform_vector(csp_now - csp_prev);
+        let vct = self.transform.pre_translate(v);
+        ViewportMsg::NewView(vct, self.scale, csp_now)
     }
 
     /// return the canvas to viewport space transform
@@ -240,8 +257,15 @@ impl Viewport {
         self.curpos = (csp1, vsp1, ssp1);
     }
 
+    /// update the cursor position
+    pub fn curpos(&mut self, csp1: CSPoint) -> (VSPoint, SSPoint) {
+        let vsp1 = self.cv_transform().transform_point(csp1);
+        let ssp1: SSPoint = vsp1.round().cast().cast_unit();
+        (vsp1, ssp1)
+    }
+
     /// change the viewport zoom by scale
-    pub fn zoom(&mut self, scale: f32) {
+    pub fn zoom(&self, scale: f32, curpos_csp: CSPoint) -> ViewportMsg {
         let (csp, vsp, _) = self.curpos;
         let scaled_transform = self.transform.then_scale(scale, scale);
 
@@ -263,8 +287,7 @@ impl Viewport {
         let translation = csp - csp1;
         new_transform = new_transform.then_translate(translation);
 
-        self.transform = new_transform;
-        self.scale = self.transform.determinant().abs().sqrt();
+        ViewportMsg::NewView(new_transform, new_transform.determinant().abs().sqrt(), curpos_csp)
     }
 
     /// draw the cursor onto canvas
@@ -307,11 +330,11 @@ impl Viewport {
             stroke: Stroke,
         ) {
             let bb_viewport = cvt.outer_transformed_box(&bb_canvas);
-            let v = ((bb_viewport.min / spacing).round() * spacing) - bb_viewport.min;
+            let v = ((bb_viewport.min / spacing).ceil() * spacing) - bb_viewport.min;
             let bb_viewport = bb_viewport.translate(v);
 
             let v = bb_viewport.max - bb_viewport.min;
-            for col in 0..=(v.x.ceil() / spacing) as u32 {
+            for col in 0..=(v.x / spacing).ceil() as u32 {
                 let csp0 = bb_viewport.min + VSVec::from([col as f32 * spacing, 0.0]);
                 let csp1 = bb_viewport.min + VSVec::from([col as f32 * spacing, v.y.ceil()]);
                 let c = Path::line(
@@ -323,7 +346,6 @@ impl Viewport {
         }
         let coarse_grid_threshold: f32 = 2.0 * self.snap_scale;
         let fine_grid_threshold: f32 = 6.0 * self.snap_scale;
-
         if self.vc_scale() > coarse_grid_threshold {
             // draw coarse grid
             let spacing = 16.0 / self.snap_scale;
@@ -338,7 +360,6 @@ impl Viewport {
                 },
                 ..Stroke::default()
             };
-
             draw_grid_w_spacing(
                 spacing,
                 bb_canvas,
