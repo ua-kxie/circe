@@ -29,7 +29,7 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::sync::Arc;
-use std::{collections::HashSet, fs};
+use std::{collections::HashSet, fs, process};
 
 use colored::Colorize;
 use paprika::*;
@@ -186,11 +186,11 @@ impl Default for Schematic {
         #[cfg(target_os = "macos")]
         {
             // retrieve libngspice.dylib from the following possible directories
-            let ret = Cmd::new("find")
+            let ret = process::Command::new("find")
                 .args(&["/usr/lib", "/usr/local/lib"])
                 .arg("-name")
                 .arg("*libngspice.dylib")
-                .stdout(Stdio::piped())
+                .stdout(process::Stdio::piped())
                 .output()
                 .unwrap_or_else(|_| {
                     eprintln!("Error: Could not find libngspice.dylib. Make sure it is installed.");
@@ -202,10 +202,10 @@ impl Default for Schematic {
         #[cfg(target_os = "linux")]
         {
             // dynamically retrieves libngspice from system
-            let ret = Cmd::new("sh")
+            let ret = process::Command::new("sh")
                 .arg("-c")
                 .arg("ldconfig -p | grep ngspice | awk '/.*libngspice.so$/{print $4}'")
-                .stdout(Stdio::piped())
+                .stdout(process::Stdio::piped())
                 .output()
                 .unwrap_or_else(|_| {
                     eprintln!("Error: Could not find libngspice. Make sure it is installed.");
@@ -727,6 +727,7 @@ impl Schematic {
             ) => {
                 state = SchematicState::Wiring(None);
             }
+
             (
                 SchematicState::Wiring(Some((g, prev_ssp))),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
@@ -762,7 +763,26 @@ impl Schematic {
                 SchematicState::Idle,
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
             ) => {
-                state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                let mut click_selected = false;
+
+                for s in &self.selected {
+                    if let BaseElement::Device(rcr) = s {
+                        if rcr.0.borrow().interactable.contains_ssp(curpos_ssp) {
+                            click_selected = true;
+                            break;
+                        }
+                    }
+                }
+
+                if click_selected {
+                    state = SchematicState::Moving(Some((
+                        curpos_ssp,
+                        curpos_ssp,
+                        SSTransform::identity(),
+                    )));
+                } else {
+                    state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                }
             }
             (
                 SchematicState::Selecting(ssb),
@@ -849,7 +869,7 @@ impl Schematic {
             }
             (
                 SchematicState::Moving(mut opt_pts),
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
+                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
             ) => {
                 if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
                     self.move_selected(SchematicState::move_transform(ssp0, ssp1, vvt));

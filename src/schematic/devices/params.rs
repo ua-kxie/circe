@@ -3,7 +3,10 @@
 //! a device should be able to choose between all compatible parameter specifier
 
 use euclid::default;
-use iced::{widget::{text_input, button}, Length, Element};
+use iced::{
+    widget::{button, text_input},
+    Element, Length,
+};
 
 #[derive(Debug, Clone)]
 pub enum RawPEMsg {
@@ -22,10 +25,10 @@ impl Raw {
         match msg {
             RawPEMsg::InputChanged(s) => {
                 self.tmp = s;
-            },
+            }
             RawPEMsg::InputSubmit => {
                 self.raw = self.tmp.clone();
-            },
+            }
         }
     }
     pub fn view(&self) -> Element<RawPEMsg> {
@@ -40,7 +43,10 @@ impl Raw {
         .into()
     }
     pub fn new(raw: String) -> Self {
-        Raw { raw, tmp: Default::default() }
+        Raw {
+            raw,
+            tmp: Default::default(),
+        }
     }
     pub fn set(&mut self, new: String) {
         self.raw = new;
