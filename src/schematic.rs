@@ -29,7 +29,7 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::sync::Arc;
-use std::{collections::HashSet, fs, process::*, process};
+use std::{collections::HashSet, fs, process::*};
 
 use colored::Colorize;
 use iced_aw::Icon::Command;
