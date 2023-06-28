@@ -29,7 +29,7 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::sync::Arc;
-use std::{collections::HashSet, fs};
+use std::{collections::HashSet, fs, process::{self, Stdio, Command as Cmd}};
 
 use colored::Colorize;
 use paprika::*;
@@ -727,6 +727,7 @@ impl Schematic {
             ) => {
                 state = SchematicState::Wiring(None);
             }
+
             (
                 SchematicState::Wiring(Some((g, prev_ssp))),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
@@ -762,7 +763,28 @@ impl Schematic {
                 SchematicState::Idle,
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
             ) => {
-                state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                let mut click_selected = false;
+
+                if !&self.selected.is_empty() {
+                    for s in &self.selected {
+                        if let BaseElement::Device(rcr) = s {
+                            if rcr.0.borrow().interactable.contains_ssp(curpos_ssp) {
+                                click_selected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if click_selected {
+                    state = SchematicState::Moving(Some((
+                        curpos_ssp,
+                        curpos_ssp,
+                        SSTransform::identity(),
+                    )));
+                } else {
+                    state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                }
             }
             (
                 SchematicState::Selecting(ssb),
@@ -849,7 +871,7 @@ impl Schematic {
             }
             (
                 SchematicState::Moving(mut opt_pts),
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
+                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
             ) => {
                 if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
                     self.move_selected(SchematicState::move_transform(ssp0, ssp1, vvt));
