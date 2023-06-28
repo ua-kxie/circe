@@ -29,7 +29,7 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::sync::Arc;
-use std::{collections::HashSet, fs, process::*};
+use std::{collections::HashSet, fs, process};
 
 use colored::Colorize;
 use iced_aw::Icon::Command;
@@ -191,7 +191,7 @@ impl Default for Schematic {
                 .args(&["/usr/lib", "/usr/local/lib"])
                 .arg("-name")
                 .arg("*libngspice.dylib")
-                .stdout(Stdio::piped())
+                .stdout(process::Stdio::piped())
                 .output()
                 .unwrap_or_else(|_| {
                     eprintln!("Error: Could not find libngspice.dylib. Make sure it is installed.");
@@ -206,7 +206,7 @@ impl Default for Schematic {
             let ret = process::Command::new("sh")
                 .arg("-c")
                 .arg("ldconfig -p | grep ngspice | awk '/.*libngspice.so$/{print $4}'")
-                .stdout(Stdio::piped())
+                .stdout(process::Stdio::piped())
                 .output()
                 .unwrap_or_else(|_| {
                     eprintln!("Error: Could not find libngspice. Make sure it is installed.");
