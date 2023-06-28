@@ -32,7 +32,6 @@ use std::sync::Arc;
 use std::{collections::HashSet, fs, process};
 
 use colored::Colorize;
-use iced_aw::Icon::Command;
 use paprika::*;
 
 /// Spice Manager to facillitate interaction with NgSpice
