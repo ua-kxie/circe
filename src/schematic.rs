@@ -765,13 +765,11 @@ impl Schematic {
             ) => {
                 let mut click_selected = false;
 
-                if !&self.selected.is_empty() {
-                    for s in &self.selected {
-                        if let BaseElement::Device(rcr) = s {
-                            if rcr.0.borrow().interactable.contains_ssp(curpos_ssp) {
-                                click_selected = true;
-                                break;
-                            }
+                for s in &self.selected {
+                    if let BaseElement::Device(rcr) = s {
+                        if rcr.0.borrow().interactable.contains_ssp(curpos_ssp) {
+                            click_selected = true;
+                            break;
                         }
                     }
                 }
