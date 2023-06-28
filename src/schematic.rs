@@ -123,7 +123,7 @@ pub enum SchematicMsg {
 pub enum SchematicState {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     Idle,
-    Selecting(SSBox),
+    AreaSelect(SSBox),
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
     // first click, second click, transform for rotation/flip ONLY
 }
@@ -392,7 +392,7 @@ impl Schematic {
                 g.as_mut().clear();
                 g.route(*prev_ssp, ssp);
             }
-            SchematicState::Selecting(ssb) => {
+            SchematicState::AreaSelect(ssb) => {
                 ssb.max = ssp;
                 self.tentatives_by_ssbox(ssb);
             }
@@ -572,7 +572,7 @@ impl Schematic {
                 net.as_ref().draw_preview(vct, vcscale, frame);
             }
             SchematicState::Idle => {}
-            SchematicState::Selecting(ssb) => {
+            SchematicState::AreaSelect(ssb) => {
                 let color = if ssb.height() > 0 {
                     Color::from_rgba(1., 1., 0., 0.1)
                 } else {
@@ -781,18 +781,18 @@ impl Schematic {
                         SSTransform::identity(),
                     )));
                 } else {
-                    state = SchematicState::Selecting(SSBox::new(curpos_ssp, curpos_ssp));
+                    state = SchematicState::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
                 }
             }
             (
-                SchematicState::Selecting(ssb),
+                SchematicState::AreaSelect(ssb),
                 Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
             ) => {
                 ssb.max = curpos_ssp;
                 self.tentatives_by_ssbox(ssb);
             }
             (
-                SchematicState::Selecting(_),
+                SchematicState::AreaSelect(_),
                 Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
             ) => {
                 self.tentatives_to_selected();
