@@ -29,9 +29,10 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::sync::Arc;
-use std::{collections::HashSet, fs, process::{self, Stdio, Command as Cmd}};
+use std::{collections::HashSet, fs, process::*, process};
 
 use colored::Colorize;
+use iced_aw::Icon::Command;
 use paprika::*;
 
 /// Spice Manager to facillitate interaction with NgSpice
@@ -186,7 +187,7 @@ impl Default for Schematic {
         #[cfg(target_os = "macos")]
         {
             // retrieve libngspice.dylib from the following possible directories
-            let ret = Cmd::new("find")
+            let ret = process::Command::new("find")
                 .args(&["/usr/lib", "/usr/local/lib"])
                 .arg("-name")
                 .arg("*libngspice.dylib")
@@ -202,7 +203,7 @@ impl Default for Schematic {
         #[cfg(target_os = "linux")]
         {
             // dynamically retrieves libngspice from system
-            let ret = Cmd::new("sh")
+            let ret = process::Command::new("sh")
                 .arg("-c")
                 .arg("ldconfig -p | grep ngspice | awk '/.*libngspice.so$/{print $4}'")
                 .stdout(Stdio::piped())
