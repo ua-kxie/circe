@@ -1,6 +1,7 @@
 //! device designer
 //! editor for designing devices - draw the appearance and place ports
 
+use crate::IcedStruct;
 use crate::interactable::{Interactable, Interactive};
 use crate::viewport::{self, Drawable};
 use crate::{
@@ -315,8 +316,8 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
     }
 }
 
-impl DeviceDesigner {
-    pub fn update(&mut self, msg: DeviceDesignerMsg) {
+impl IcedStruct<DeviceDesignerMsg> for DeviceDesigner {
+    fn update(&mut self, msg: DeviceDesignerMsg) {
         match msg {
             DeviceDesignerMsg::Fit(csb) => {
                 let vsb = self.bounding_box().inflate(5.0, 5.0);
@@ -332,7 +333,7 @@ impl DeviceDesigner {
         }
     }
 
-    pub fn view(&self) -> iced::Element<DeviceDesignerMsg> {
+    fn view(&self) -> iced::Element<DeviceDesignerMsg> {
         let str_vsp = format!("x: {}; y: {}", self.curpos_vsp.x, self.curpos_vsp.y);
 
         let canvas = canvas(self).width(Length::Fill).height(Length::Fill);
@@ -353,6 +354,9 @@ impl DeviceDesigner {
         .width(Length::Fill);
         dd.into()
     }
+}
+
+impl DeviceDesigner {
     /// clear selection
     fn clear_selected(&mut self) {
         self.selected.clear();

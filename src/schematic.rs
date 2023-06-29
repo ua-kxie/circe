@@ -6,7 +6,7 @@ mod nets;
 
 use self::devices::Devices;
 pub use self::devices::RcRDevice;
-use crate::{interactable, viewport};
+use crate::{interactable, viewport, IcedStruct};
 use crate::{
     interactable::Interactive,
     transforms::{
@@ -15,7 +15,7 @@ use crate::{
     },
     viewport::{Drawable, Viewport, ViewportState},
 };
-use iced::widget::{row, text};
+use iced::widget::row;
 use iced::Length;
 use iced::{
     mouse,
@@ -247,7 +247,6 @@ impl canvas::Program<SchematicMsg> for Schematic {
         cursor: Cursor,
     ) -> (event::Status, Option<SchematicMsg>) {
         let curpos = cursor.position_in(&bounds);
-        let vstate = viewport_st.clone();
         let mut msg = None;
         let csb = CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)]);
         self.active_cache.clear();
@@ -380,30 +379,8 @@ impl canvas::Program<SchematicMsg> for Schematic {
     }
 }
 
-impl Schematic {
-    fn update_cursor_ssp(&mut self, ssp: SSPoint) {
-        let mut skip = self.selskip.saturating_sub(1);
-        self.net_name = self.tentative_by_sspoint(ssp, &mut skip);
-        self.selskip = skip;
-
-        let mut st = self.state.clone();
-        match &mut st {
-            SchematicState::Wiring(Some((g, prev_ssp))) => {
-                g.as_mut().clear();
-                g.route(*prev_ssp, ssp);
-            }
-            SchematicState::AreaSelect(ssb) => {
-                ssb.max = ssp;
-                self.tentatives_by_ssbox(ssb);
-            }
-            SchematicState::Moving(Some((_ssp0, ssp1, _sst))) => {
-                *ssp1 = ssp;
-            }
-            _ => {}
-        }
-        self.state = st;
-    }
-    pub fn update(&mut self, msg: SchematicMsg) {
+impl IcedStruct<SchematicMsg> for Schematic {
+    fn update(&mut self, msg: SchematicMsg) {
         match msg {
             SchematicMsg::TextInputChanged(s) => {
                 self.text = s;
@@ -439,7 +416,7 @@ impl Schematic {
         }
     }
 
-    pub fn view(&self) -> iced::Element<SchematicMsg> {
+    fn view(&self) -> iced::Element<SchematicMsg> {
         let str_ssp = format!("x: {}; y: {}", self.curpos_ssp.x, self.curpos_ssp.y);
         let net_name = self.net_name.as_deref().unwrap_or_default();
 
@@ -477,6 +454,32 @@ impl Schematic {
             .width(Length::Fill)
         ];
         schematic.into()
+    }
+}
+
+impl Schematic {
+    /// update schematic cursor position
+    fn update_cursor_ssp(&mut self, ssp: SSPoint) {
+        let mut skip = self.selskip.saturating_sub(1);
+        self.net_name = self.tentative_by_sspoint(ssp, &mut skip);
+        self.selskip = skip;
+
+        let mut st = self.state.clone();
+        match &mut st {
+            SchematicState::Wiring(Some((g, prev_ssp))) => {
+                g.as_mut().clear();
+                g.route(*prev_ssp, ssp);
+            }
+            SchematicState::AreaSelect(ssb) => {
+                ssb.max = ssp;
+                self.tentatives_by_ssbox(ssb);
+            }
+            SchematicState::Moving(Some((_ssp0, ssp1, _sst))) => {
+                *ssp1 = ssp;
+            }
+            _ => {}
+        }
+        self.state = st;
     }
     /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
     pub fn active_device(&self) -> Option<RcRDevice> {
@@ -952,7 +955,7 @@ impl Schematic {
 }
 
 mod param_editor {
-    use iced::widget::{button, column, text, text_input};
+    use iced::widget::{button, column, text_input};
     use iced::{Element, Length, Renderer};
     use iced_lazy::{component, Component};
 
@@ -964,7 +967,6 @@ mod param_editor {
 
     pub struct ParamEditor<Message> {
         value: String,
-        count: usize,
         on_change: Box<dyn Fn(String) -> Message>,
         on_submit: Box<dyn Fn() -> Message>,
     }
@@ -977,7 +979,6 @@ mod param_editor {
         ) -> Self {
             Self {
                 value,
-                count: 0,
                 on_change: Box::new(on_change),
                 on_submit: Box::new(on_submit),
             }

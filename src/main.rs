@@ -2,22 +2,19 @@
 //! Schematic Capture for EDA with ngspice integration
 
 use std::fmt::Debug;
-use std::sync::Arc;
 
 mod transforms;
 use designer::DeviceDesigner;
-use transforms::{SSPoint, VSPoint};
-
 mod viewport;
 
 mod schematic;
-use schematic::{RcRDevice, Schematic};
+use schematic::Schematic;
 
 mod designer;
 mod interactable;
 
 use iced::{
-    executor, widget::canvas::event::Event, Application, Command, Element, Settings, Theme,
+    executor, Application, Command, Element, Settings, Theme,
 };
 
 use iced_aw::{TabLabel, Tabs};
@@ -107,4 +104,9 @@ impl Application for Circe {
 
         tabs.into()
     }
+}
+
+trait IcedStruct<T> {
+    fn update(&mut self, msg: T);
+    fn view(&self) -> Element<T>;
 }
