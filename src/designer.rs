@@ -1,5 +1,6 @@
 //! device designer
 //! editor for designing devices - draw the appearance and place ports
+//! intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices 
 
 use crate::IcedStruct;
 use crate::interactable::{Interactable, Interactive};

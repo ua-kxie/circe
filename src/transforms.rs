@@ -2,8 +2,9 @@
 
 use euclid::{Point2D, Transform2D};
 use iced::Point as IcedPoint;
+use serde::{Deserialize, Serialize};
 
-/// PhantomData tag used to denote the patch of screen being drawn on
+/// PhantomData tag used to denote the patch of screen being drawn on (f32)
 #[derive(
     Clone,
     Copy,
@@ -14,8 +15,8 @@ use iced::Point as IcedPoint;
     PartialOrd,
     Ord,
     Hash,
-    serde::Deserialize,
-    serde::Serialize,
+    Deserialize,
+    Serialize,
 )]
 pub struct CanvasSpace;
 
@@ -30,8 +31,8 @@ pub struct CanvasSpace;
     PartialOrd,
     Ord,
     Hash,
-    serde::Deserialize,
-    serde::Serialize,
+    Deserialize,
+    Serialize,
 )]
 pub struct ViewportSpace;
 
@@ -46,8 +47,8 @@ pub struct ViewportSpace;
     PartialOrd,
     Ord,
     Hash,
-    serde::Deserialize,
-    serde::Serialize,
+    Deserialize,
+    Serialize,
 )]
 pub struct SchematicSpace;
 

@@ -34,7 +34,7 @@ pub fn main() -> iced::Result {
 pub struct Circe {
     /// schematic
     schematic: Schematic,
-    /// device designer
+    /// intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices 
     designer: DeviceDesigner,
 
     /// active tab index
