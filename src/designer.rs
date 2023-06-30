@@ -20,20 +20,11 @@ use iced::{
     },
     Color, Rectangle, Size, Theme,
 };
+use iced_lazy::component::view;
 
 use self::graphics::line::LineSeg;
 
 mod graphics;
-
-pub struct DesignerViewport(Viewport);
-
-impl Default for DesignerViewport {
-    fn default() -> Self {
-        let mut v = Viewport::default();
-        v.snap_scale = transforms::DESIGNER_GRID;
-        DesignerViewport(v)
-    }
-}
 
 #[derive(Clone)]
 pub enum DesignerState {
@@ -58,7 +49,6 @@ impl DesignerState {
 }
 
 /// schematic
-#[derive(Default)]
 pub struct DeviceDesigner {
     /// Viewport
     viewport: Viewport,
@@ -69,6 +59,21 @@ pub struct DeviceDesigner {
     selected: Vec<()>, // todo
 
     dev: Vec<LineSeg>,
+}
+
+impl Default for DeviceDesigner {
+    fn default() -> Self {
+        let vct = VCTransform::identity();
+        vct.then_scale(1.5, 1.5);
+        let viewport = Viewport::new(
+            8.0,
+            0.1,
+            10.0,
+            1.5,
+            vct,
+        );
+        Self { viewport, state: Default::default(), selskip: Default::default(), selected: Default::default(), dev: Default::default() }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -322,7 +327,8 @@ impl IcedStruct<DeviceDesignerMsg> for DeviceDesigner {
     }
 
     fn view(&self) -> iced::Element<DeviceDesignerMsg> {
-        let str_vsp = format!("x: {}; y: {}", self.viewport.curpos_ssp().x, self.viewport.curpos_ssp().y);
+        let vsp = self.viewport.curpos_vsp_scaled();
+        let str_vsp = format!("x: {}; y: {}", vsp.x, vsp.y);
 
         let canvas = canvas(self).width(Length::Fill).height(Length::Fill);
         let dd = iced::widget::column![

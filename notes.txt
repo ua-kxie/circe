@@ -1,6 +1,8 @@
 todo:
 
 - schematic: 
+    reversible rotation direction
+    vertical/horizontal mirroring
     area selection - contains and intersects by selection area is positive/negative
     device/wire copy/paste
     connect devices with wire if ports overlap

@@ -46,14 +46,18 @@ pub struct Viewport {
     /// iced canvas graphical cache, almost never cleared
     pub background_cache: Cache,
 
-    transform: VCTransform,
-    scale: f32,
+    vct: VCTransform,
+    zoom_scale: f32,
 
     curpos: (CSPoint, VSPoint, SSPoint),
 
-    max_scale: f32,
-    min_scale: f32,
-    pub snap_scale: f32,
+    /// zoom in limit
+    max_zoom: f32,
+    /// zoom out limit
+    min_zoom: f32,
+    /// ssp always rounds to i16. This scale allows snapping to fixed f32 intervals if not 1.0
+    /// effectively the transform from schematic space to viewport space
+    scale: f32,
 }
 
 impl Default for Viewport {
@@ -63,31 +67,41 @@ impl Default for Viewport {
             passive_cache: Default::default(),
             background_cache: Default::default(),
             // state: Default::default(),
-            transform: VCTransform::default()
+            vct: VCTransform::default()
                 .pre_scale(10., 10.)
                 .then_scale(1., -1.),
-            scale: 10.0, // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
+            zoom_scale: 10.0, // scale from canvas to viewport, sqrt of transform determinant. Save value to save computing power
 
             curpos: (CSPoint::origin(), VSPoint::origin(), SSPoint::origin()),
 
             /// most zoomed in - every 1.0 unit is 1000.0 pixels
-            max_scale: 1000.0,
+            max_zoom: 100.0,
             /// most zoomed out - every 1.0 unit is 1.0 pixels
-            min_scale: 1.0,
+            min_zoom: 1.0,
 
             /// schematic, designer should always snap to nearest integer.  
             /// snap scale just scales viewport grid such that snapping appears to operate on some other granularity
-            snap_scale: 1.0,
+            scale: 1.0,
         }
     }
 }
 
 impl Viewport {
+    pub fn new(scale: f32, min_zoom: f32, max_zoom: f32, zoom_scale: f32, vct: VCTransform) -> Self {
+        Viewport { 
+            scale,
+            min_zoom,
+            max_zoom,
+            zoom_scale,
+            vct,
+            ..Default::default()
+        }
+    }
     pub fn update(&mut self, viewport_msg: ViewportMsg) {
         match viewport_msg {
-            ViewportMsg::NewView(cvt, scale, curpos_csp) => {
-                self.transform = cvt;
-                self.scale = scale;
+            ViewportMsg::NewView(cvt, zoom_scale, curpos_csp) => {
+                self.vct = cvt;
+                self.zoom_scale = zoom_scale;
                 // update cursor position, otherwise it may be wrong until cursor is moved again
                 self.curpos_update(curpos_csp);
             }
@@ -116,8 +130,8 @@ impl Viewport {
             (_, Event::Mouse(iced::mouse::Event::WheelScrolled { delta })) => match delta {
                 iced::mouse::ScrollDelta::Lines { y, .. }
                 | iced::mouse::ScrollDelta::Pixels { y, .. } => {
-                    let scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                    msg = Some(self.zoom(scale, curpos_csp));
+                    let zoom_scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
+                    msg = Some(self.zoom(zoom_scale, curpos_csp));
                 }
             },
             // panning
@@ -205,13 +219,18 @@ impl Viewport {
         self.curpos.2
     }
 
+    /// returns the cursor position in schematic space
+    pub fn curpos_vsp_scaled(&self) -> VSPoint {
+        self.curpos.1 * self.scale
+    }
+
     /// returns transform and scale such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
     fn bounds_transform(&self, csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {
         let mut vct = VCTransform::identity();
 
         let s = (csb.height() / vsb.height())
             .min(csb.width() / vsb.width())
-            .clamp(self.min_scale, self.max_scale); // scale from vsb to fit inside csb
+            .clamp(self.min_zoom, self.max_zoom); // scale from vsb to fit inside csb
         vct = vct.then_scale(s, -s);
 
         let v = csb.center() - vct.transform_point(vsb.center()); // vector from vsb to csb
@@ -222,37 +241,37 @@ impl Viewport {
 
     /// change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
     pub fn display_bounds(&self, csb: CSBox, vsb: VSBox, csp: CSPoint) -> ViewportMsg {
-        let (vct, scale) = self.bounds_transform(csb, vsb);
-        ViewportMsg::NewView(vct, scale, csp)
+        let (vct, zoom_scale) = self.bounds_transform(csb, vsb);
+        ViewportMsg::NewView(vct, zoom_scale, csp)
     }
 
     /// pan by vector v
     pub fn pan(&self, csp_now: CSPoint, csp_prev: CSPoint) -> ViewportMsg {
         let v = self.cv_transform().transform_vector(csp_now - csp_prev);
-        let vct = self.transform.pre_translate(v);
-        ViewportMsg::NewView(vct, self.scale, csp_now)
+        let vct = self.vct.pre_translate(v);
+        ViewportMsg::NewView(vct, self.zoom_scale, csp_now)
     }
 
     /// return the canvas to viewport space transform
     pub fn cv_transform(&self) -> CVTransform {
-        self.transform.inverse().unwrap()
+        self.vct.inverse().unwrap()
     }
 
     /// return the viewport to canvas space transform
     pub fn vc_transform(&self) -> VCTransform {
-        self.transform
+        self.vct
     }
 
     /// returns the scale factor in the viewwport to canvas transform
     /// this value is stored to avoid calling sqrt() each time
     pub fn vc_scale(&self) -> f32 {
-        self.scale
+        self.zoom_scale
     }
 
     /// returns the scale factor in the viewwport to canvas transform
     /// this value is stored to avoid calling sqrt() each time
     pub fn cv_scale(&self) -> f32 {
-        1. / self.scale
+        1. / self.zoom_scale
     }
 
     /// update the cursor position
@@ -270,23 +289,23 @@ impl Viewport {
     }
 
     /// change the viewport zoom by scale
-    pub fn zoom(&self, scale: f32, curpos_csp: CSPoint) -> ViewportMsg {
+    pub fn zoom(&self, zoom_scale: f32, curpos_csp: CSPoint) -> ViewportMsg {
         let (csp, vsp, _) = self.curpos;
-        let scaled_transform = self.transform.then_scale(scale, scale);
+        let scaled_transform = self.vct.then_scale(zoom_scale, zoom_scale);
 
         let mut new_transform; // transform with applied scale and translated to maintain p_viewport position
         let scaled_determinant = scaled_transform.determinant().abs();
-        if scaled_determinant < self.min_scale * self.min_scale {
+        if scaled_determinant < self.min_zoom * self.min_zoom {
             // minimum scale
-            let clamped_scale = self.min_scale / self.vc_scale();
-            new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
-        } else if scaled_determinant <= self.max_scale * self.max_scale {
+            let clamped_scale = self.min_zoom / self.vc_scale();
+            new_transform = self.vct.then_scale(clamped_scale, clamped_scale);
+        } else if scaled_determinant <= self.max_zoom * self.max_zoom {
             // adjust scale
             new_transform = scaled_transform;
         } else {
             // maximum scale
-            let clamped_scale = self.max_scale / self.vc_scale();
-            new_transform = self.transform.then_scale(clamped_scale, clamped_scale);
+            let clamped_scale = self.max_zoom / self.vc_scale();
+            new_transform = self.vct.then_scale(clamped_scale, clamped_scale);
         }
         let csp1 = new_transform.transform_point(vsp); // translate based on cursor location
         let translation = csp - csp1;
@@ -325,7 +344,7 @@ impl Viewport {
             content: String::from("origin"),
             position: Point::from(self.vc_transform().transform_point(VSPoint::origin())).into(),
             color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
-            size: self.vc_scale(),
+            size: self.vc_scale() * self.scale,
             ..Default::default()
         };
         frame.fill_text(a);
@@ -353,14 +372,14 @@ impl Viewport {
                 frame.stroke(&c, stroke.clone());
             }
         }
-        let coarse_grid_threshold: f32 = 2.0 * self.snap_scale;
-        let fine_grid_threshold: f32 = 6.0 * self.snap_scale;
+        let coarse_grid_threshold: f32 = 2.0 / self.scale;
+        let fine_grid_threshold: f32 = 6.0 / self.scale;
         if self.vc_scale() > coarse_grid_threshold {
             // draw coarse grid
-            let spacing = 16.0 / self.snap_scale;
+            let spacing = 16.0 * self.scale;
 
             let grid_stroke = Stroke {
-                width: (0.5 * self.vc_scale() / self.snap_scale).clamp(0.5, 3.0),
+                width: (0.5 * self.vc_scale() * self.scale).clamp(0.5, 3.0),
                 style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
                 line_cap: LineCap::Round,
                 line_dash: LineDash {
@@ -380,7 +399,7 @@ impl Viewport {
 
             if self.vc_scale() > fine_grid_threshold {
                 // draw fine grid if sufficiently zoomed in
-                let spacing = 2.0 / self.snap_scale;
+                let spacing = 2.0 * self.scale;
 
                 let grid_stroke = Stroke {
                     width: 1.0,
@@ -404,7 +423,7 @@ impl Viewport {
             }
         }
         let ref_stroke = Stroke {
-            width: (0.1 * self.vc_scale()).clamp(0.1, 3.0),
+            width: (0.1 * self.vc_scale() * self.scale).clamp(0.1, 3.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -412,19 +431,19 @@ impl Viewport {
 
         let mut path_builder = Builder::new();
         path_builder.move_to(
-            Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, 1.0))).into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, 1.0) * self.scale)).into(),
         );
         path_builder.line_to(
-            Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, -1.0))).into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, -1.0) * self.scale)).into(),
         );
         path_builder.move_to(
-            Point::from(self.vc_transform().transform_point(VSPoint::new(1.0, 0.0))).into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(1.0, 0.0) * self.scale)).into(),
         );
         path_builder.line_to(
-            Point::from(self.vc_transform().transform_point(VSPoint::new(-1.0, 0.0))).into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(-1.0, 0.0) * self.scale)).into(),
         );
         let p = self.vc_transform().transform_point(VSPoint::origin());
-        let r = self.vc_scale() * 0.5;
+        let r = self.vc_scale() * self.scale * 0.5;
         path_builder.circle(Point::from(p).into(), r);
         frame.stroke(&path_builder.build(), ref_stroke);
     }
