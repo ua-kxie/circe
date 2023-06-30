@@ -9,7 +9,7 @@ use crate::transforms::{
     CSBox, CSPoint, CSVec, CVTransform, Point, SSPoint, VCTransform, VSBox, VSPoint, VSVec,
 };
 use iced::widget::canvas::path::Builder;
-use iced::widget::canvas::{stroke, Event, Frame, LineCap, LineDash, Path, Stroke, Text};
+use iced::widget::canvas::{stroke, Event, Frame, LineCap, LineDash, Path, Stroke, Text, Cache};
 use iced::Color;
 
 /// trait for element which can be drawn on canvas
@@ -39,6 +39,13 @@ pub enum ViewportMsg {
 }
 
 pub struct Viewport {
+    /// iced canvas graphical cache, cleared every frame
+    pub active_cache: Cache,
+    /// iced canvas graphical cache, cleared following some schematic actions
+    pub passive_cache: Cache,
+    /// iced canvas graphical cache, almost never cleared
+    pub background_cache: Cache,
+
     transform: VCTransform,
     scale: f32,
 
@@ -52,6 +59,9 @@ pub struct Viewport {
 impl Default for Viewport {
     fn default() -> Self {
         Viewport {
+            active_cache: Default::default(),
+            passive_cache: Default::default(),
+            background_cache: Default::default(),
             // state: Default::default(),
             transform: VCTransform::default()
                 .pre_scale(10., 10.)
@@ -60,8 +70,8 @@ impl Default for Viewport {
 
             curpos: (CSPoint::origin(), VSPoint::origin(), SSPoint::origin()),
 
-            /// most zoomed in - every 1.0 unit is 100.0 pixels
-            max_scale: 100.0,
+            /// most zoomed in - every 1.0 unit is 1000.0 pixels
+            max_scale: 1000.0,
             /// most zoomed out - every 1.0 unit is 1.0 pixels
             min_scale: 1.0,
 

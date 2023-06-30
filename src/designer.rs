@@ -7,7 +7,6 @@ use crate::IcedStruct;
 use crate::{
     transforms::{
         self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
-        VSPoint,
     },
     viewport::{Viewport, ViewportState},
 };
@@ -17,7 +16,7 @@ use iced::{
     mouse,
     widget::canvas::{
         event::{self, Event},
-        Cache, Cursor, Frame, Geometry,
+        Cursor, Frame, Geometry,
     },
     Color, Rectangle, Size, Theme,
 };
@@ -64,17 +63,7 @@ pub struct DeviceDesigner {
     /// Viewport
     viewport: Viewport,
 
-    /// iced canvas graphical cache, cleared every frame
-    active_cache: Cache,
-    /// iced canvas graphical cache, cleared following some schematic actions
-    passive_cache: Cache,
-    /// iced canvas graphical cache, almost never cleared
-    background_cache: Cache,
-
     state: DesignerState,
-
-    curpos_vsp: VSPoint,
-    zoom_scale: f32,
 
     selskip: usize,
     selected: Vec<()>, // todo
@@ -103,7 +92,7 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
         let mut msg = None;
         let csb = CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)]);
 
-        self.active_cache.clear();
+        self.viewport.active_cache.clear();
         if let Some(p) = curpos {
             if let Some(msg) =
                 self.viewport
@@ -241,7 +230,7 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
         bounds: Rectangle,
         _cursor: Cursor,
     ) -> Vec<Geometry> {
-        let active = self.active_cache.draw(bounds.size(), |frame| {
+        let active = self.viewport.active_cache.draw(bounds.size(), |frame| {
             self.draw_active(
                 self.viewport.vc_transform(),
                 self.viewport.vc_scale(),
@@ -268,7 +257,7 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
             }
         });
 
-        let passive = self.passive_cache.draw(bounds.size(), |frame| {
+        let passive = self.viewport.passive_cache.draw(bounds.size(), |frame| {
             self.viewport.draw_grid(
                 frame,
                 CSBox::new(
@@ -283,7 +272,7 @@ impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
             );
         });
 
-        let background = self.background_cache.draw(bounds.size(), |frame| {
+        let background = self.viewport.background_cache.draw(bounds.size(), |frame| {
             let f = canvas::Fill {
                 style: canvas::Style::Solid(Color::from_rgb(0.2, 0.2, 0.2)),
                 ..canvas::Fill::default()
@@ -323,17 +312,17 @@ impl IcedStruct<DeviceDesignerMsg> for DeviceDesigner {
                 let csp = self.viewport.curpos_csp();
                 let msg = self.viewport.display_bounds(csb, vsb, csp);
                 self.viewport.update(msg);
-                self.passive_cache.clear();
+                self.viewport.passive_cache.clear();
             }
             DeviceDesignerMsg::ViewportMsg(vp_msg) => {
                 self.viewport.update(vp_msg);
-                self.passive_cache.clear();
+                self.viewport.passive_cache.clear();
             }
         }
     }
 
     fn view(&self) -> iced::Element<DeviceDesignerMsg> {
-        let str_vsp = format!("x: {}; y: {}", self.curpos_vsp.x, self.curpos_vsp.y);
+        let str_vsp = format!("x: {}; y: {}", self.viewport.curpos_ssp().x, self.viewport.curpos_ssp().y);
 
         let canvas = canvas(self).width(Length::Fill).height(Length::Fill);
         let dd = iced::widget::column![
@@ -343,7 +332,7 @@ impl IcedStruct<DeviceDesignerMsg> for DeviceDesigner {
                     .size(16)
                     .height(16)
                     .vertical_alignment(alignment::Vertical::Center),
-                text(&format!("{:04.1}", self.zoom_scale))
+                text(&format!("{:04.1}", self.viewport.vc_scale()))
                     .size(16)
                     .height(16)
                     .vertical_alignment(alignment::Vertical::Center),

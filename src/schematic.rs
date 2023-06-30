@@ -23,7 +23,7 @@ use iced::{
         self,
         event::{self, Event},
         path::Builder,
-        Cache, Cursor, Frame, Geometry, LineCap, Stroke,
+        Cursor, Frame, Geometry, LineCap, Stroke,
     },
     Color, Rectangle, Size, Theme,
 };
@@ -148,18 +148,11 @@ impl SchematicState {
 
 /// schematic
 pub struct Schematic {
-    /// iced canvas graphical cache, cleared every frame
-    active_cache: Cache,
-    /// iced canvas graphical cache, cleared following some schematic actions
-    passive_cache: Cache,
-    /// iced canvas graphical cache, almost never cleared
-    background_cache: Cache,
-
     /// viewport
     viewport: Viewport,
 
-    /// schematic cursor position
-    curpos_ssp: SSPoint,
+    // /// schematic cursor position
+    // curpos_ssp: SSPoint,
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
     /// active device - some if only 1 device selected, otherwise is none
@@ -221,11 +214,7 @@ impl Default for Schematic {
         }
         lib.init(Some(spmanager.clone()));
         Schematic {
-            active_cache: Default::default(),
-            passive_cache: Default::default(),
-            background_cache: Default::default(),
             viewport: Default::default(),
-            curpos_ssp: Default::default(),
             net_name: Default::default(),
             active_device: Default::default(),
             text: Default::default(),
@@ -253,7 +242,7 @@ impl canvas::Program<SchematicMsg> for Schematic {
         let curpos = cursor.position_in(&bounds);
         let mut msg = None;
         let csb = CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)]);
-        self.active_cache.clear();
+        self.viewport.active_cache.clear();
 
         if let Some(p) = curpos {
             if let Some(msg) =
@@ -308,7 +297,7 @@ impl canvas::Program<SchematicMsg> for Schematic {
         bounds: Rectangle,
         _cursor: Cursor,
     ) -> Vec<Geometry> {
-        let active = self.active_cache.draw(bounds.size(), |frame| {
+        let active = self.viewport.active_cache.draw(bounds.size(), |frame| {
             self.draw_active(
                 self.viewport.vc_transform(),
                 self.viewport.vc_scale(),
@@ -335,7 +324,7 @@ impl canvas::Program<SchematicMsg> for Schematic {
             }
         });
 
-        let passive = self.passive_cache.draw(bounds.size(), |frame| {
+        let passive = self.viewport.passive_cache.draw(bounds.size(), |frame| {
             self.viewport.draw_grid(
                 frame,
                 CSBox::new(
@@ -350,7 +339,7 @@ impl canvas::Program<SchematicMsg> for Schematic {
             );
         });
 
-        let background = self.background_cache.draw(bounds.size(), |frame| {
+        let background = self.viewport.background_cache.draw(bounds.size(), |frame| {
             let f = canvas::Fill {
                 style: canvas::Style::Solid(Color::from_rgb(0.2, 0.2, 0.2)),
                 ..canvas::Fill::default()
@@ -392,7 +381,7 @@ impl IcedStruct<SchematicMsg> for Schematic {
             SchematicMsg::TextInputSubmit => {
                 if let Some(ad) = &self.active_device {
                     ad.0.borrow_mut().class_mut().set(self.text.clone());
-                    self.passive_cache.clear();
+                    self.viewport.passive_cache.clear();
                 }
             }
             SchematicMsg::Fit(csb) => {
@@ -400,12 +389,12 @@ impl IcedStruct<SchematicMsg> for Schematic {
                 let csp = self.viewport.curpos_csp();
                 self.viewport
                     .update(self.viewport.display_bounds(csb, vsb, csp));
-                self.passive_cache.clear();
+                self.viewport.passive_cache.clear();
             }
             SchematicMsg::ViewportMsg(viewport_msg) => {
                 self.viewport.update(viewport_msg);
                 self.update_cursor_ssp(self.viewport.curpos_ssp());
-                self.passive_cache.clear();
+                self.viewport.passive_cache.clear();
             }
             SchematicMsg::SchematicEvt(event, curpos_ssp) => {
                 self.events_handler(event, curpos_ssp);
@@ -421,7 +410,7 @@ impl IcedStruct<SchematicMsg> for Schematic {
     }
 
     fn view(&self) -> iced::Element<SchematicMsg> {
-        let str_ssp = format!("x: {}; y: {}", self.curpos_ssp.x, self.curpos_ssp.y);
+        let str_ssp = format!("x: {}; y: {}", self.viewport.curpos_ssp().x, self.viewport.curpos_ssp().y);
         let net_name = self.net_name.as_deref().unwrap_or_default();
 
         let canvas = iced::widget::canvas(self)
