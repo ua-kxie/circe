@@ -1,16 +1,15 @@
 //! device designer
 //! editor for designing devices - draw the appearance and place ports
+//! intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
 
-use crate::IcedStruct;
-use crate::interactable::{Interactable, Interactive};
 use crate::viewport::{self, Drawable};
+use crate::IcedStruct;
 use crate::{
     transforms::{
         self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
-        VSPoint, ViewportSpace,
+        VSPoint,
     },
     viewport::{Viewport, ViewportState},
-    Msg,
 };
 use iced::widget::{canvas, text};
 use iced::{alignment, Length};
@@ -18,7 +17,7 @@ use iced::{
     mouse,
     widget::canvas::{
         event::{self, Event},
-        Cache, Cursor, Frame, Geometry, LineCap, Stroke,
+        Cache, Cursor, Frame, Geometry,
     },
     Color, Rectangle, Size, Theme,
 };

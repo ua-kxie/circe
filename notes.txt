@@ -1,7 +1,6 @@
 todo:
 
 - schematic: 
-    click-drag-move for devices
     area selection - contains and intersects by selection area is positive/negative
     device/wire copy/paste
     connect devices with wire if ports overlap
@@ -13,16 +12,20 @@ todo:
 - designer:
     arc drawing (nor, nand gates curved portion)
     serde save graphics
+    place ports, device saving/loading, device libraries
+
+- architectural:
+    rework viewport integration
+    viewport: 
+        common functionality between device designer/schematic
+        viewport controls should not intefer with schematic controls. e.g. panning should not reset device placement
+
+    modules which will be used by both device designer and schematic (e.g. ports) need to be reorganized
 
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?
 
     clean up colors, use iced theme?
-    org and tech debt - make code/comment pristine - then code review
-
-    device designer, place ports, device saving/loading, device libraries
-    devices rework - json serde graphics
-    draw device lines, circle, bounds, ports
 
 - medium term:
     build script to copy ngspice.dll into directory

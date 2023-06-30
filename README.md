@@ -7,7 +7,8 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 * click wires or device to select  
 * mouse wheel to zoom and pan  
 * right click drag to zoom to area  
-* left click drag for area select  
+* left click drag to select area
+* left click drag on selected device to drag selected
 * select single device to edit parameter (wonky)  
 #### Hotkeys:
 

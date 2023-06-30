@@ -17,6 +17,7 @@ use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
 use by_address::ByAddress;
 use iced::widget::canvas::Frame;
 
+/// newtype wrapper for Rc<RefCell<Device>>. Hashes by memory address.
 #[derive(Debug, Clone)]
 pub struct RcRDevice(pub Rc<RefCell<Device>>);
 
@@ -32,8 +33,10 @@ impl std::hash::Hash for RcRDevice {
     }
 }
 
+/// struct to keep track of unique IDs for all devices of a type
 #[derive(Debug)]
 struct ClassManager {
+    // watermark keeps track of the last ID given out
     wm: usize,
 }
 
@@ -47,6 +50,7 @@ impl ClassManager {
     }
 }
 
+/// struct to keep track of unique IDs for all devices of all types
 #[derive(Debug)]
 struct DevicesManager {
     gnd: ClassManager,
@@ -64,9 +68,12 @@ impl Default for DevicesManager {
     }
 }
 
+/// struct containing all devices in schematic
 #[derive(Debug, Default)]
 pub struct Devices {
+    /// set of all devices
     set: HashSet<RcRDevice>,
+    /// manager to facillate assignment of unique IDs to each device
     manager: DevicesManager,
 }
 
@@ -91,11 +98,13 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
         for d in &self.set {
             d.0.borrow_mut().op(pkvecvaluesall);
         }
     }
+    /// inserts device d into self. Replaces existing if the device already exists.
     pub fn insert(&mut self, d: RcRDevice) {
         if !self.set.contains(&d) {
             let ord = match d.0.borrow().class() {
@@ -107,7 +116,7 @@ impl Devices {
             self.set.insert(d);
         }
     }
-
+    /// returns an iterator over all devices which have tentative flag set
     pub fn tentatives(&self) -> impl Iterator<Item = RcRDevice> + '_ {
         self.set.iter().filter_map(|x| {
             if x.0.borrow().interactable.tentative {
@@ -117,6 +126,7 @@ impl Devices {
             }
         })
     }
+    /// sets tentative flags for all devices based on ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         let _: Vec<_> = self
             .set
@@ -127,38 +137,33 @@ impl Devices {
             })
             .collect();
     }
+    /// create a new resistor with unique ID
     pub fn new_res(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::R(R::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
+    /// create a new gnd with unique ID
     pub fn new_gnd(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
+    /// create a new voltage source with unique ID
     pub fn new_vs(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::V(V::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
+    /// returns a vector of SSPoints of all coordinates occupied by all ports of all devices. A coordinate is returned once for each port on that coordinate
     pub fn ports_ssp(&self) -> Vec<SSPoint> {
         self.set
             .iter()
             .flat_map(|d| d.0.borrow().ports_ssp())
             .collect()
     }
+    /// clears tentative flags from all devices
     pub fn clear_tentatives(&mut self) {
         for d in &self.set {
             d.0.borrow_mut().interactable.tentative = false;
         }
-    }
-    pub fn bounding_box(&self) -> VSBox {
-        let pts = self.set.iter().flat_map(|d| {
-            [
-                d.0.borrow().interactable.bounds.min,
-                d.0.borrow().interactable.bounds.max,
-            ]
-            .into_iter()
-        });
-        SSBox::from_points(pts).cast().cast_unit()
     }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         for d in &self.set {
@@ -177,6 +182,7 @@ impl Devices {
 }
 
 impl SchematicSet for Devices {
+    /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
     fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
@@ -193,5 +199,16 @@ impl SchematicSet for Devices {
             }
         }
         None
+    }
+    /// returns the bounding box of all devices
+    fn bounding_box(&self) -> VSBox {
+        let pts = self.set.iter().flat_map(|d| {
+            [
+                d.0.borrow().interactable.bounds.min,
+                d.0.borrow().interactable.bounds.max,
+            ]
+            .into_iter()
+        });
+        SSBox::from_points(pts).cast().cast_unit()
     }
 }

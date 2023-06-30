@@ -73,12 +73,16 @@ impl paprika::PkSpiceManager for SpManager {
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
+    /// returns the first BaseElement after skip which intersects with curpos_ssp, if any.
     fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
         skip: &mut usize,
         count: &mut usize,
     ) -> Option<BaseElement>;
+
+    /// returns the bounding box of all contained elements
+    fn bounding_box(&self) -> VSBox;
 }
 
 #[derive(Debug, Clone)]
@@ -639,7 +643,7 @@ impl Schematic {
     }
     /// returns the bouding box of all elements on canvas
     pub fn bounding_box(&self) -> VSBox {
-        let bbn = VSBox::from_points(self.nets.graph.nodes().map(|x| x.0.cast().cast_unit()));
+        let bbn = self.nets.bounding_box();
         let bbi = self.devices.bounding_box();
         bbn.union(&bbi)
     }
@@ -702,6 +706,8 @@ impl Schematic {
                 }
                 BaseElement::Device(d) => {
                     d.0.borrow_mut().transform(sst);
+                    // if moving an existing device, does nothing
+                    // inserts the device if placing a new device
                     self.devices.insert(d);
                 }
             }

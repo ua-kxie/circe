@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::{
     schematic::{interactable::Interactive, BaseElement, SchematicSet},
-    transforms::{SSBox, SSPoint, SSTransform, VCTransform},
+    transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
 };
 use petgraph::algo::tarjan_scc;
 use petgraph::graphmap::GraphMap;
@@ -86,9 +86,12 @@ impl Default for Nets {
 }
 
 impl Nets {
+    /// this function is called before netlisting
     pub fn pre_netlist(&mut self) {
+        // reset floating nets - new netlists generated with same floating net names, no need for floating net names to be unique across different netlists
         self.label_manager.rst_floating_nets();
     }
+    /// returns the netname at coordinate ssp. If no net at ssp, returns a unique net name not used anywhere else (floating net)
     pub fn net_at(&mut self, ssp: SSPoint) -> String {
         for e in self.graph.all_edges() {
             if e.2.interactable.contains_ssp(ssp) {
@@ -97,6 +100,7 @@ impl Nets {
         }
         self.label_manager.new_floating_label()
     }
+    /// set tentatives flag for individual net segments based on ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         for e in self.graph.all_edges_mut() {
             if e.2.interactable.bounds.intersects(ssb) {
@@ -104,6 +108,7 @@ impl Nets {
             }
         }
     }
+    /// returns an iterator over all net edges which are under tentative selection
     pub fn tentatives(&self) -> impl Iterator<Item = NetEdge> + '_ {
         self.graph.all_edges().filter_map(|e| {
             if e.2.interactable.tentative {
@@ -113,6 +118,7 @@ impl Nets {
             }
         })
     }
+    /// delete all nets
     pub fn clear(&mut self) {
         self.graph.clear();
     }
@@ -162,6 +168,8 @@ impl Nets {
         }
         label.unwrap()
     }
+    /// this function is called whenever schematic is changed. Ensures all connected nets have the same net name, overlapping segments are merged, etc.
+    /// extra_vertices are coordinates where net segments should be bisected (device ports)
     pub fn prune(&mut self, extra_vertices: Vec<SSPoint>) {
         // extra vertices to add, e.g. ports
         let all_vertices: Vec<NetVertex> = self.graph.nodes().collect();
@@ -280,18 +288,16 @@ impl Nets {
             taken_net_names.push(self.unify_labels(edges, &taken_net_names));
         }
     }
-    pub fn edge_occupies_ssp(&self, ssp: SSPoint) -> bool {
+    /// returns true if any net segment intersects with ssp
+    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         for (_, _, edge) in self.graph.all_edges() {
             if edge.interactable.contains_ssp(ssp) {
-                // does not include endpoints
                 return true;
             }
         }
         false
     }
-    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.edge_occupies_ssp(ssp)
-    }
+    /// add net segments to connect src and dst
     pub fn route(&mut self, src: SSPoint, dst: SSPoint) {
         // pathfinding?
         // for now, just force edges to be vertical or horizontal
@@ -351,31 +357,35 @@ impl Nets {
             }
         }
     }
+    /// merge other into self. extra_vertices are coordinates where net segments should be bisected (device ports)
     pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
         for edge in other.graph.all_edges() {
             let mut ew = edge.2.clone();
             ew.interactable = NetEdge::interactable(edge.0 .0, edge.1 .0, false);
-            // ew.label = Some(self.label_manager.new_label());
             self.graph.add_edge(edge.0, edge.1, ew); // adding edges also add nodes if they do not already exist
         }
         self.prune(extra_vertices);
     }
+    /// applies transformation sst to NetEdge e. Moves an existing edge or adds a new one with the transformation applied.
     pub fn transform(&mut self, mut e: NetEdge, sst: SSTransform) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
         e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
     }
+    /// reset tentative flags for all net edges
     pub fn clear_tentatives(&mut self) {
         for e in self.graph.all_edges_mut() {
             e.2.interactable.tentative = false;
         }
     }
+    /// deletes NetEdge e from self
     pub fn delete_edge(&mut self, e: &NetEdge) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
     }
 }
 
 impl SchematicSet for Nets {
+    /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
     fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
@@ -392,6 +402,9 @@ impl SchematicSet for Nets {
             }
         }
         None
+    }
+    fn bounding_box(&self) -> crate::transforms::VSBox {
+        VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
     }
 }
 

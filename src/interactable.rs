@@ -2,10 +2,12 @@
 
 use crate::transforms::{SSBox, SSPoint, SSTransform, SchematicSpace};
 
+/// trait to facillitates and unify implementation of interactive logic
 pub trait Interactive {
     fn transform(&mut self, sst: SSTransform);
 }
 
+/// struct to facillitates and unify implementation of interactive logic through composition
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Interactable {
     /// the bounds of the interactable. e.g. mouse hover over this area should highlight the interactable.

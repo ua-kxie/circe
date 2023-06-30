@@ -2,7 +2,6 @@
 //! multiple devices can use the same parameter specifier. e.g. all devices can use the `Raw` paramter specifier, R L C can use `SingleValue`, etc.
 //! a device should be able to choose between all compatible parameter specifier
 
-use euclid::default;
 use iced::{
     widget::{button, text_input},
     Element, Length,

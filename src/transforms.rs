@@ -2,52 +2,23 @@
 
 use euclid::{Point2D, Transform2D};
 use iced::Point as IcedPoint;
+use serde::{Deserialize, Serialize};
 
-/// PhantomData tag used to denote the patch of screen being drawn on
+/// PhantomData tag used to denote the patch of screen being drawn on (f32)
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Deserialize,
-    serde::Serialize,
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize,
 )]
 pub struct CanvasSpace;
 
 /// PhantomData tag used to denote the f32 space on which the schematic is drawn
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Deserialize,
-    serde::Serialize,
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize,
 )]
 pub struct ViewportSpace;
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Deserialize,
-    serde::Serialize,
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize,
 )]
 pub struct SchematicSpace;
 
