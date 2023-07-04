@@ -34,7 +34,7 @@ impl std::hash::Hash for RcRDevice {
 }
 
 /// struct to keep track of unique IDs for all devices of a type
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ClassManager {
     // watermark keeps track of the last ID given out
     wm: usize,
@@ -51,7 +51,7 @@ impl ClassManager {
 }
 
 /// struct to keep track of unique IDs for all devices of all types
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct DevicesManager {
     gnd: ClassManager,
     r: ClassManager,
@@ -69,7 +69,7 @@ impl Default for DevicesManager {
 }
 
 /// struct containing all devices in schematic
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Devices {
     /// set of all devices
     set: HashSet<RcRDevice>,

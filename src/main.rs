@@ -4,13 +4,14 @@
 use std::fmt::Debug;
 
 mod transforms;
-use designer::DeviceDesigner;
+// use designer::DeviceDesigner;
 mod viewport;
 
 mod schematic;
-use schematic::Schematic;
+mod schematic_gui;
+use schematic_gui::Schematic;
 
-mod designer;
+// mod designer;
 mod interactable;
 
 use iced::{executor, Application, Command, Element, Settings, Theme};
@@ -33,7 +34,7 @@ pub struct Circe {
     /// schematic
     schematic: Schematic,
     /// intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
-    designer: DeviceDesigner,
+    // designer: DeviceDesigner,
 
     /// active tab index
     active_tab: usize,
@@ -41,8 +42,8 @@ pub struct Circe {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    DeviceDesignerMsg(designer::DeviceDesignerMsg),
-    SchematicMsg(schematic::SchematicMsg),
+    // DeviceDesignerMsg(designer::DeviceDesignerMsg),
+    SchematicMsg(schematic_gui::SchematicMsg),
 
     TabSel(usize),
 }
@@ -57,8 +58,7 @@ impl Application for Circe {
         (
             Circe {
                 schematic: Schematic::default(),
-                designer: DeviceDesigner::default(),
-
+                // designer: DeviceDesigner::default(),
                 active_tab: 0,
             },
             Command::none(),
@@ -74,9 +74,9 @@ impl Application for Circe {
             Msg::TabSel(i) => {
                 self.active_tab = i;
             }
-            Msg::DeviceDesignerMsg(device_designer_msg) => {
-                self.designer.update(device_designer_msg);
-            }
+            // Msg::DeviceDesignerMsg(device_designer_msg) => {
+            //     self.designer.update(device_designer_msg);
+            // }
             Msg::SchematicMsg(schematic_msg) => {
                 self.schematic.update(schematic_msg);
             }
@@ -86,7 +86,7 @@ impl Application for Circe {
 
     fn view(&self) -> Element<Msg> {
         let schematic = self.schematic.view().map(Msg::SchematicMsg);
-        let device_designer = self.designer.view().map(Msg::DeviceDesignerMsg);
+        // let device_designer = self.designer.view().map(Msg::DeviceDesignerMsg);
 
         let tabs = Tabs::with_tabs(
             self.active_tab,
@@ -94,7 +94,8 @@ impl Application for Circe {
                 (TabLabel::Text("Schematic".to_string()), schematic),
                 (
                     TabLabel::Text("Device Creator".to_string()),
-                    device_designer,
+                    // device_designer,
+                    iced::widget::text("placeholder").into(),
                 ),
             ],
             Msg::TabSel,

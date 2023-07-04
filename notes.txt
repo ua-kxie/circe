@@ -5,6 +5,7 @@ todo:
     vertical/horizontal mirroring
     area selection - contains and intersects by selection area is positive/negative
     device/wire copy/paste
+    gui toolbar
     connect devices with wire if ports overlap
     ctrl-z/undo/redo
     wiring pathfinder
