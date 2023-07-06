@@ -24,7 +24,9 @@ use std::{collections::HashSet, fs};
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
-    /// returns the first BaseElement after skip which intersects with curpos_ssp, if any.
+    /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
+    /// count is incremented by 1 for every element skipped over
+    /// skip is updated if an element is returned, equal to count
     fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
@@ -69,7 +71,11 @@ impl std::hash::Hash for BaseElement {
 #[derive(Debug, Clone, Copy)]
 pub enum SchematicContentMsg {
     Event(Event),
+    Wire,
     DcOp,
+
+    Reset,
+    Cycle,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -114,14 +120,36 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
     }
 
     fn events_handler(&self, event: Event) -> Option<SchematicContentMsg> {
-        if let Event::Keyboard(iced::keyboard::Event::KeyPressed {
-            key_code: iced::keyboard::KeyCode::Space,
-            modifiers: _,
-        }) = event
-        {
-            Some(SchematicContentMsg::DcOp)
-        } else {
-            Some(SchematicContentMsg::Event(event))
+        match (&self.state, event) {
+            (   // to be migrated to viewport - no state
+                _,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::Escape,
+                    modifiers: _,
+                }),
+            ) => Some(SchematicContentMsg::Reset),
+            (   // to be migrated to viewport - no state
+                _,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::C,
+                    modifiers: _,
+                }),
+            ) => Some(SchematicContentMsg::Cycle),
+            (
+                SchematicContentSt::Idle,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::W,
+                    modifiers: _,
+                }),
+            ) => Some(SchematicContentMsg::Wire),
+            (
+                SchematicContentSt::Idle,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::Space,
+                    modifiers: _,
+                }),
+            ) => Some(SchematicContentMsg::DcOp),
+            (_, _) => Some(SchematicContentMsg::Event(event)),
         }
     }
 
@@ -209,6 +237,25 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
     fn update(&mut self, msg: SchematicContentMsg, curpos_ssp: SSPoint) -> bool {
         let mut clear_passive = false;
         match msg {
+            SchematicContentMsg::Wire => {
+                self.state = SchematicContentSt::Wiring(None);
+            }
+            SchematicContentMsg::Reset => {
+                match self.state {
+                    SchematicContentSt::Idle => {
+                        self.selected.clear();
+                        clear_passive = true;
+                    }
+                    _ => {
+                        self.state = SchematicContentSt::Idle;
+                    }
+                }
+            }
+            SchematicContentMsg::Cycle => {
+                if let SchematicContentSt::Idle = self.state {
+                    self.infobarstr = self.tentative_next_by_ssp(curpos_ssp);
+                }
+            }
             SchematicContentMsg::Event(event) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
@@ -217,13 +264,6 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                 let mut state = self.state.clone();
                 match (&mut state, event) {
                     // wiring
-                    (
-                        _,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::W,
-                            modifiers: _,
-                        }),
-                    ) => state = SchematicContentSt::Wiring(None),
                     (
                         SchematicContentSt::Wiring(opt_ws),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
@@ -248,7 +288,7 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                         clear_passive = true;
                     }
 
-                    // drag/area select
+                    // drag/area select - todo move to viewport - content should allow viewport to discern areaselect or drag
                     (
                         SchematicContentSt::Idle,
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
@@ -371,23 +411,7 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                             state = SchematicContentSt::Moving(Some((ssp, ssp, sst)));
                         }
                     }
-                    // esc
-                    (
-                        st,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::Escape,
-                            modifiers: _,
-                        }),
-                    ) => match st {
-                        SchematicContentSt::Idle => {
-                            self.selected.clear();
-                            clear_passive = true;
-                        }
-                        _ => {
-                            state = SchematicContentSt::Idle;
-                        }
-                    },
-                    // delete
+                    // delete - todo move to viewport - send a message down
                     (
                         SchematicContentSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
@@ -397,16 +421,6 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                     ) => {
                         self.delete_selected();
                         clear_passive = true;
-                    }
-                    // cycle
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::C,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        self.infobarstr = self.tentative_next_by_ssp(curpos_ssp);
                     }
                     _ => {}
                 }
@@ -427,8 +441,7 @@ impl SchematicContent {
     }
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
-        let mut skip = self.selskip.saturating_sub(1);
-        self.selskip = skip;
+        let mut skip = self.selskip;
         self.infobarstr = self.tentative_by_sspoint(curpos_ssp, &mut skip);
 
         let mut stcp = self.state.clone();
@@ -501,7 +514,7 @@ impl SchematicContent {
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
     pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) -> Option<String> {
-        let mut skip = self.selskip;
+        let mut skip = self.selskip.wrapping_add(1);
         let s = self.tentative_by_sspoint(ssp, &mut skip);
         self.selskip = skip;
         s
@@ -530,7 +543,7 @@ impl SchematicContent {
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
-            let mut count = 0;
+            let mut count = 0;  // tracks the number of skipped elements
             if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
                 return Some(e);
             }

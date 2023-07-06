@@ -183,6 +183,7 @@ impl Devices {
 
 impl SchematicSet for Devices {
     /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
+    /// count is updated to track the number of elements skipped over
     fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
@@ -191,10 +192,11 @@ impl SchematicSet for Devices {
     ) -> Option<BaseElement> {
         for d in &self.set {
             if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
-                *count += 1;
-                if *count > *skip {
+                if *count >= *skip {
                     *skip = *count;
                     return Some(BaseElement::Device(d.clone()));
+                } else {
+                    *count += 1;
                 }
             }
         }

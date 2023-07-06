@@ -2,9 +2,10 @@
 //! includes paramter editor, toolbar, and the canvas itself
 
 use crate::schematic::{RcRDevice, SchematicContent, SchematicContentMsg};
+use crate::viewport::ViewportContentMsgs;
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
-use iced::widget::row;
+use iced::widget::{button, row};
 use iced::Length;
 use std::sync::Arc;
 
@@ -167,40 +168,44 @@ impl IcedStruct<SchematicMsg> for Schematic {
             self.viewport.curpos_ssp().x,
             self.viewport.curpos_ssp().y
         );
-        let net_name = self.net_name.as_deref().unwrap_or_default();
-
         let canvas = self.viewport.view().map(SchematicMsg::ViewportEvt);
         let pe =
             param_editor::param_editor(self.text.clone(), SchematicMsg::TextInputChanged, || {
                 SchematicMsg::TextInputSubmit
             });
-
         // let mut pe = text("");
         // if let Some(active_device) = &self.active_device {
         //     active_device.0.borrow().class().
         // }
-        let schematic = iced::widget::row![
-            pe,
-            iced::widget::column![
-                canvas,
-                row![
-                    iced::widget::text(str_ssp)
-                        .size(16)
-                        .height(16)
-                        .vertical_alignment(iced::alignment::Vertical::Center),
-                    iced::widget::text(&format!("{:04.1}", self.viewport.vc_scale()))
-                        .size(16)
-                        .height(16)
-                        .vertical_alignment(iced::alignment::Vertical::Center),
-                    iced::widget::text(net_name)
-                        .size(16)
-                        .height(16)
-                        .vertical_alignment(iced::alignment::Vertical::Center),
-                ]
-                .spacing(10)
+        let infobar = row![
+            iced::widget::text(str_ssp)
+                .size(16)
+                .height(16)
+                .vertical_alignment(iced::alignment::Vertical::Center),
+            iced::widget::text(&format!("{:04.1}", self.viewport.vc_scale()))
+                .size(16)
+                .height(16)
+                .vertical_alignment(iced::alignment::Vertical::Center),
+            iced::widget::text(self.net_name.as_deref().unwrap_or_default())
+                .size(16)
+                .height(16)
+                .vertical_alignment(iced::alignment::Vertical::Center),
+        ]
+        .spacing(10);
+        let toolbar =
+            row![
+                button("wire").on_press(SchematicMsg::ViewportEvt(ViewportContentMsgs {
+                    content_msg: Some(SchematicContentMsg::Wire),
+                    viewport_msg: None
+                })),
             ]
-            .width(Length::Fill)
+            .width(Length::Fill);
+
+        let schematic = iced::widget::column![
+            toolbar,
+            iced::widget::row![pe, iced::widget::column![canvas, infobar,]]
         ];
+
         schematic.into()
     }
 }
@@ -260,7 +265,7 @@ mod param_editor {
                     .width(50)
                     .on_input(Evt::InputChanged)
                     .on_submit(Evt::InputSubmit),
-                button("enter"),
+                button("enter").on_press(Evt::InputSubmit),
             ]
             .width(Length::Shrink)
             .into()

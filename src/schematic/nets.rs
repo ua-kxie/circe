@@ -386,6 +386,7 @@ impl Nets {
 
 impl SchematicSet for Nets {
     /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
+    /// count is updated to track the number of elements skipped over
     fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
@@ -394,10 +395,11 @@ impl SchematicSet for Nets {
     ) -> Option<BaseElement> {
         for e in self.graph.all_edges_mut() {
             if e.2.interactable.contains_ssp(curpos_ssp) {
-                *count += 1;
-                if *count > *skip {
+                if *count >= *skip {
                     *skip = *count;
                     return Some(BaseElement::NetEdge(e.2.clone()));
+                } else {
+                    *count += 1;
                 }
             }
         }

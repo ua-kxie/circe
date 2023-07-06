@@ -63,8 +63,7 @@ pub struct DeviceDesigner {
 
 impl Default for DeviceDesigner {
     fn default() -> Self {
-        let vct = VCTransform::identity();
-        vct.then_scale(1.5, 1.5);
+        let vct = VCTransform::identity().then_scale(1.5, 1.5);
         let viewport = Viewport::new(
             8.0,
             0.1,
