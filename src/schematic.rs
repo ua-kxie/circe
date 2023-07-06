@@ -73,9 +73,6 @@ pub enum SchematicContentMsg {
     Event(Event),
     Wire,
     DcOp,
-
-    Reset,
-    Cycle,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -121,20 +118,6 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
 
     fn events_handler(&self, event: Event) -> Option<SchematicContentMsg> {
         match (&self.state, event) {
-            (   // to be migrated to viewport - no state
-                _,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::Escape,
-                    modifiers: _,
-                }),
-            ) => Some(SchematicContentMsg::Reset),
-            (   // to be migrated to viewport - no state
-                _,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::C,
-                    modifiers: _,
-                }),
-            ) => Some(SchematicContentMsg::Cycle),
             (
                 SchematicContentSt::Idle,
                 Event::Keyboard(iced::keyboard::Event::KeyPressed {
@@ -239,22 +222,6 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
         match msg {
             SchematicContentMsg::Wire => {
                 self.state = SchematicContentSt::Wiring(None);
-            }
-            SchematicContentMsg::Reset => {
-                match self.state {
-                    SchematicContentSt::Idle => {
-                        self.selected.clear();
-                        clear_passive = true;
-                    }
-                    _ => {
-                        self.state = SchematicContentSt::Idle;
-                    }
-                }
-            }
-            SchematicContentMsg::Cycle => {
-                if let SchematicContentSt::Idle = self.state {
-                    self.infobarstr = self.tentative_next_by_ssp(curpos_ssp);
-                }
             }
             SchematicContentMsg::Event(event) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
@@ -432,6 +399,26 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
         }
         clear_passive
     }
+    fn rst(&mut self) -> bool {
+        match self.state {
+            SchematicContentSt::Idle => {
+                self.selected.clear();
+                true
+            }
+            _ => {
+                self.state = SchematicContentSt::Idle;
+                false
+            }
+        }
+    }
+    fn cycle(&mut self, curpos_ssp: SSPoint) -> bool {
+        if let SchematicContentSt::Idle = self.state {
+            self.infobarstr = self.tentative_next_by_ssp(curpos_ssp);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl SchematicContent {
@@ -543,7 +530,7 @@ impl SchematicContent {
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
         loop {
-            let mut count = 0;  // tracks the number of skipped elements
+            let mut count = 0; // tracks the number of skipped elements
             if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
                 return Some(e);
             }

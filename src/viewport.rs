@@ -35,6 +35,8 @@ pub enum ViewportState {
 pub enum ViewportMsg {
     NewView(VCTransform, f32, CSPoint),
     CursorMoved(CSPoint),
+    ContentSingleTentativeCycle(SSPoint),
+    ContentRst,
 }
 
 /// message type that is the union of content and viewport messages - allows content and viewport to process events simultaneously
@@ -59,6 +61,18 @@ pub trait ViewportContent<ContentMsg> {
     fn draw_passive(&self, vct: VCTransform, scale: f32, frame: &mut Frame);
     /// returns the bounding box of all elements in content
     fn bounds(&self) -> VSBox;
+    /// called when the user presses esc. Clear selection, reset state, etc. Returns whether or not to clear passive cache
+    fn rst(&mut self) -> bool {
+        false
+    }
+    /// called when the user cycles single selection (c key). Returns whether or not to clear passive cache
+    fn cycle(&mut self, curpos_ssp: SSPoint) -> bool {
+        false
+    }
+    /// wip - area select - only if left click on empty (ssp, vsp?). Returns whether or not to clear passive cache
+    fn area_select(&mut self) -> bool {
+        false
+    }
 }
 
 pub struct Viewport<Content, ContentMsg>
@@ -214,6 +228,12 @@ where
             Some(ViewportMsg::CursorMoved(curpos_csp)) => {
                 self.curpos_update(curpos_csp);
             }
+            Some(ViewportMsg::ContentSingleTentativeCycle(curpos_ssp)) => {
+                self.content.cycle(curpos_ssp);
+            }
+            Some(ViewportMsg::ContentRst) => {
+                self.content.rst();
+            }
             None => {}
         }
         if let Some(msg) = msgs.content_msg {
@@ -338,6 +358,7 @@ where
                 }
                 stcp = ViewportState::None;
             }
+            // fit view to content
             (
                 ViewportState::None,
                 Event::Keyboard(iced::keyboard::Event::KeyPressed {
@@ -349,6 +370,22 @@ where
                 let csp = self.curpos_csp();
                 viewport_msg = Some(self.display_bounds(bounds_csb, vsb, csp));
             }
+            // esc key / reset
+            (
+                _,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::Escape,
+                    modifiers: _,
+                }),
+            ) => viewport_msg = Some(ViewportMsg::ContentRst),
+            (
+                // to be migrated to viewport - no state
+                _,
+                Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::C,
+                    modifiers: _,
+                }),
+            ) => viewport_msg = Some(ViewportMsg::ContentSingleTentativeCycle(self.curpos_ssp())),
             _ => {}
         }
         *state = stcp;
