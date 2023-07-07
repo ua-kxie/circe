@@ -94,6 +94,10 @@ impl SchematicElement for CircuitElement {
             CircuitElement::Device(d) => d.0.borrow().interactable.contains_ssp(ssp),
         }
     }
+
+    fn set_tentative(&mut self) {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -154,12 +158,40 @@ impl Drawable for Circuit {
     }
 }
 
-impl schematic::Content for Circuit {
+impl schematic::Content<CircuitElement> for Circuit {
     fn bounds(&self) -> VSBox {
         todo!()
     }
 
     fn update_cursor_ssp(&mut self, ssp: SSPoint) {
+        todo!()
+    }
+
+    fn clear_tentatives(&mut self) {
+        todo!()
+    }
+
+    fn tentatives_by_ssbox(&mut self, ssb: SSBox) {
+        todo!()
+    }
+
+    fn tentatives(&self) -> Vec<CircuitElement> {
+        todo!()
+    }
+
+    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+        todo!()
+    }
+
+    fn delete(&mut self, targets: &HashSet<CircuitElement>) {
+        todo!()
+    }
+
+    fn transform(&mut self, targets: &HashSet<CircuitElement>) {
+        todo!()
+    }
+
+    fn selectable(&self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<CircuitElement> {
         todo!()
     }
 }

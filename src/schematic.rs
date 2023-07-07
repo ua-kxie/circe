@@ -21,6 +21,7 @@ use iced::{
     Color, Size,
 };
 use nets::{NetEdge, NetVertex, Nets};
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::{collections::HashSet, fs};
 
@@ -70,10 +71,11 @@ use std::{collections::HashSet, fs};
 //     }
 // }
 
-pub trait SchematicElement: Hash + Eq + Drawable {
+pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     // device designer: line, arc
     // circuit: wire, device
     fn contains_ssp(&self, ssp: SSPoint) -> bool;
+    fn set_tentative(&mut self);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -99,17 +101,24 @@ impl SchematicSt {
     }
 }
 
-pub trait Content: Drawable + Default {
+pub trait Content<T>: Drawable + Default where T: SchematicElement {
     // ex. wires + devices
     fn bounds(&self) -> VSBox;
     fn update_cursor_ssp(&mut self, ssp: SSPoint);
+    fn clear_tentatives(&mut self);
+    fn tentatives_by_ssbox(&mut self, ssb: SSBox);
+    fn tentatives(&self) -> Vec<T>;
+    fn occupies_ssp(&self, ssp: SSPoint) -> bool;
+    fn delete(&mut self, targets: &HashSet<T>);
+    fn transform(&mut self, targets: &HashSet<T>);
+    fn selectable(&self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<T>;
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
 #[derive(Debug, Clone)]
 pub struct Schematic<C, T>
 where
-    C: Content,
+    C: Content<T>,
     T: SchematicElement,
 {
     curpos_ssp: SSPoint,
@@ -121,7 +130,7 @@ where
 
 impl<C, T> Default for Schematic<C, T>
 where
-    C: Content,
+    C: Content<T>,
     T: SchematicElement,
 {
     fn default() -> Self {
@@ -137,7 +146,7 @@ where
 
 impl<C, T> viewport::Content for Schematic<C, T>
 where
-    C: Content,
+    C: Content<T>,
     T: SchematicElement,
 {
     type ContentMsg = SchematicMsg;
@@ -321,8 +330,7 @@ where
                     ) => {
                         if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
                             // end transform if already started
-                            self.move_selected(SchematicSt::move_transform(ssp0, ssp1, vvt));
-                            self.prune_nets();
+                            self.transform_selected(SchematicSt::move_transform(ssp0, ssp1, vvt));
                             state = SchematicSt::Idle;
                             clear_passive = true;
                         } else {
@@ -363,14 +371,15 @@ where
             }
         }
     }
-    fn cycle(&mut self, curpos_ssp: SSPoint) {
+    fn cycle(&mut self, curpos_ssp: SSPoint) -> bool {
         self.tentative_next_by_ssp(curpos_ssp);
+        true
     }
 }
 
 impl<C, T> Schematic<C, T>
 where
-    C: Content,
+    C: Content<T>,
     T: SchematicElement,
 {
     /// update schematic cursor position
@@ -393,43 +402,41 @@ where
     }
     /// clear tentative selections (cursor hover highlight)
     fn clear_tentatives(&mut self) {
-        self.devices.clear_tentatives();
-        self.nets.clear_tentatives();
+        self.content.clear_tentatives();
     }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
         self.clear_tentatives();
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-        self.devices.tentatives_by_ssbox(&ssb_p);
-        self.nets.tentatives_by_ssbox(&ssb_p);
+        self.content.tentatives_by_ssbox(ssb_p);
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
         self.clear_tentatives();
-        if let Some(e) = self.selectable(ssp, skip) {
+        if let Some(mut e) = self.selectable(ssp, skip) {
             e.set_tentative();
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
-    pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) -> Option<String> {
+    pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) {
         let mut skip = self.selskip.wrapping_add(1);
         let s = self.tentative_by_sspoint(ssp, &mut skip);
         self.selskip = skip;
-        s
     }
     /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
         let _: Vec<_> = self
             .content
             .tentatives()
+            .iter()
             .map(|e| {
-                self.selected.insert(e);
+                self.selected.insert(e.clone());
             })
             .collect();
     }
     /// returns true if ssp is occupied by an element
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
+        self.content.occupies_ssp(ssp)
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<T> {
@@ -448,19 +455,13 @@ where
     /// delete all elements which appear in the selected array
     pub fn delete_selected(&mut self) {
         if let SchematicSt::Idle = self.state {
-            for e in &self.selected {
-                e.delete();
-            }
+            self.content.delete(&self.selected);
             self.selected.clear();
-            self.prune_nets();
         }
     }
     /// move all elements in the selected array by sst
-    fn move_selected(&mut self, sst: SSTransform) {
-        let selected = self.selected.clone();
+    fn transform_selected(&mut self, sst: SSTransform) {
+        self.content.transform(&self.selected);
         self.selected.clear();
-        for e in selected {
-            e.transform(sst);
-        }
     }
 }
