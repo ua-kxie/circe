@@ -10,10 +10,8 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 3. Run `cago run`
 
 Alternatively, clone the repository with the following:
-> `git clone --recurse-submodules https://github.com/ua-kxie/circe.git`
-
-followed by 
-> `cargo run`
+`git clone --recurse-submodules https://github.com/ua-kxie/circe.git`
+followed by `cargo run`
 
 ### Controls: 
 * click wires or device to select  
