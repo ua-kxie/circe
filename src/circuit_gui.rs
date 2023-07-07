@@ -1,8 +1,8 @@
 //! Schematic GUI
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::schematic::{RcRDevice, SchematicContent, SchematicContentMsg};
-use crate::viewport::ViewportContentMsgs;
+use crate::schematic::{RcRDevice, Schematic, SchematicMsg};
+use crate::viewport::ContentMsgs;
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::{button, row};
@@ -51,15 +51,15 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum SchematicMsg {
-    ViewportEvt(viewport::ViewportContentMsgs<SchematicContentMsg>),
+    ViewportEvt(viewport::ContentMsgs<SchematicMsg>),
     TextInputChanged(String),
     TextInputSubmit,
 }
 
 /// schematic
-pub struct Schematic {
+pub struct Circuit {
     /// viewport
-    viewport: Viewport<SchematicContent, SchematicContentMsg>,
+    viewport: Viewport<Schematic, SchematicMsg>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -73,7 +73,7 @@ pub struct Schematic {
     /// ngspice library
     lib: PkSpice<SpManager>,
 }
-impl Default for Schematic {
+impl Default for Circuit {
     fn default() -> Self {
         let spmanager = Arc::new(SpManager::new());
         let mut lib;
@@ -115,7 +115,7 @@ impl Default for Schematic {
         }
         lib.init(Some(spmanager.clone()));
         let vct = VCTransform::identity().then_scale(10.0, -10.0);
-        Schematic {
+        Circuit {
             viewport: viewport::Viewport::new(1.0, 1.0, 100.0, vct),
             net_name: Default::default(),
             active_device: Default::default(),
@@ -126,7 +126,7 @@ impl Default for Schematic {
     }
 }
 
-impl IcedStruct<SchematicMsg> for Schematic {
+impl IcedStruct<SchematicMsg> for Circuit {
     fn update(&mut self, msg: SchematicMsg) {
         match msg {
             SchematicMsg::TextInputChanged(s) => {
@@ -141,7 +141,7 @@ impl IcedStruct<SchematicMsg> for Schematic {
             SchematicMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
-                if let Some(SchematicContentMsg::DcOp) = msgs.content_msg {
+                if let Some(SchematicMsg::DcOp) = msgs.content_msg {
                     self.viewport.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
@@ -194,8 +194,8 @@ impl IcedStruct<SchematicMsg> for Schematic {
         .spacing(10);
         let toolbar =
             row![
-                button("wire").on_press(SchematicMsg::ViewportEvt(ViewportContentMsgs {
-                    content_msg: Some(SchematicContentMsg::Wire),
+                button("wire").on_press(SchematicMsg::ViewportEvt(ContentMsgs {
+                    content_msg: Some(SchematicMsg::Wire),
                     viewport_msg: None
                 })),
             ]

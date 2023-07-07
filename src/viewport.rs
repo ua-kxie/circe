@@ -41,14 +41,14 @@ pub enum ViewportMsg {
 
 /// message type that is the union of content and viewport messages - allows content and viewport to process events simultaneously
 #[derive(Clone, Copy, Debug)]
-pub struct ViewportContentMsgs<ContentMsg> {
+pub struct ContentMsgs<ContentMsg> {
     /// raw canvas event
     pub content_msg: Option<ContentMsg>,
     /// viewport message processed from canvas event
     pub viewport_msg: Option<ViewportMsg>,
 }
 
-pub trait ViewportContent<ContentMsg> {
+pub trait Content<ContentMsg> {
     /// returns the mouse interaction to display on canvas based on content state
     fn mouse_interaction(&self) -> mouse::Interaction;
     /// returns a ContentMsg which will be processed
@@ -75,12 +75,12 @@ pub trait ViewportContent<ContentMsg> {
     }
 }
 
-pub struct Viewport<Content, ContentMsg>
+pub struct Viewport<C, ContentMsg>
 where
-    Content: Default + ViewportContent<ContentMsg>,
+    C: Default + Content<ContentMsg>,
 {
     /// Contents displayed through this viewport
-    pub content: Content,
+    pub content: C,
     /// phantom data to mark ContentMsg type
     content_msg: std::marker::PhantomData<ContentMsg>,
     /// iced canvas graphical cache, cleared every frame
@@ -107,10 +107,10 @@ where
     scale: f32,
 }
 
-impl<Content, ContentMsg> canvas::Program<ViewportContentMsgs<ContentMsg>>
-    for Viewport<Content, ContentMsg>
+impl<C, ContentMsg> canvas::Program<ContentMsgs<ContentMsg>>
+    for Viewport<C, ContentMsg>
 where
-    Content: Default + ViewportContent<ContentMsg>,
+    C: Default + Content<ContentMsg>,
 {
     type State = ViewportState;
 
@@ -120,7 +120,7 @@ where
         event: Event,
         bounds: Rectangle,
         cursor: Cursor,
-    ) -> (event::Status, Option<ViewportContentMsgs<ContentMsg>>) {
+    ) -> (event::Status, Option<ContentMsgs<ContentMsg>>) {
         let opt_curpos: Option<CSPoint> =
             cursor.position_in(&bounds).map(|p| Point::from(p).into());
         let bounds_csb = CSBox::from_points([
@@ -211,12 +211,12 @@ where
     }
 }
 
-impl<Content, ContentMsg> IcedStruct<ViewportContentMsgs<ContentMsg>>
-    for Viewport<Content, ContentMsg>
+impl<C, CMsg> IcedStruct<ContentMsgs<CMsg>>
+    for Viewport<C, CMsg>
 where
-    Content: Default + ViewportContent<ContentMsg>,
+    C: Default + Content<CMsg>,
 {
-    fn update(&mut self, msgs: ViewportContentMsgs<ContentMsg>) {
+    fn update(&mut self, msgs: ContentMsgs<CMsg>) {
         match msgs.viewport_msg {
             Some(ViewportMsg::NewView(vct, zoom_scale, curpos_csp)) => {
                 self.vct = vct;
@@ -243,7 +243,7 @@ where
         }
     }
 
-    fn view(&self) -> iced::Element<ViewportContentMsgs<ContentMsg>> {
+    fn view(&self) -> iced::Element<ContentMsgs<CMsg>> {
         iced::widget::canvas(self)
             .width(Length::Fill)
             .height(Length::Fill)
@@ -251,9 +251,9 @@ where
     }
 }
 
-impl<Content, ContentMsg> Viewport<Content, ContentMsg>
+impl<C, ContentMsg> Viewport<C, ContentMsg>
 where
-    Content: Default + ViewportContent<ContentMsg>,
+    C: Default + Content<ContentMsg>,
 {
     pub fn new(scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransform) -> Self {
         Viewport {
@@ -278,7 +278,7 @@ where
         event: iced::widget::canvas::Event,
         bounds_csb: CSBox,
         curpos_csp: CSPoint,
-    ) -> Option<ViewportContentMsgs<ContentMsg>> {
+    ) -> Option<ContentMsgs<ContentMsg>> {
         let mut viewport_msg = None;
         let mut stcp = state.clone();
         match (&mut stcp, event) {
@@ -391,7 +391,7 @@ where
         *state = stcp;
 
         let content_msg = self.content.events_handler(event);
-        Some(ViewportContentMsgs {
+        Some(ContentMsgs {
             content_msg,
             viewport_msg,
         })
