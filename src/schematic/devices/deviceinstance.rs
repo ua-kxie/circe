@@ -18,7 +18,7 @@ use crate::{
 use std::hash::Hash;
 
 /// device identifier
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     /// prefix which determines device type in NgSpice - a few characters at most
     id_prefix: &'static str,
@@ -70,7 +70,7 @@ impl Hash for Identifier {
 }
 
 /// A device - e.g. a resistor, bjt, voltage source, ground
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Device {
     /// id which uniquely identifies the device in netlist
     id: Identifier,

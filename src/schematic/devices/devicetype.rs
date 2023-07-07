@@ -204,7 +204,7 @@ pub trait DeviceType {
 }
 
 /// DeviceClass enumerates the various classes of devices. E.g. ground, resistor, voltage source... etc
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DeviceClass {
     Gnd(gnd::Gnd),
     R(r::R),

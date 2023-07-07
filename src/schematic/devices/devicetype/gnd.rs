@@ -24,7 +24,7 @@ lazy_static! {
     };
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParamGnd {
     None,
 }
@@ -39,7 +39,7 @@ impl ParamGnd {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Gnd {
     pub params: ParamGnd,
     pub graphics: &'static Graphics,

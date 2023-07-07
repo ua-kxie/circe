@@ -21,6 +21,9 @@ use iced::{
 };
 use nets::{NetEdge, NetVertex, Nets};
 use std::{collections::HashSet, fs};
+use std::cell::RefCell;
+use std::ops::Deref;
+use std::rc::Rc;
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -82,6 +85,7 @@ pub enum SchematicContentSt {
     Wiring(Option<(Box<Nets>, SSPoint)>),
     AreaSelect(SSBox),
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
+    Copying(Option<(SSPoint, SSPoint, SSTransform)>),
     // first click, second click, transform for rotation/flip ONLY
 }
 
@@ -112,6 +116,7 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
             SchematicContentSt::Idle => mouse::Interaction::default(),
             SchematicContentSt::Wiring(_) => mouse::Interaction::Crosshair,
             SchematicContentSt::Moving(_) => mouse::Interaction::Grabbing,
+            SchematicContentSt::Copying(_) => mouse::Interaction::Grabbing,
             SchematicContentSt::AreaSelect(_) => mouse::Interaction::Crosshair,
         }
     }
@@ -175,7 +180,7 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                 };
                 frame.stroke(&path_builder.build(), stroke);
             }
-            SchematicContentSt::Moving(Some((ssp0, ssp1, sst))) => {
+            SchematicContentSt::Moving(Some((ssp0, ssp1, sst))) | SchematicContentSt::Copying(Some((ssp0, ssp1, sst))) => {
                 let vvt = transforms::sst_to_xxt::<ViewportSpace>(
                     SchematicContentSt::move_transform(ssp0, ssp1, sst),
                 );
@@ -344,6 +349,19 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                             SSTransform::identity(),
                         )));
                     }
+                    // copying
+                    (
+                        SchematicContentSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                            key_code: iced::keyboard::KeyCode::X,
+                                            modifiers: m,
+                                        }),
+                    ) => {
+                        if m.control() {
+                            self.copy_selected();
+                            state = SchematicContentSt::Copying(Some((curpos_ssp, curpos_ssp, SSTransform::identity())));
+                        }
+                    }
                     // moving
                     (
                         _,
@@ -376,6 +394,17 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                             let ssp: euclid::Point2D<_, _> = curpos_ssp;
                             let sst = SSTransform::identity();
                             state = SchematicContentSt::Moving(Some((ssp, ssp, sst)));
+                        }
+                    }
+                    (
+                        SchematicContentSt::Copying(mut opt_pts),
+                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
+                    ) => {
+                        if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
+                            self.move_copied(SchematicContentSt::move_transform(ssp0, ssp1, vvt));
+                            self.prune_nets();
+                            state = SchematicContentSt::Idle;
+                            clear_passive = true;
                         }
                     }
                     // delete - todo move to viewport - send a message down
@@ -441,7 +470,7 @@ impl SchematicContent {
                 ssb.max = curpos_ssp;
                 self.tentatives_by_ssbox(ssb);
             }
-            SchematicContentSt::Moving(Some((_ssp0, ssp1, _sst))) => {
+            SchematicContentSt::Moving(Some((_ssp0, ssp1, _sst))) | SchematicContentSt::Copying(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_ssp;
             }
             _ => {}
@@ -561,6 +590,49 @@ impl SchematicContent {
             self.prune_nets();
         }
     }
+
+    fn copy_selected(&mut self) {
+        let mut copy_hs: HashSet<BaseElement> = HashSet::new();
+        for be in self.selected.iter() {
+            match be {
+                BaseElement::NetEdge(n) => {
+                    let src = n.deref().src;
+                    let dst = n.deref().dst;
+                    let mut net = Box::<Nets>::default();
+
+
+                    let interactable = NetEdge::interactable(src, dst, false);
+                    let net_edge = NetEdge{
+                        src,
+                        dst,
+                        interactable,
+                        ..NetEdge::default()
+                    };
+
+                    net.graph.add_edge(NetVertex(src), NetVertex(dst), net_edge.clone());
+                    let base_element = BaseElement::NetEdge(net_edge);
+
+                    copy_hs.insert(base_element);
+                }
+                BaseElement::Device(rcr) => {
+                    //unwrap refcell
+                    let refcell_d = rcr.0.borrow();
+                    let device = refcell_d.deref().clone();
+
+                    //build BaseElement
+                    let d_refcell = RefCell::new(device);
+                    let d_refcnt = Rc::new(d_refcell);
+                    let rcr_device = RcRDevice(d_refcnt);
+
+                    let base_element = BaseElement::Device(rcr_device);
+
+                    copy_hs.insert(base_element);
+                }
+            }
+        }
+        self.selected = copy_hs;
+    }
+
     /// create netlist for the current schematic and save it.
     pub fn netlist(&mut self) {
         self.nets.pre_netlist();
@@ -588,6 +660,21 @@ impl SchematicContent {
                     d.0.borrow_mut().transform(sst);
                     // if moving an existing device, does nothing
                     // inserts the device if placing a new device
+                    self.devices.insert(d);
+                }
+            }
+        }
+    }
+    fn move_copied(&mut self, sst: SSTransform) {
+        let selected = self.selected.clone();
+        self.selected.clear();
+        for be in selected {
+            match be {
+                BaseElement::NetEdge(mut e) => {
+                    self.nets.copy_transform(e, sst)
+                }
+                BaseElement::Device(d) => {
+                    d.0.borrow_mut().transform(sst);
                     self.devices.insert(d);
                 }
             }
