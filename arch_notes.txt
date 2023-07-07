@@ -6,6 +6,8 @@ Page - elements/widget layout which may contain a viewport
             Plot - concrete types containing data
 
 Content <-> Page communication - how to do this?
+Content/Plot is a member of Page
+Viewport gets a reference
 
 add another layer
 viewport <-> schematic/plot <-> content

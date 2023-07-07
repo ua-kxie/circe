@@ -152,18 +152,18 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
                     if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
-                        self.viewport.content.op(pkvecvaluesall);
+                        self.circuit.op(pkvecvaluesall);
                     }
                 }
 
-                self.active_device = self.viewport.content.active_device();
+                self.active_device = self.circuit.active_device();
                 if let Some(rcrd) = &self.active_device {
                     self.text = rcrd.0.borrow().class().param_summary();
                 } else {
                     self.text = String::from("");
                 }
 
-                self.net_name = self.viewport.content.infobarstr.take();
+                self.net_name = self.circuit.infobarstr.take();
             }
         }
     }
