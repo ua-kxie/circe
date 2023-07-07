@@ -6,7 +6,7 @@ mod deviceinstance;
 mod devicetype;
 mod params;
 
-use super::{BaseElement, SchematicSet};
+use super::{SchematicElement};
 use crate::{
     transforms::{SSBox, SSPoint, VCTransform, VSBox},
     viewport::Drawable,
@@ -181,36 +181,40 @@ impl Devices {
     }
 }
 
-impl SchematicSet for Devices {
-    /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
-    /// count is updated to track the number of elements skipped over
-    fn selectable(
-        &mut self,
-        curpos_ssp: SSPoint,
-        skip: &mut usize,
-        count: &mut usize,
-    ) -> Option<BaseElement> {
-        for d in &self.set {
-            if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
-                if *count >= *skip {
-                    *skip = *count;
-                    return Some(BaseElement::Device(d.clone()));
-                } else {
-                    *count += 1;
-                }
-            }
-        }
-        None
-    }
-    /// returns the bounding box of all devices
-    fn bounding_box(&self) -> VSBox {
-        let pts = self.set.iter().flat_map(|d| {
-            [
-                d.0.borrow().interactable.bounds.min,
-                d.0.borrow().interactable.bounds.max,
-            ]
-            .into_iter()
-        });
-        SSBox::from_points(pts).cast().cast_unit()
-    }
+// impl SchematicSet for Devices {
+//     /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
+//     /// count is updated to track the number of elements skipped over
+//     fn selectable(
+//         &mut self,
+//         curpos_ssp: SSPoint,
+//         skip: &mut usize,
+//         count: &mut usize,
+//     ) -> Option<BaseElement> {
+//         for d in &self.set {
+//             if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
+//                 if *count >= *skip {
+//                     *skip = *count;
+//                     return Some(BaseElement::Device(d.clone()));
+//                 } else {
+//                     *count += 1;
+//                 }
+//             }
+//         }
+//         None
+//     }
+//     /// returns the bounding box of all devices
+//     fn bounding_box(&self) -> VSBox {
+//         let pts = self.set.iter().flat_map(|d| {
+//             [
+//                 d.0.borrow().interactable.bounds.min,
+//                 d.0.borrow().interactable.bounds.max,
+//             ]
+//             .into_iter()
+//         });
+//         SSBox::from_points(pts).cast().cast_unit()
+//     }
+// }
+
+impl SchematicElement for RcRDevice {
+
 }

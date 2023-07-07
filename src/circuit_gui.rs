@@ -1,6 +1,7 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
+use crate::circuit::{Circuit, CircuitElement};
 use crate::circuit_gui;
 
 use crate::schematic::{RcRDevice, Schematic, SchematicMsg};
@@ -59,9 +60,9 @@ pub enum CircuitPageMsg {
 }
 
 /// schematic
-pub struct Circuit {
+pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic, SchematicMsg>,
+    viewport: Viewport<Schematic<Circuit, CircuitElement>, SchematicMsg>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -75,7 +76,7 @@ pub struct Circuit {
     /// ngspice library
     lib: PkSpice<SpManager>,
 }
-impl Default for Circuit {
+impl Default for CircuitPage {
     fn default() -> Self {
         let spmanager = Arc::new(SpManager::new());
         let mut lib;
@@ -117,7 +118,7 @@ impl Default for Circuit {
         }
         lib.init(Some(spmanager.clone()));
         let vct = VCTransform::identity().then_scale(10.0, -10.0);
-        Circuit {
+        CircuitPage {
             viewport: viewport::Viewport::new(1.0, 1.0, 100.0, vct),
             net_name: Default::default(),
             active_device: Default::default(),
@@ -128,7 +129,7 @@ impl Default for Circuit {
     }
 }
 
-impl IcedStruct<SchematicMsg> for Circuit {
+impl IcedStruct<SchematicMsg> for CircuitPage {
     fn update(&mut self, msg: SchematicMsg) {
         match msg {
             SchematicMsg::TextInputChanged(s) => {

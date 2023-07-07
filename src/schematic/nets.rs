@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::{
-    schematic::{interactable::Interactive, BaseElement, SchematicSet},
+    schematic::{interactable::Interactive, SchematicElement},
     transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
 };
 use petgraph::algo::tarjan_scc;
@@ -384,31 +384,31 @@ impl Nets {
     }
 }
 
-impl SchematicSet for Nets {
-    /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
-    /// count is updated to track the number of elements skipped over
-    fn selectable(
-        &mut self,
-        curpos_ssp: SSPoint,
-        skip: &mut usize,
-        count: &mut usize,
-    ) -> Option<BaseElement> {
-        for e in self.graph.all_edges_mut() {
-            if e.2.interactable.contains_ssp(curpos_ssp) {
-                if *count >= *skip {
-                    *skip = *count;
-                    return Some(BaseElement::NetEdge(e.2.clone()));
-                } else {
-                    *count += 1;
-                }
-            }
-        }
-        None
-    }
-    fn bounding_box(&self) -> crate::transforms::VSBox {
-        VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
-    }
-}
+// impl SchematicSet for Nets {
+//     /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
+//     /// count is updated to track the number of elements skipped over
+//     fn selectable(
+//         &mut self,
+//         curpos_ssp: SSPoint,
+//         skip: &mut usize,
+//         count: &mut usize,
+//     ) -> Option<BaseElement> {
+//         for e in self.graph.all_edges_mut() {
+//             if e.2.interactable.contains_ssp(curpos_ssp) {
+//                 if *count >= *skip {
+//                     *skip = *count;
+//                     return Some(BaseElement::NetEdge(e.2.clone()));
+//                 } else {
+//                     *count += 1;
+//                 }
+//             }
+//         }
+//         None
+//     }
+//     fn bounding_box(&self) -> crate::transforms::VSBox {
+//         VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
+//     }
+// }
 
 impl Drawable for Nets {
     fn draw_persistent(
@@ -448,4 +448,8 @@ impl Drawable for Nets {
             edge.draw_preview(vct, vcscale, frame)
         }
     }
+}
+
+impl SchematicElement for NetEdge {
+    
 }

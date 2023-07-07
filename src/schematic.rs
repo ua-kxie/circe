@@ -81,7 +81,7 @@ pub enum SchematicMsg {
     NewState(SchematicSt),
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum SchematicSt {
     #[default]
     Idle,

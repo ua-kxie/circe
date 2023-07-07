@@ -73,11 +73,18 @@ impl SchematicElement for CircuitElement {
 }
 
 #[derive(Debug, Clone, Copy)]
+enum DeviceType {
+    Gnd,
+    V,
+    R,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum CircuitMsg {
     Event(Event),
     Wire,
     DcOp,
-    NewDevice(CircuitElement),
+    NewDevice(DeviceType),
 }
 
 #[derive(Debug, Clone, Default)]
