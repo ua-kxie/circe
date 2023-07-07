@@ -449,7 +449,3 @@ impl Drawable for Nets {
         }
     }
 }
-
-impl SchematicElement for NetEdge {
-    
-}

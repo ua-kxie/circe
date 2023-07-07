@@ -48,13 +48,14 @@ pub struct ContentMsgs<ContentMsg> {
     pub viewport_msg: Option<ViewportMsg>,
 }
 
-pub trait Content<ContentMsg> {
+pub trait Content: Default {
+    type ContentMsg;
     /// returns the mouse interaction to display on canvas based on content state
     fn mouse_interaction(&self) -> mouse::Interaction;
     /// returns a ContentMsg which will be processed
-    fn events_handler(&self, event: Event) -> Option<ContentMsg>;
+    fn events_handler(&self, event: Event) -> Option<Self::ContentMsg>;
     /// mutate self based on ContentMsg. Returns whether to clear passive cache
-    fn update(&mut self, msg: ContentMsg, curpos_ssp: SSPoint) -> bool;
+    fn update(&mut self, msg: Self::ContentMsg, curpos_ssp: SSPoint) -> bool;
     /// draw geometry onto active frame
     fn draw_active(&self, vct: VCTransform, scale: f32, frame: &mut Frame);
     /// draw geometry onto passive frame
@@ -77,7 +78,7 @@ pub trait Content<ContentMsg> {
 
 pub struct Viewport<C, ContentMsg>
 where
-    C: Default + Content<ContentMsg>,
+    C: Default + Content,
 {
     /// Contents displayed through this viewport
     pub content: C,
@@ -109,7 +110,7 @@ where
 
 impl<C, ContentMsg> canvas::Program<ContentMsgs<ContentMsg>> for Viewport<C, ContentMsg>
 where
-    C: Default + Content<ContentMsg>,
+    C: Default + Content,
 {
     type State = ViewportState;
 
@@ -212,7 +213,7 @@ where
 
 impl<C, CMsg> IcedStruct<ContentMsgs<CMsg>> for Viewport<C, CMsg>
 where
-    C: Default + Content<CMsg>,
+    C: Content,
 {
     fn update(&mut self, msgs: ContentMsgs<CMsg>) {
         match msgs.viewport_msg {
@@ -251,7 +252,7 @@ where
 
 impl<C, ContentMsg> Viewport<C, ContentMsg>
 where
-    C: Default + Content<ContentMsg>,
+    C: Content,
 {
     pub fn new(scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransform) -> Self {
         Viewport {
@@ -259,7 +260,7 @@ where
             min_zoom,
             max_zoom,
             vct,
-            content: Content::default(),
+            content: C::default(),
             active_cache: Default::default(),
             passive_cache: Default::default(),
             background_cache: Default::default(),

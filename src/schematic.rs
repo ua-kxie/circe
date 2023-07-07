@@ -73,6 +73,7 @@ use std::{collections::HashSet, fs};
 pub trait SchematicElement: Hash + Eq + Drawable {
     // device designer: line, arc
     // circuit: wire, device
+    fn contains_ssp(&self, ssp: SSPoint) -> bool;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -98,25 +99,48 @@ impl SchematicSt {
     }
 }
 
-pub trait Content: Drawable {
+pub trait Content: Drawable + Default {
     // ex. wires + devices
-    fn bounds() -> VSBox;
+    fn bounds(&self) -> VSBox;
+    fn update_cursor_ssp(&mut self, ssp: SSPoint);
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Schematic<C, T>
 where
     C: Content,
     T: SchematicElement,
 {
+    curpos_ssp: SSPoint,
     state: SchematicSt,
     content: C,
     selskip: usize,
     selected: HashSet<T>,
 }
 
-impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
+impl<C, T> Default for Schematic<C, T>
+where
+    C: Content,
+    T: SchematicElement,
+{
+    fn default() -> Self {
+        Self {
+            state: Default::default(),
+            content: Default::default(),
+            selskip: Default::default(),
+            selected: Default::default(),
+            curpos_ssp: Default::default(),
+        }
+    }
+}
+
+impl<C, T> viewport::Content for Schematic<C, T>
+where
+    C: Content,
+    T: SchematicElement,
+{
+    type ContentMsg = SchematicMsg;
     fn mouse_interaction(&self) -> mouse::Interaction {
         match self.state {
             SchematicSt::Idle => mouse::Interaction::default(),
@@ -133,7 +157,7 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
             ) => {
                 let mut click_selected = false;
-                let curpos_ssp = self.curpos_ssp();
+                let curpos_ssp = self.curpos_ssp;
 
                 for s in &self.selected {
                     if s.contains_ssp(curpos_ssp) {
@@ -158,7 +182,7 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
 
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.content.draw_preview();
+        self.content.draw_preview(vct, vcscale, frame);
 
         match &self.state {
             SchematicSt::Idle => {}
@@ -207,7 +231,7 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
     }
     /// draw onto passive cache
     fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.content.draw_persistent();
+        self.content.draw_persistent(vct, vcscale, frame);
         let _: Vec<_> = self
             .selected
             .iter()
@@ -223,8 +247,8 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
     fn update(&mut self, msg: SchematicMsg, curpos_ssp: SSPoint) -> bool {
         let mut clear_passive = false;
         match msg {
-            SchematicMsg::TransformInit => {
-                self.state = SchematicSt::TransformSelected(None);
+            SchematicMsg::NewState(ns) => {
+                self.state = ns;
             }
             SchematicMsg::Event(event) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
@@ -339,17 +363,16 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
             }
         }
     }
-    fn cycle(&mut self, curpos_ssp: SSPoint) -> bool {
-        if let SchematicSt::Idle = self.state {
-            self.infobarstr = self.tentative_next_by_ssp(curpos_ssp);
-            true
-        } else {
-            false
-        }
+    fn cycle(&mut self, curpos_ssp: SSPoint) {
+        self.tentative_next_by_ssp(curpos_ssp);
     }
 }
 
-impl<C, T> Schematic<C, T> {
+impl<C, T> Schematic<C, T>
+where
+    C: Content,
+    T: SchematicElement,
+{
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         let mut skip = self.selskip;

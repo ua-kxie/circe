@@ -6,7 +6,7 @@ mod deviceinstance;
 mod devicetype;
 mod params;
 
-use super::{SchematicElement};
+use super::SchematicElement;
 use crate::{
     transforms::{SSBox, SSPoint, VCTransform, VSBox},
     viewport::Drawable,
@@ -215,6 +215,22 @@ impl Devices {
 //     }
 // }
 
-impl SchematicElement for RcRDevice {
+impl Drawable for RcRDevice {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.0.borrow().draw_persistent(vct, vcscale, frame);
+    }
 
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.0.borrow().draw_selected(vct, vcscale, frame);
+    }
+
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.0.borrow().draw_preview(vct, vcscale, frame);
+    }
+}
+
+impl SchematicElement for RcRDevice {
+    fn contains_ssp(&self, ssp: SSPoint) -> bool {
+        self.0.borrow().interactable.contains_ssp(ssp)
+    }
 }

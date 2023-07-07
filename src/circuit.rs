@@ -1,7 +1,8 @@
 //! Circuit
 //! Concrete types for schematic content
 
-use crate::schematic::{SchematicElement, RcRDevice, self};
+use crate::schematic::nets::{NetEdge, NetVertex, Nets};
+use crate::schematic::{self, RcRDevice, SchematicElement};
 use crate::{interactable, viewport};
 use crate::{
     interactable::Interactive,
@@ -15,7 +16,6 @@ use iced::{
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
     Color, Size,
 };
-use crate::schematic::nets::{NetEdge, NetVertex, Nets};
 use std::{collections::HashSet, fs};
 
 /// trait for a type of element in schematic. e.g. nets or devices
@@ -65,11 +65,35 @@ impl std::hash::Hash for CircuitElement {
 }
 
 impl Drawable for CircuitElement {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        match self {
+            CircuitElement::NetEdge(e) => e.draw_persistent(vct, vcscale, frame),
+            CircuitElement::Device(d) => d.draw_persistent(vct, vcscale, frame),
+        }
+    }
 
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        match self {
+            CircuitElement::NetEdge(e) => e.draw_selected(vct, vcscale, frame),
+            CircuitElement::Device(d) => d.draw_selected(vct, vcscale, frame),
+        }
+    }
+
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        match self {
+            CircuitElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
+            CircuitElement::Device(d) => d.draw_preview(vct, vcscale, frame),
+        }
+    }
 }
 
 impl SchematicElement for CircuitElement {
-
+    fn contains_ssp(&self, ssp: SSPoint) -> bool {
+        match self {
+            CircuitElement::NetEdge(e) => e.interactable.contains_ssp(ssp),
+            CircuitElement::Device(d) => d.0.borrow().interactable.contains_ssp(ssp),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -116,8 +140,28 @@ pub struct Circuit {
     // devices: Devices,
 }
 
-impl schematic::Content for Circuit {
+impl Drawable for Circuit {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.nets.draw_persistent(vct, vcscale, frame);
+    }
 
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.nets.draw_selected(vct, vcscale, frame);
+    }
+
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.nets.draw_preview(vct, vcscale, frame);
+    }
+}
+
+impl schematic::Content for Circuit {
+    fn bounds(&self) -> VSBox {
+        todo!()
+    }
+
+    fn update_cursor_ssp(&mut self, ssp: SSPoint) {
+        todo!()
+    }
 }
 
 // impl viewport::ViewportContent<CircuitMsg> for SchematicContent {

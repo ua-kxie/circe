@@ -1,7 +1,7 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::circuit::{Circuit, CircuitElement};
+use crate::circuit::{Circuit, CircuitElement, CircuitMsg};
 use crate::circuit_gui;
 
 use crate::schematic::{RcRDevice, Schematic, SchematicMsg};
@@ -54,7 +54,7 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
-    ViewportEvt(viewport::ContentMsgs<SchematicMsg>),
+    ViewportEvt(viewport::ContentMsgs<CircuitMsg>),
     TextInputChanged(String),
     TextInputSubmit,
 }
@@ -62,7 +62,7 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic<Circuit, CircuitElement>, SchematicMsg>,
+    viewport: Viewport<Schematic<Circuit, CircuitElement>, CircuitMsg>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -129,22 +129,22 @@ impl Default for CircuitPage {
     }
 }
 
-impl IcedStruct<SchematicMsg> for CircuitPage {
-    fn update(&mut self, msg: SchematicMsg) {
+impl IcedStruct<CircuitPageMsg> for CircuitPage {
+    fn update(&mut self, msg: CircuitPageMsg) {
         match msg {
-            SchematicMsg::TextInputChanged(s) => {
+            CircuitPageMsg::TextInputChanged(s) => {
                 self.text = s;
             }
-            SchematicMsg::TextInputSubmit => {
+            CircuitPageMsg::TextInputSubmit => {
                 if let Some(ad) = &self.active_device {
                     ad.0.borrow_mut().class_mut().set(self.text.clone());
                     self.viewport.passive_cache.clear();
                 }
             }
-            SchematicMsg::ViewportEvt(msgs) => {
+            CircuitPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
-                if let Some(SchematicMsg::DcOp) = msgs.content_msg {
+                if let Some(CircuitPageMsg::DcOp) = msgs.content_msg {
                     self.viewport.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
@@ -165,16 +165,16 @@ impl IcedStruct<SchematicMsg> for CircuitPage {
         }
     }
 
-    fn view(&self) -> iced::Element<SchematicMsg> {
+    fn view(&self) -> iced::Element<CircuitPageMsg> {
         let str_ssp = format!(
             "x: {}; y: {}",
             self.viewport.curpos_ssp().x,
             self.viewport.curpos_ssp().y
         );
-        let canvas = self.viewport.view().map(SchematicMsg::ViewportEvt);
+        let canvas = self.viewport.view().map(CircuitPageMsg::ViewportEvt);
         let pe =
-            param_editor::param_editor(self.text.clone(), SchematicMsg::TextInputChanged, || {
-                SchematicMsg::TextInputSubmit
+            param_editor::param_editor(self.text.clone(), CircuitPageMsg::TextInputChanged, || {
+                CircuitPageMsg::TextInputSubmit
             });
         // let mut pe = text("");
         // if let Some(active_device) = &self.active_device {
@@ -196,8 +196,8 @@ impl IcedStruct<SchematicMsg> for CircuitPage {
         ]
         .spacing(10);
         let toolbar = row![
-            button("wire").on_press(SchematicMsg::ViewportEvt(ContentMsgs {
-                content_msg: Some(SchematicMsg::Wire),
+            button("wire").on_press(CircuitPageMsg::ViewportEvt(ContentMsgs {
+                content_msg: Some(CircuitMsg::Wire),
                 viewport_msg: None
             })),
         ]

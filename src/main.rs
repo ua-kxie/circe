@@ -7,8 +7,8 @@ mod transforms;
 // use designer::DeviceDesigner;
 mod viewport;
 
-mod circuit_gui;
 mod circuit;
+mod circuit_gui;
 mod schematic;
 use circuit_gui::CircuitPage;
 
