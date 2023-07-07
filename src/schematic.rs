@@ -116,27 +116,23 @@ pub trait Content<T>: Drawable + Default where T: SchematicElement {
 
 /// struct holding schematic state (nets, devices, and their locations)
 #[derive(Debug, Clone)]
-pub struct Schematic<C, T>
+pub struct Schematic<T>
 where
-    C: Content<T>,
     T: SchematicElement,
 {
     curpos_ssp: SSPoint,
     state: SchematicSt,
-    content: C,
     selskip: usize,
     selected: HashSet<T>,
 }
 
-impl<C, T> Default for Schematic<C, T>
+impl<T> Default for Schematic<T>
 where
-    C: Content<T>,
     T: SchematicElement,
 {
     fn default() -> Self {
         Self {
             state: Default::default(),
-            content: Default::default(),
             selskip: Default::default(),
             selected: Default::default(),
             curpos_ssp: Default::default(),
@@ -144,9 +140,8 @@ where
     }
 }
 
-impl<C, T> viewport::Content for Schematic<C, T>
+impl<T> viewport::Content for Schematic<T>
 where
-    C: Content<T>,
     T: SchematicElement,
 {
     type ContentMsg = SchematicMsg;
@@ -377,9 +372,8 @@ where
     }
 }
 
-impl<C, T> Schematic<C, T>
+impl<T> Schematic<T>
 where
-    C: Content<T>,
     T: SchematicElement,
 {
     /// update schematic cursor position

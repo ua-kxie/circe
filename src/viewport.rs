@@ -263,7 +263,7 @@ where
             content: C::default(),
             active_cache: Default::default(),
             passive_cache: Default::default(),
-            background_cache: Default::default(),
+            background_cache: Default::default(), 
             zoom_scale: vct.determinant().abs().sqrt(),
             curpos: Default::default(),
             content_msg: std::marker::PhantomData,

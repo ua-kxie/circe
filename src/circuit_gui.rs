@@ -62,7 +62,7 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic<Circuit, CircuitElement>, CircuitMsg>,
+    viewport: Viewport<Schematic<CircuitElement>, CircuitMsg>,
 
     circuit: Circuit,
 
