@@ -7,8 +7,9 @@ mod transforms;
 // use designer::DeviceDesigner;
 mod viewport;
 
-mod schematic;
 mod circuit_gui;
+mod circuit;
+mod schematic;
 use circuit_gui::Circuit;
 
 // mod designer;
@@ -43,7 +44,7 @@ pub struct Circe {
 #[derive(Debug, Clone)]
 pub enum Msg {
     // DeviceDesignerMsg(designer::DeviceDesignerMsg),
-    SchematicMsg(circuit_gui::SchematicMsg),
+    SchematicMsg(circuit_gui::CircuitPageMsg),
 
     TabSel(usize),
 }

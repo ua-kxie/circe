@@ -5,7 +5,7 @@ Page - elements/widget layout which may contain a viewport
         DataGraph - impl plot functions - horz/vert markers, etc.
             Plot - concrete types containing data
 
-
+Content <-> Page communication 
 add another layer
 viewport <-> schematic/plot <-> content
 viewport: zoom, pan, etc.

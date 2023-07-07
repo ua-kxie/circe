@@ -1,5 +1,7 @@
-//! Schematic GUI
+//! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
+
+use crate::circuit_gui;
 
 use crate::schematic::{RcRDevice, Schematic, SchematicMsg};
 use crate::viewport::ContentMsgs;
@@ -50,7 +52,7 @@ impl paprika::PkSpiceManager for SpManager {
 }
 
 #[derive(Debug, Clone)]
-pub enum SchematicMsg {
+pub enum CircuitPageMsg {
     ViewportEvt(viewport::ContentMsgs<SchematicMsg>),
     TextInputChanged(String),
     TextInputSubmit,
@@ -192,14 +194,13 @@ impl IcedStruct<SchematicMsg> for Circuit {
                 .vertical_alignment(iced::alignment::Vertical::Center),
         ]
         .spacing(10);
-        let toolbar =
-            row![
-                button("wire").on_press(SchematicMsg::ViewportEvt(ContentMsgs {
-                    content_msg: Some(SchematicMsg::Wire),
-                    viewport_msg: None
-                })),
-            ]
-            .width(Length::Fill);
+        let toolbar = row![
+            button("wire").on_press(SchematicMsg::ViewportEvt(ContentMsgs {
+                content_msg: Some(SchematicMsg::Wire),
+                viewport_msg: None
+            })),
+        ]
+        .width(Length::Fill);
 
         let schematic = iced::widget::column![
             toolbar,

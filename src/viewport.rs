@@ -107,8 +107,7 @@ where
     scale: f32,
 }
 
-impl<C, ContentMsg> canvas::Program<ContentMsgs<ContentMsg>>
-    for Viewport<C, ContentMsg>
+impl<C, ContentMsg> canvas::Program<ContentMsgs<ContentMsg>> for Viewport<C, ContentMsg>
 where
     C: Default + Content<ContentMsg>,
 {
@@ -211,8 +210,7 @@ where
     }
 }
 
-impl<C, CMsg> IcedStruct<ContentMsgs<CMsg>>
-    for Viewport<C, CMsg>
+impl<C, CMsg> IcedStruct<ContentMsgs<CMsg>> for Viewport<C, CMsg>
 where
     C: Default + Content<CMsg>,
 {

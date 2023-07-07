@@ -2,7 +2,7 @@
 //! Space in which devices and nets live in
 
 mod devices;
-mod nets;
+pub(crate) mod nets;
 
 use self::devices::Devices;
 pub use self::devices::RcRDevice;
@@ -21,8 +21,8 @@ use iced::{
     Color, Size,
 };
 use nets::{NetEdge, NetVertex, Nets};
-use std::{collections::HashSet, fs};
 use std::hash::Hash;
+use std::{collections::HashSet, fs};
 
 // /// trait for a type of element in schematic. e.g. nets or devices
 // pub trait SchematicSet {
@@ -70,7 +70,7 @@ use std::hash::Hash;
 //     }
 // }
 
-pub trait SchematicElement: Hash + PartialEq + Drawable {
+pub trait SchematicElement: Hash + Eq + Drawable {
     // device designer: line, arc
     // circuit: wire, device
 }
@@ -78,7 +78,7 @@ pub trait SchematicElement: Hash + PartialEq + Drawable {
 #[derive(Debug, Clone, Copy)]
 pub enum SchematicMsg {
     Event(Event),
-    TransformInit
+    NewState(SchematicSt),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -105,7 +105,11 @@ pub trait Content: Drawable {
 
 /// struct holding schematic state (nets, devices, and their locations)
 #[derive(Debug, Default, Clone)]
-pub struct Schematic<C, T> where C: Content, T: SchematicElement {
+pub struct Schematic<C, T>
+where
+    C: Content,
+    T: SchematicElement,
+{
     state: SchematicSt,
     content: C,
     selskip: usize,
@@ -123,6 +127,31 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
 
     fn events_handler(&self, event: Event) -> Option<SchematicMsg> {
         match (&self.state, event) {
+            // drag/area select
+            (
+                SchematicSt::Idle,
+                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
+            ) => {
+                let mut click_selected = false;
+                let curpos_ssp = self.curpos_ssp();
+
+                for s in &self.selected {
+                    if s.contains_ssp(curpos_ssp) {
+                        click_selected = true;
+                        break;
+                    }
+                }
+
+                if click_selected {
+                    Some(SchematicMsg::NewState(SchematicSt::TransformSelected(
+                        Some((curpos_ssp, curpos_ssp, SSTransform::identity())),
+                    )))
+                } else {
+                    Some(SchematicMsg::NewState(SchematicSt::AreaSelect(SSBox::new(
+                        curpos_ssp, curpos_ssp,
+                    ))))
+                }
+            }
             (_, _) => Some(SchematicMsg::Event(event)),
         }
     }
@@ -164,9 +193,9 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
             }
             SchematicSt::TransformSelected(Some((ssp0, ssp1, sst))) => {
                 // draw selected preview with transform applied
-                let vvt = transforms::sst_to_xxt::<ViewportSpace>(
-                    SchematicSt::move_transform(ssp0, ssp1, sst),
-                );
+                let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicSt::move_transform(
+                    ssp0, ssp1, sst,
+                ));
 
                 let vct_c = vvt.then(&vct);
                 for be in &self.selected {
@@ -194,6 +223,9 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
     fn update(&mut self, msg: SchematicMsg, curpos_ssp: SSPoint) -> bool {
         let mut clear_passive = false;
         match msg {
+            SchematicMsg::TransformInit => {
+                self.state = SchematicSt::TransformSelected(None);
+            }
             SchematicMsg::Event(event) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
@@ -222,8 +254,7 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
                                 SSTransform::identity(),
                             )));
                         } else {
-                            state =
-                                SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
+                            state = SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
                         }
                     }
 
@@ -292,9 +323,6 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
                 }
                 self.state = state;
             }
-            SchematicMsg::DcOp => {
-                clear_passive = true;
-            }
         }
         clear_passive
     }
@@ -322,21 +350,13 @@ impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T> {
 }
 
 impl<C, T> Schematic<C, T> {
-    /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
-    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
-        self.devices.op(pkvecvaluesall);
-    }
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         let mut skip = self.selskip;
-        self.infobarstr = self.tentative_by_sspoint(curpos_ssp, &mut skip);
+        self.content.update_cursor_ssp(curpos_ssp);
 
         let mut stcp = self.state.clone();
         match &mut stcp {
-            SchematicSt::Wiring(Some((g, prev_ssp))) => {
-                g.as_mut().clear();
-                g.route(*prev_ssp, curpos_ssp);
-            }
             SchematicSt::AreaSelect(ssb) => {
                 ssb.max = curpos_ssp;
                 self.tentatives_by_ssbox(ssb);
@@ -347,22 +367,6 @@ impl<C, T> Schematic<C, T> {
             _ => {}
         }
         self.state = stcp;
-    }
-    /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
-    pub fn active_device(&self) -> Option<RcRDevice> {
-        let mut v: Vec<_> = self
-            .selected
-            .iter()
-            .filter_map(|x| match x {
-                BaseElement::Device(d) => Some(d.clone()),
-                _ => None,
-            })
-            .collect();
-        if v.len() == 1 {
-            v.pop()
-        } else {
-            None
-        }
     }
     /// clear tentative selections (cursor hover highlight)
     fn clear_tentatives(&mut self) {
@@ -377,26 +381,10 @@ impl<C, T> Schematic<C, T> {
         self.nets.tentatives_by_ssbox(&ssb_p);
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
-    pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
+    pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
         self.clear_tentatives();
-        if let Some(be) = self.selectable(ssp, skip) {
-            match be {
-                BaseElement::NetEdge(e) => {
-                    let mut netedge = e.clone();
-                    let netname = e.label.map(|x| x.as_ref().clone());
-                    netedge.interactable.tentative = true;
-                    self.nets
-                        .graph
-                        .add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
-                    netname
-                }
-                BaseElement::Device(d) => {
-                    d.0.borrow_mut().interactable.tentative = true;
-                    None
-                }
-            }
-        } else {
-            None
+        if let Some(e) = self.selectable(ssp, skip) {
+            e.set_tentative();
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
@@ -409,17 +397,10 @@ impl<C, T> Schematic<C, T> {
     /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
         let _: Vec<_> = self
-            .devices
-            .tentatives()
-            .map(|d| {
-                self.selected.insert(BaseElement::Device(d));
-            })
-            .collect();
-        let _: Vec<_> = self
-            .nets
+            .content
             .tentatives()
             .map(|e| {
-                self.selected.insert(BaseElement::NetEdge(e));
+                self.selected.insert(e);
             })
             .collect();
     }
@@ -428,14 +409,11 @@ impl<C, T> Schematic<C, T> {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<T> {
         loop {
             let mut count = 0; // tracks the number of skipped elements
-            if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
+            if let Some(e) = self.content.selectable(ssp, skip, &mut count) {
                 return Some(e);
-            }
-            if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
-                return Some(d);
             }
             if count == 0 {
                 *skip = count;
@@ -447,50 +425,19 @@ impl<C, T> Schematic<C, T> {
     /// delete all elements which appear in the selected array
     pub fn delete_selected(&mut self) {
         if let SchematicSt::Idle = self.state {
-            for be in &self.selected {
-                match be {
-                    BaseElement::NetEdge(e) => {
-                        self.nets.delete_edge(e);
-                    }
-                    BaseElement::Device(d) => {
-                        self.devices.delete_device(d);
-                    }
-                }
+            for e in &self.selected {
+                e.delete();
             }
             self.selected.clear();
             self.prune_nets();
         }
     }
-    /// create netlist for the current schematic and save it.
-    pub fn netlist(&mut self) {
-        self.nets.pre_netlist();
-        let mut netlist = String::from("Netlist Created by Circe\n");
-        for d in self.devices.get_set() {
-            netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
-        }
-        netlist.push('\n');
-        fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
-    }
-    /// clear up nets graph: merging segments, cleaning up segment net names, etc.
-    fn prune_nets(&mut self) {
-        self.nets.prune(self.devices.ports_ssp());
-    }
     /// move all elements in the selected array by sst
     fn move_selected(&mut self, sst: SSTransform) {
         let selected = self.selected.clone();
         self.selected.clear();
-        for be in selected {
-            match be {
-                BaseElement::NetEdge(e) => {
-                    self.nets.transform(e, sst); // how to handle copying? e.g. adds new nets
-                }
-                BaseElement::Device(d) => {
-                    d.0.borrow_mut().transform(sst);
-                    // if moving an existing device, does nothing
-                    // inserts the device if placing a new device
-                    self.devices.insert(d);
-                }
-            }
+        for e in selected {
+            e.transform(sst);
         }
     }
 }
