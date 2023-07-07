@@ -20,10 +20,7 @@ use iced::{
     Color, Size,
 };
 use nets::{NetEdge, NetVertex, Nets};
-use std::{collections::HashSet, fs};
-use std::cell::RefCell;
-use std::ops::Deref;
-use std::rc::Rc;
+use std::{cell::RefCell, collections::HashSet, fs, ops::Deref, rc::Rc};
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -180,7 +177,8 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                 };
                 frame.stroke(&path_builder.build(), stroke);
             }
-            SchematicContentSt::Moving(Some((ssp0, ssp1, sst))) | SchematicContentSt::Copying(Some((ssp0, ssp1, sst))) => {
+            SchematicContentSt::Moving(Some((ssp0, ssp1, sst)))
+            | SchematicContentSt::Copying(Some((ssp0, ssp1, sst))) => {
                 let vvt = transforms::sst_to_xxt::<ViewportSpace>(
                     SchematicContentSt::move_transform(ssp0, ssp1, sst),
                 );
@@ -353,13 +351,17 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                     (
                         SchematicContentSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::X,
-                                            modifiers: m,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::X,
+                            modifiers: m,
+                        }),
                     ) => {
                         if m.control() {
                             self.copy_selected();
-                            state = SchematicContentSt::Copying(Some((curpos_ssp, curpos_ssp, SSTransform::identity())));
+                            state = SchematicContentSt::Copying(Some((
+                                curpos_ssp,
+                                curpos_ssp,
+                                SSTransform::identity(),
+                            )));
                         }
                     }
                     // moving
@@ -470,7 +472,8 @@ impl SchematicContent {
                 ssb.max = curpos_ssp;
                 self.tentatives_by_ssbox(ssb);
             }
-            SchematicContentSt::Moving(Some((_ssp0, ssp1, _sst))) | SchematicContentSt::Copying(Some((_ssp0, ssp1, _sst))) => {
+            SchematicContentSt::Moving(Some((_ssp0, ssp1, _sst)))
+            | SchematicContentSt::Copying(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_ssp;
             }
             _ => {}
@@ -600,16 +603,16 @@ impl SchematicContent {
                     let dst = n.deref().dst;
                     let mut net = Box::<Nets>::default();
 
-
                     let interactable = NetEdge::interactable(src, dst, false);
-                    let net_edge = NetEdge{
+                    let net_edge = NetEdge {
                         src,
                         dst,
                         interactable,
                         ..NetEdge::default()
                     };
 
-                    net.graph.add_edge(NetVertex(src), NetVertex(dst), net_edge.clone());
+                    net.graph
+                        .add_edge(NetVertex(src), NetVertex(dst), net_edge.clone());
                     let base_element = BaseElement::NetEdge(net_edge);
 
                     copy_hs.insert(base_element);
@@ -670,9 +673,7 @@ impl SchematicContent {
         self.selected.clear();
         for be in selected {
             match be {
-                BaseElement::NetEdge(mut e) => {
-                    self.nets.copy_transform(e, sst)
-                }
+                BaseElement::NetEdge(mut e) => self.nets.copy_transform(e, sst),
                 BaseElement::Device(d) => {
                     d.0.borrow_mut().transform(sst);
                     self.devices.insert(d);
