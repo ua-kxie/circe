@@ -1,7 +1,7 @@
 //! Schematic
 //! Space in which devices and nets live in
 
-mod devices;
+pub(crate) mod devices;
 pub(crate) mod nets;
 
 use self::devices::Devices;

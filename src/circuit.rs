@@ -17,6 +17,7 @@ use iced::{
     Color, Size,
 };
 use std::{collections::HashSet, fs};
+use crate::schematic::devices::Devices;
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -141,7 +142,7 @@ pub struct Circuit {
     state: CircuitSt,
 
     nets: Nets,
-    // devices: Devices,
+    devices: Devices,
 }
 
 impl Drawable for Circuit {
@@ -511,176 +512,176 @@ impl schematic::Content<CircuitElement> for Circuit {
 //     }
 // }
 
-// impl SchematicContent {
-//     /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
-//     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
-//         self.devices.op(pkvecvaluesall);
-//     }
-//     /// update schematic cursor position
-//     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
-//         let mut skip = self.selskip;
-//         self.infobarstr = self.tentative_by_sspoint(curpos_ssp, &mut skip);
+impl Circuit {
+    /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
+    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
+        self.devices.op(pkvecvaluesall);
+    }
+    // /// update schematic cursor position
+    // fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+    //     let mut skip = self.selskip;
+    //     self.infobarstr = self.tentative_by_sspoint(curpos_ssp, &mut skip);
 
-//         let mut stcp = self.state.clone();
-//         match &mut stcp {
-//             CircuitSt::Wiring(Some((g, prev_ssp))) => {
-//                 g.as_mut().clear();
-//                 g.route(*prev_ssp, curpos_ssp);
-//             }
-//             CircuitSt::AreaSelect(ssb) => {
-//                 ssb.max = curpos_ssp;
-//                 self.tentatives_by_ssbox(ssb);
-//             }
-//             CircuitSt::Moving(Some((_ssp0, ssp1, _sst))) => {
-//                 *ssp1 = curpos_ssp;
-//             }
-//             _ => {}
-//         }
-//         self.state = stcp;
-//     }
-//     /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
-//     pub fn active_device(&self) -> Option<RcRDevice> {
-//         let mut v: Vec<_> = self
-//             .selected
-//             .iter()
-//             .filter_map(|x| match x {
-//                 CircuitElement::Device(d) => Some(d.clone()),
-//                 _ => None,
-//             })
-//             .collect();
-//         if v.len() == 1 {
-//             v.pop()
-//         } else {
-//             None
-//         }
-//     }
-//     /// clear tentative selections (cursor hover highlight)
-//     fn clear_tentatives(&mut self) {
-//         self.devices.clear_tentatives();
-//         self.nets.clear_tentatives();
-//     }
-//     /// set tentative flags by intersection with ssb
-//     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-//         self.clear_tentatives();
-//         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-//         self.devices.tentatives_by_ssbox(&ssb_p);
-//         self.nets.tentatives_by_ssbox(&ssb_p);
-//     }
-//     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
-//     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
-//         self.clear_tentatives();
-//         if let Some(be) = self.selectable(ssp, skip) {
-//             match be {
-//                 CircuitElement::NetEdge(e) => {
-//                     let mut netedge = e.clone();
-//                     let netname = e.label.map(|x| x.as_ref().clone());
-//                     netedge.interactable.tentative = true;
-//                     self.nets
-//                         .graph
-//                         .add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
-//                     netname
-//                 }
-//                 CircuitElement::Device(d) => {
-//                     d.0.borrow_mut().interactable.tentative = true;
-//                     None
-//                 }
-//             }
-//         } else {
-//             None
-//         }
-//     }
-//     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
-//     pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) -> Option<String> {
-//         let mut skip = self.selskip.wrapping_add(1);
-//         let s = self.tentative_by_sspoint(ssp, &mut skip);
-//         self.selskip = skip;
-//         s
-//     }
-//     /// put every element with tentative flag set into selected vector
-//     fn tentatives_to_selected(&mut self) {
-//         let _: Vec<_> = self
-//             .devices
-//             .tentatives()
-//             .map(|d| {
-//                 self.selected.insert(CircuitElement::Device(d));
-//             })
-//             .collect();
-//         let _: Vec<_> = self
-//             .nets
-//             .tentatives()
-//             .map(|e| {
-//                 self.selected.insert(CircuitElement::NetEdge(e));
-//             })
-//             .collect();
-//     }
-//     /// returns true if ssp is occupied by an element
-//     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-//         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
-//     }
-//     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-//     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<CircuitElement> {
-//         loop {
-//             let mut count = 0; // tracks the number of skipped elements
-//             if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
-//                 return Some(e);
-//             }
-//             if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
-//                 return Some(d);
-//             }
-//             if count == 0 {
-//                 *skip = count;
-//                 return None;
-//             }
-//             *skip -= count;
-//         }
-//     }
-//     /// delete all elements which appear in the selected array
-//     pub fn delete_selected(&mut self) {
-//         if let CircuitSt::Idle = self.state {
-//             for be in &self.selected {
-//                 match be {
-//                     CircuitElement::NetEdge(e) => {
-//                         self.nets.delete_edge(e);
-//                     }
-//                     CircuitElement::Device(d) => {
-//                         self.devices.delete_device(d);
-//                     }
-//                 }
-//             }
-//             self.selected.clear();
-//             self.prune_nets();
-//         }
-//     }
-//     /// create netlist for the current schematic and save it.
-//     pub fn netlist(&mut self) {
-//         self.nets.pre_netlist();
-//         let mut netlist = String::from("Netlist Created by Circe\n");
-//         for d in self.devices.get_set() {
-//             netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
-//         }
-//         netlist.push('\n');
-//         fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
-//     }
-//     /// clear up nets graph: merging segments, cleaning up segment net names, etc.
-//     fn prune_nets(&mut self) {
-//         self.nets.prune(self.devices.ports_ssp());
-//     }
-//     /// move all elements in the selected array by sst
-//     fn move_selected(&mut self, sst: SSTransform) {
-//         let selected = self.selected.clone();
-//         self.selected.clear();
-//         for be in selected {
-//             match be {
-//                 CircuitElement::NetEdge(e) => {
-//                     self.nets.transform(e, sst); // how to handle copying? e.g. adds new nets
-//                 }
-//                 CircuitElement::Device(d) => {
-//                     d.0.borrow_mut().transform(sst);
-//                     // if moving an existing device, does nothing
-//                     // inserts the device if placing a new device
-//                     self.devices.insert(d);
-//                 }
-//             }
-//         }
-//     }
-// }
+    //     let mut stcp = self.state.clone();
+    //     match &mut stcp {
+    //         CircuitSt::Wiring(Some((g, prev_ssp))) => {
+    //             g.as_mut().clear();
+    //             g.route(*prev_ssp, curpos_ssp);
+    //         }
+    //         CircuitSt::AreaSelect(ssb) => {
+    //             ssb.max = curpos_ssp;
+    //             self.tentatives_by_ssbox(ssb);
+    //         }
+    //         CircuitSt::Moving(Some((_ssp0, ssp1, _sst))) => {
+    //             *ssp1 = curpos_ssp;
+    //         }
+    //         _ => {}
+    //     }
+    //     self.state = stcp;
+    // }
+    // /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
+    // pub fn active_device(&self) -> Option<RcRDevice> {
+    //     let mut v: Vec<_> = self
+    //         .selected
+    //         .iter()
+    //         .filter_map(|x| match x {
+    //             CircuitElement::Device(d) => Some(d.clone()),
+    //             _ => None,
+    //         })
+    //         .collect();
+    //     if v.len() == 1 {
+    //         v.pop()
+    //     } else {
+    //         None
+    //     }
+    // }
+    // /// clear tentative selections (cursor hover highlight)
+    // fn clear_tentatives(&mut self) {
+    //     self.devices.clear_tentatives();
+    //     self.nets.clear_tentatives();
+    // }
+    // /// set tentative flags by intersection with ssb
+    // pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
+    //     self.clear_tentatives();
+    //     let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
+    //     self.devices.tentatives_by_ssbox(&ssb_p);
+    //     self.nets.tentatives_by_ssbox(&ssb_p);
+    // }
+    // /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
+    // pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
+    //     self.clear_tentatives();
+    //     if let Some(be) = self.selectable(ssp, skip) {
+    //         match be {
+    //             CircuitElement::NetEdge(e) => {
+    //                 let mut netedge = e.clone();
+    //                 let netname = e.label.map(|x| x.as_ref().clone());
+    //                 netedge.interactable.tentative = true;
+    //                 self.nets
+    //                     .graph
+    //                     .add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
+    //                 netname
+    //             }
+    //             CircuitElement::Device(d) => {
+    //                 d.0.borrow_mut().interactable.tentative = true;
+    //                 None
+    //             }
+    //         }
+    //     } else {
+    //         None
+    //     }
+    // }
+    // /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
+    // pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) -> Option<String> {
+    //     let mut skip = self.selskip.wrapping_add(1);
+    //     let s = self.tentative_by_sspoint(ssp, &mut skip);
+    //     self.selskip = skip;
+    //     s
+    // }
+    // /// put every element with tentative flag set into selected vector
+    // fn tentatives_to_selected(&mut self) {
+    //     let _: Vec<_> = self
+    //         .devices
+    //         .tentatives()
+    //         .map(|d| {
+    //             self.selected.insert(CircuitElement::Device(d));
+    //         })
+    //         .collect();
+    //     let _: Vec<_> = self
+    //         .nets
+    //         .tentatives()
+    //         .map(|e| {
+    //             self.selected.insert(CircuitElement::NetEdge(e));
+    //         })
+    //         .collect();
+    // }
+    // /// returns true if ssp is occupied by an element
+    // fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+    //     self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
+    // }
+    // /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
+    // fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<CircuitElement> {
+    //     loop {
+    //         let mut count = 0; // tracks the number of skipped elements
+    //         if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
+    //             return Some(e);
+    //         }
+    //         if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
+    //             return Some(d);
+    //         }
+    //         if count == 0 {
+    //             *skip = count;
+    //             return None;
+    //         }
+    //         *skip -= count;
+    //     }
+    // }
+    // /// delete all elements which appear in the selected array
+    // pub fn delete_selected(&mut self) {
+    //     if let CircuitSt::Idle = self.state {
+    //         for be in &self.selected {
+    //             match be {
+    //                 CircuitElement::NetEdge(e) => {
+    //                     self.nets.delete_edge(e);
+    //                 }
+    //                 CircuitElement::Device(d) => {
+    //                     self.devices.delete_device(d);
+    //                 }
+    //             }
+    //         }
+    //         self.selected.clear();
+    //         self.prune_nets();
+    //     }
+    // }
+    /// create netlist for the current schematic and save it.
+    pub fn netlist(&mut self) {
+        self.nets.pre_netlist();
+        let mut netlist = String::from("Netlist Created by Circe\n");
+        for d in self.devices.get_set() {
+            netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
+        }
+        netlist.push('\n');
+        fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
+    }
+    /// clear up nets graph: merging segments, cleaning up segment net names, etc.
+    fn prune_nets(&mut self) {
+        self.nets.prune(self.devices.ports_ssp());
+    }
+    // /// move all elements in the selected array by sst
+    // fn move_selected(&mut self, sst: SSTransform) {
+    //     let selected = self.selected.clone();
+    //     self.selected.clear();
+    //     for be in selected {
+    //         match be {
+    //             CircuitElement::NetEdge(e) => {
+    //                 self.nets.transform(e, sst); // how to handle copying? e.g. adds new nets
+    //             }
+    //             CircuitElement::Device(d) => {
+    //                 d.0.borrow_mut().transform(sst);
+    //                 // if moving an existing device, does nothing
+    //                 // inserts the device if placing a new device
+    //                 self.devices.insert(d);
+    //             }
+    //         }
+    //     }
+    // }
+}

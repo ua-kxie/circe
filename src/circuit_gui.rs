@@ -64,6 +64,8 @@ pub struct CircuitPage {
     /// viewport
     viewport: Viewport<Schematic<Circuit, CircuitElement>, CircuitMsg>,
 
+    circuit: Circuit,
+
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
     /// active device - some if only 1 device selected, otherwise is none
@@ -125,6 +127,7 @@ impl Default for CircuitPage {
             text: Default::default(),
             spmanager,
             lib,
+            circuit: Default::default(),
         }
     }
 }
@@ -144,8 +147,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             CircuitPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
-                if let Some(CircuitPageMsg::DcOp) = msgs.content_msg {
-                    self.viewport.content.netlist();
+                if let Some(CircuitMsg::DcOp) = msgs.content_msg {
+                    self.circuit.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
                     if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
