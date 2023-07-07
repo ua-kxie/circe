@@ -1,0 +1,14 @@
+Page - elements/widget layout which may contain a viewport
+    Viewport - impl iced canvas, grid, panning, fit view etc
+        Schematic - impl schematic functions - selection, cycle, move, copy etc over generic elements
+            Content - concrete types implmenting specialized functions (Circuit, DeviceDesigner)
+        DataGraph - impl plot functions - horz/vert markers, etc.
+            Plot - concrete types containing data
+
+
+add another layer
+viewport <-> schematic/plot <-> content
+viewport: zoom, pan, etc.
+schematic: translate, copy, delete generic selected
+plot: data plots
+content: concrete elements which can be selected or moved
