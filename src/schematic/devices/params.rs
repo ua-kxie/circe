@@ -14,7 +14,7 @@ pub enum RawPEMsg {
 }
 
 /// this struct to edit device parameters by specifying the spice netlist line (after port connects) directly
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Raw {
     pub raw: String,
     tmp: String,
@@ -53,7 +53,7 @@ impl Raw {
 }
 
 /// this struct to edit device paramters by specying a single characteristic value (resistance, capacitance, inductance)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SingleValue {
     pub value: f32,
 }

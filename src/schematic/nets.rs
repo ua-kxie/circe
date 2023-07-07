@@ -372,6 +372,11 @@ impl Nets {
         e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
     }
+    /// copies and transforms netedge.
+    pub fn copy_transform(&mut self, mut e: NetEdge, sst: SSTransform) {
+        e.transform(sst);
+        self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
+    }
     /// reset tentative flags for all net edges
     pub fn clear_tentatives(&mut self) {
         for e in self.graph.all_edges_mut() {
