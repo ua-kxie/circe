@@ -161,7 +161,9 @@ impl Drawable for Circuit {
 
 impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
     fn bounds(&self) -> VSBox {
-        todo!()
+        let bbn = self.nets.bounding_box();
+        let bbi = self.devices.bounding_box();
+        bbn.union(&bbi)
     }
 
     fn update_cursor_ssp(&mut self, ssp: SSPoint) {
@@ -169,35 +171,71 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
     }
 
     fn clear_tentatives(&mut self) {
-        todo!()
+        self.nets.clear_tentatives();
+        self.devices.clear_tentatives();
     }
 
     fn tentatives_by_ssbox(&mut self, ssb: SSBox) {
-        todo!()
+        self.nets.tentatives_by_ssbox(&ssb);
+        self.devices.tentatives_by_ssbox(&ssb);
     }
 
     fn tentatives(&self) -> Vec<CircuitElement> {
-        todo!()
+        let mut v = vec![];
+        for e in self.nets.tentatives() {
+            v.push(CircuitElement::NetEdge(e));
+        }
+        for d in self.devices.tentatives() {
+            v.push(CircuitElement::Device(d));
+        }
+        v
     }
 
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        todo!()
+        self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
     }
 
     fn delete(&mut self, targets: &HashSet<CircuitElement>) {
-        todo!()
+        for e in targets {
+            match e {
+                CircuitElement::NetEdge(edge) => {
+                    self.nets.delete_edge(edge)
+                },
+                CircuitElement::Device(d) => {
+                    self.devices.delete_device(d)
+                },
+            }
+        }
     }
 
     fn transform(&mut self, targets: &HashSet<CircuitElement>) {
         todo!()
     }
 
-    fn selectable(&self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<CircuitElement> {
-        todo!()
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<CircuitElement> {
+        loop {
+            let mut count = 0; // tracks the number of skipped elements
+            if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
+                return Some(CircuitElement::NetEdge(e));
+            }
+            if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
+                return Some(CircuitElement::Device(d));
+            }
+            if count == 0 {
+                *skip = count;
+                return None;
+            }
+            *skip -= count;
+        }
     }
 
     fn update(&mut self, msg: CircuitMsg) {
-        todo!()
+        match msg {
+            CircuitMsg::Event(_) => todo!(),
+            CircuitMsg::Wire => todo!(),
+            CircuitMsg::DcOp => todo!(),
+            CircuitMsg::NewDevice(_) => todo!(),
+        }
     }
 }
 
@@ -305,12 +343,7 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
 //             .collect();
 //     }
 
-//     /// returns the bouding box of all elements on canvas
-//     fn bounds(&self) -> VSBox {
-//         let bbn = self.nets.bounding_box();
-//         let bbi = self.devices.bounding_box();
-//         bbn.union(&bbi)
-//     }
+
 //     /// mutate state based on message and cursor position
 //     fn update(&mut self, msg: CircuitMsg, curpos_ssp: SSPoint) -> bool {
 //         let mut clear_passive = false;

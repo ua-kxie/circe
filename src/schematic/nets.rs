@@ -86,6 +86,29 @@ impl Default for Nets {
 }
 
 impl Nets {
+    /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
+    /// count is updated to track the number of elements skipped over
+    pub fn selectable(
+        &mut self,
+        curpos_ssp: SSPoint,
+        skip: &mut usize,
+        count: &mut usize,
+    ) -> Option<NetEdge> {
+        for e in self.graph.all_edges_mut() {
+            if e.2.interactable.contains_ssp(curpos_ssp) {
+                if *count >= *skip {
+                    *skip = *count;
+                    return Some(e.2.clone());
+                } else {
+                    *count += 1;
+                }
+            }
+        }
+        None
+    }
+    pub fn bounding_box(&self) -> crate::transforms::VSBox {
+        VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
+    }
     /// this function is called before netlisting
     pub fn pre_netlist(&mut self) {
         // reset floating nets - new netlists generated with same floating net names, no need for floating net names to be unique across different netlists
@@ -385,29 +408,7 @@ impl Nets {
 }
 
 // impl SchematicSet for Nets {
-//     /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
-//     /// count is updated to track the number of elements skipped over
-//     fn selectable(
-//         &mut self,
-//         curpos_ssp: SSPoint,
-//         skip: &mut usize,
-//         count: &mut usize,
-//     ) -> Option<BaseElement> {
-//         for e in self.graph.all_edges_mut() {
-//             if e.2.interactable.contains_ssp(curpos_ssp) {
-//                 if *count >= *skip {
-//                     *skip = *count;
-//                     return Some(BaseElement::NetEdge(e.2.clone()));
-//                 } else {
-//                     *count += 1;
-//                 }
-//             }
-//         }
-//         None
-//     }
-//     fn bounding_box(&self) -> crate::transforms::VSBox {
-//         VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
-//     }
+
 // }
 
 impl Drawable for Nets {

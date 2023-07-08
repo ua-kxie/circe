@@ -113,7 +113,7 @@ pub trait Content<T, M>: Drawable + Default where T: SchematicElement {
     fn occupies_ssp(&self, ssp: SSPoint) -> bool;
     fn delete(&mut self, targets: &HashSet<T>);
     fn transform(&mut self, targets: &HashSet<T>);
-    fn selectable(&self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<T>;
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<T>;
 }
 
 /// struct holding schematic state (nets, devices, and their locations)

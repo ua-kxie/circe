@@ -98,6 +98,37 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
+    /// count is updated to track the number of elements skipped over
+    pub fn selectable(
+        &mut self,
+        curpos_ssp: SSPoint,
+        skip: &mut usize,
+        count: &mut usize,
+    ) -> Option<RcRDevice> {
+        for d in &self.set {
+            if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
+                if *count >= *skip {
+                    *skip = *count;
+                    return Some(d.clone());
+                } else {
+                    *count += 1;
+                }
+            }
+        }
+        None
+    }
+    /// returns the bounding box of all devices
+    pub fn bounding_box(&self) -> VSBox {
+        let pts = self.set.iter().flat_map(|d| {
+            [
+                d.0.borrow().interactable.bounds.min,
+                d.0.borrow().interactable.bounds.max,
+            ]
+            .into_iter()
+        });
+        SSBox::from_points(pts).cast().cast_unit()
+    }
     /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
         for d in &self.set {
@@ -180,40 +211,6 @@ impl Devices {
         &self.set
     }
 }
-
-// impl SchematicSet for Devices {
-//     /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
-//     /// count is updated to track the number of elements skipped over
-//     fn selectable(
-//         &mut self,
-//         curpos_ssp: SSPoint,
-//         skip: &mut usize,
-//         count: &mut usize,
-//     ) -> Option<BaseElement> {
-//         for d in &self.set {
-//             if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
-//                 if *count >= *skip {
-//                     *skip = *count;
-//                     return Some(BaseElement::Device(d.clone()));
-//                 } else {
-//                     *count += 1;
-//                 }
-//             }
-//         }
-//         None
-//     }
-//     /// returns the bounding box of all devices
-//     fn bounding_box(&self) -> VSBox {
-//         let pts = self.set.iter().flat_map(|d| {
-//             [
-//                 d.0.borrow().interactable.bounds.min,
-//                 d.0.borrow().interactable.bounds.max,
-//             ]
-//             .into_iter()
-//         });
-//         SSBox::from_points(pts).cast().cast_unit()
-//     }
-// }
 
 impl Drawable for RcRDevice {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
