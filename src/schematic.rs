@@ -79,9 +79,10 @@ pub trait SchematicElement: Hash + Eq + Drawable + Clone {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum SchematicMsg {
+pub enum SchematicMsg<ContentMsg> {
     Event(Event),
     NewState(SchematicSt),
+    ContentMsg(ContentMsg),
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -101,8 +102,9 @@ impl SchematicSt {
     }
 }
 
-pub trait Content<T>: Drawable + Default where T: SchematicElement {
+pub trait Content<T, M>: Drawable + Default where T: SchematicElement {
     // ex. wires + devices
+    fn update(&mut self, msg: M);
     fn bounds(&self) -> VSBox;
     fn update_cursor_ssp(&mut self, ssp: SSPoint);
     fn clear_tentatives(&mut self);
@@ -116,21 +118,23 @@ pub trait Content<T>: Drawable + Default where T: SchematicElement {
 
 /// struct holding schematic state (nets, devices, and their locations)
 #[derive(Debug, Clone)]
-pub struct Schematic<C, T>
+pub struct Schematic<C, T, M>
 where
-    C: Content<T>,
+    C: Content<T, M>,
     T: SchematicElement,
 {
     curpos_ssp: SSPoint,
     state: SchematicSt,
     pub content: C,
+    /// phantom data to mark ContentMsg type
+    content_msg: std::marker::PhantomData<M>,
     selskip: usize,
     selected: HashSet<T>,
 }
 
-impl<C, T> Default for Schematic<C, T>
+impl<C, T, M> Default for Schematic<C, T, M>
 where
-    C: Content<T>,
+    C: Content<T, M>,
     T: SchematicElement,
 {
     fn default() -> Self {
@@ -140,13 +144,14 @@ where
             selskip: Default::default(),
             selected: Default::default(),
             curpos_ssp: Default::default(),
+            content_msg: std::marker::PhantomData,
         }
     }
 }
 
-impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T>
+impl<C, T, M> viewport::Content<SchematicMsg<M>> for Schematic<C, T, M>
 where
-    C: Content<T>,
+    C: Content<T, M>,
     T: SchematicElement,
 {
     fn mouse_interaction(&self) -> mouse::Interaction {
@@ -157,7 +162,7 @@ where
         }
     }
 
-    fn events_handler(&self, event: Event) -> Option<SchematicMsg> {
+    fn events_handler(&self, event: Event) -> Option<SchematicMsg<M>> {
         match (&self.state, event) {
             // drag/area select
             (
@@ -252,9 +257,12 @@ where
         self.content.bounds()
     }
     /// mutate state based on message and cursor position
-    fn update(&mut self, msg: SchematicMsg, curpos_ssp: SSPoint) -> bool {
+    fn update(&mut self, msg: SchematicMsg<M>, curpos_ssp: SSPoint) -> bool {
         let mut clear_passive = false;
         match msg {
+            SchematicMsg::ContentMsg(m) => {
+                self.content.update(m);
+            }
             SchematicMsg::NewState(ns) => {
                 self.state = ns;
             }
@@ -376,9 +384,9 @@ where
     }
 }
 
-impl<C, T> Schematic<C, T>
+impl<C, T, M> Schematic<C, T, M>
 where
-    C: Content<T>,
+    C: Content<T, M>,
     T: SchematicElement,
 {
     /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none

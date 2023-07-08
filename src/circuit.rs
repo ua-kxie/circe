@@ -102,7 +102,7 @@ impl SchematicElement for CircuitElement {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum DeviceType {
+pub enum DeviceType {
     Gnd,
     V,
     R,
@@ -159,7 +159,7 @@ impl Drawable for Circuit {
     }
 }
 
-impl schematic::Content<CircuitElement> for Circuit {
+impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
     fn bounds(&self) -> VSBox {
         todo!()
     }
@@ -193,6 +193,10 @@ impl schematic::Content<CircuitElement> for Circuit {
     }
 
     fn selectable(&self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<CircuitElement> {
+        todo!()
+    }
+
+    fn update(&mut self, msg: CircuitMsg) {
         todo!()
     }
 }
