@@ -54,7 +54,7 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
-    ViewportEvt(viewport::ContentMsgs<CircuitMsg>),
+    ViewportEvt(viewport::ContentMsgs<SchematicMsg>),
     TextInputChanged(String),
     TextInputSubmit,
 }
@@ -62,7 +62,7 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic<Circuit, CircuitElement>, CircuitMsg>,
+    viewport: Viewport<Schematic<Circuit, CircuitElement>, SchematicMsg>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,

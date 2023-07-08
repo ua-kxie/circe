@@ -48,14 +48,13 @@ pub struct ContentMsgs<ContentMsg> {
     pub viewport_msg: Option<ViewportMsg>,
 }
 
-pub trait Content: Default {
-    type ContentMsg;
+pub trait Content<Msg>: Default {
     /// returns the mouse interaction to display on canvas based on content state
     fn mouse_interaction(&self) -> mouse::Interaction;
     /// returns a ContentMsg which will be processed
-    fn events_handler(&self, event: Event) -> Option<Self::ContentMsg>;
+    fn events_handler(&self, event: Event) -> Option<Msg>;
     /// mutate self based on ContentMsg. Returns whether to clear passive cache
-    fn update(&mut self, msg: Self::ContentMsg, curpos_ssp: SSPoint) -> bool;
+    fn update(&mut self, msg: Msg, curpos_ssp: SSPoint) -> bool;
     /// draw geometry onto active frame
     fn draw_active(&self, vct: VCTransform, scale: f32, frame: &mut Frame);
     /// draw geometry onto passive frame
@@ -78,7 +77,7 @@ pub trait Content: Default {
 
 pub struct Viewport<C, ContentMsg>
 where
-    C: Default + Content,
+    C: Default + Content<ContentMsg>,
 {
     /// Contents displayed through this viewport
     pub content: C,
@@ -110,7 +109,7 @@ where
 
 impl<C, ContentMsg> canvas::Program<ContentMsgs<ContentMsg>> for Viewport<C, ContentMsg>
 where
-    C: Default + Content,
+    C: Default + Content<ContentMsg>,
 {
     type State = ViewportState;
 
@@ -211,11 +210,11 @@ where
     }
 }
 
-impl<C, CMsg> IcedStruct<ContentMsgs<CMsg>> for Viewport<C, CMsg>
+impl<C, ContentMsg> IcedStruct<ContentMsgs<ContentMsg>> for Viewport<C, ContentMsg>
 where
-    C: Content,
+    C: Content<ContentMsg>,
 {
-    fn update(&mut self, msgs: ContentMsgs<CMsg>) {
+    fn update(&mut self, msgs: ContentMsgs<ContentMsg>) {
         match msgs.viewport_msg {
             Some(ViewportMsg::NewView(vct, zoom_scale, curpos_csp)) => {
                 self.vct = vct;
@@ -242,7 +241,7 @@ where
         }
     }
 
-    fn view(&self) -> iced::Element<ContentMsgs<CMsg>> {
+    fn view(&self) -> iced::Element<ContentMsgs<ContentMsg>> {
         iced::widget::canvas(self)
             .width(Length::Fill)
             .height(Length::Fill)
@@ -252,7 +251,7 @@ where
 
 impl<C, ContentMsg> Viewport<C, ContentMsg>
 where
-    C: Content,
+    C: Content<ContentMsg>,
 {
     pub fn new(scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransform) -> Self {
         Viewport {

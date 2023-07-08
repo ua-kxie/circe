@@ -144,12 +144,11 @@ where
     }
 }
 
-impl<C, T> viewport::Content for Schematic<C, T>
+impl<C, T> viewport::Content<SchematicMsg> for Schematic<C, T>
 where
     C: Content<T>,
     T: SchematicElement,
 {
-    type ContentMsg = SchematicMsg;
     fn mouse_interaction(&self) -> mouse::Interaction {
         match self.state {
             SchematicSt::Idle => mouse::Interaction::default(),
