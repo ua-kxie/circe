@@ -539,22 +539,7 @@ impl Circuit {
     //     }
     //     self.state = stcp;
     // }
-    // /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
-    // pub fn active_device(&self) -> Option<RcRDevice> {
-    //     let mut v: Vec<_> = self
-    //         .selected
-    //         .iter()
-    //         .filter_map(|x| match x {
-    //             CircuitElement::Device(d) => Some(d.clone()),
-    //             _ => None,
-    //         })
-    //         .collect();
-    //     if v.len() == 1 {
-    //         v.pop()
-    //     } else {
-    //         None
-    //     }
-    // }
+
     // /// clear tentative selections (cursor hover highlight)
     // fn clear_tentatives(&mut self) {
     //     self.devices.clear_tentatives();

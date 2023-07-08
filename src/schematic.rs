@@ -123,7 +123,7 @@ where
 {
     curpos_ssp: SSPoint,
     state: SchematicSt,
-    content: C,
+    pub content: C,
     selskip: usize,
     selected: HashSet<T>,
 }
@@ -382,6 +382,18 @@ where
     C: Content<T>,
     T: SchematicElement,
 {
+    /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
+    pub fn active_device(&self) -> Option<&T> {
+        let mut v: Vec<_> = self
+            .selected
+            .iter()
+            .collect();
+        if v.len() == 1 {
+            v.pop()
+        } else {
+            None
+        }
+    }
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         let mut skip = self.selskip;

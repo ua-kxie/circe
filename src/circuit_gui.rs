@@ -4,7 +4,7 @@
 use crate::circuit::{Circuit, CircuitElement, CircuitMsg};
 use crate::circuit_gui;
 
-use crate::schematic::{RcRDevice, Schematic, SchematicMsg};
+use crate::schematic::{RcRDevice, Schematic, SchematicMsg, SchematicElement};
 use crate::viewport::ContentMsgs;
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
@@ -63,8 +63,6 @@ pub enum CircuitPageMsg {
 pub struct CircuitPage {
     /// viewport
     viewport: Viewport<Schematic<Circuit, CircuitElement>, CircuitMsg>,
-
-    circuit: Circuit,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -127,7 +125,6 @@ impl Default for CircuitPage {
             text: Default::default(),
             spmanager,
             lib,
-            circuit: Default::default(),
         }
     }
 }
@@ -148,22 +145,24 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 self.viewport.update(msgs);
 
                 if let Some(CircuitMsg::DcOp) = msgs.content_msg {
-                    self.circuit.netlist();
+                    self.viewport.content.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
                     if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
-                        self.circuit.op(pkvecvaluesall);
+                        self.viewport.content.content.op(pkvecvaluesall);
                     }
                 }
 
-                self.active_device = self.circuit.active_device();
-                if let Some(rcrd) = &self.active_device {
-                    self.text = rcrd.0.borrow().class().param_summary();
-                } else {
-                    self.text = String::from("");
-                }
+                match self.viewport.content.active_device() {
+                    Some(CircuitElement::Device(rcrd)) => {
+                        self.text = rcrd.0.borrow().class().param_summary();
+                    },
+                    _ => {
+                        self.text = String::from("")
+                    }
+                };
 
-                self.net_name = self.circuit.infobarstr.take();
+                self.net_name = self.viewport.content.content.infobarstr.take();
             }
         }
     }
