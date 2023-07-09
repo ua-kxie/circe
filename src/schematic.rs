@@ -87,6 +87,8 @@ pub trait Content<T, M>: Drawable + Default
 where
     T: SchematicElement,
 {
+    // set single tentative flag by curpos_ssp
+    fn tentative_by_ssp(&mut self, curpos_ssp: SSPoint);
     // apply sst to elements
     fn move_elements(&mut self, elements: &HashSet<T>, sst: &SSTransform);
     // apply sst to a copy of elements
@@ -97,7 +99,6 @@ where
     // returns whether or not to clear the passive cache
     fn update(&mut self, msg: M) -> bool;
     fn bounds(&self) -> VSBox;
-    fn update_cursor_ssp(&mut self, ssp: SSPoint);
     fn clear_tentatives(&mut self);
     fn tentatives_by_ssbox(&mut self, ssb: SSBox);
     fn tentatives(&self) -> Vec<T>;
@@ -228,6 +229,7 @@ where
 
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
+                    self.content.tentative_by_ssp(curpos_ssp);
                 }
 
                 let mut state = self.state.clone();
@@ -379,7 +381,6 @@ where
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         let mut skip = self.selskip;
-        self.content.update_cursor_ssp(curpos_ssp);
 
         let mut stcp = self.state.clone();
         match &mut stcp {

@@ -165,10 +165,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         bbn.union(&bbi)
     }
 
-    fn update_cursor_ssp(&mut self, ssp: SSPoint) {
-        todo!()
-    }
-
     fn clear_tentatives(&mut self) {
         self.nets.clear_tentatives();
         self.devices.clear_tentatives();
@@ -231,11 +227,17 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 
     fn update(&mut self, msg: Msg) -> bool {
         match msg {
-            Msg::Event(_, _) => todo!(),
+            Msg::Event(event, curpos_ssp) => {
+                let mut state = self.state.clone();
+                match (&mut state, event) {
+                    _ => {}
+                }
+            }
             Msg::Wire => todo!(),
             Msg::DcOp => todo!(),
             Msg::None => todo!(),
         }
+        false
     }
 
     fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
@@ -248,6 +250,10 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 
     fn delete_elements(&mut self, elements: &HashSet<CircuitElement>) {
         todo!()
+    }
+
+    fn tentative_by_ssp(&mut self, curpos_ssp: SSPoint) {
+        // todo!()
     }
 }
 
