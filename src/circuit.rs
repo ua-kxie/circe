@@ -102,18 +102,17 @@ impl SchematicElement for CircuitElement {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum DeviceType {
-    Gnd,
-    V,
-    R,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum CircuitMsg {
-    Event(Event),
+pub enum Msg {
+    Event(Event, SSPoint),
     Wire,
     DcOp,
-    NewDevice(DeviceType),
+    None,
+}
+
+impl schematic::ContentMsg for Msg {
+    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self {
+        Msg::Event(event, curpos_ssp)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -159,7 +158,7 @@ impl Drawable for Circuit {
     }
 }
 
-impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
+impl schematic::Content<CircuitElement, Msg> for Circuit {
     fn bounds(&self) -> VSBox {
         let bbn = self.nets.bounding_box();
         let bbi = self.devices.bounding_box();
@@ -230,17 +229,13 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
         }
     }
 
-    fn update(&mut self, msg: CircuitMsg) -> bool {
+    fn update(&mut self, msg: Msg) -> bool {
         match msg {
-            CircuitMsg::Event(_) => todo!(),
-            CircuitMsg::Wire => todo!(),
-            CircuitMsg::DcOp => todo!(),
-            CircuitMsg::NewDevice(_) => todo!(),
+            Msg::Event(_, _) => todo!(),
+            Msg::Wire => todo!(),
+            Msg::DcOp => todo!(),
+            Msg::None => todo!(),
         }
-    }
-
-    fn events_handler(&self, event: Event) -> CircuitMsg {
-        todo!()
     }
 }
 
@@ -251,26 +246,6 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
 //             CircuitSt::Wiring(_) => mouse::Interaction::Crosshair,
 //             CircuitSt::Moving(_) => mouse::Interaction::Grabbing,
 //             CircuitSt::AreaSelect(_) => mouse::Interaction::Crosshair,
-//         }
-//     }
-
-//     fn events_handler(&self, event: Event) -> Option<CircuitMsg> {
-//         match (&self.state, event) {
-//             (
-//                 CircuitSt::Idle,
-//                 Event::Keyboard(iced::keyboard::Event::KeyPressed {
-//                     key_code: iced::keyboard::KeyCode::W,
-//                     modifiers: _,
-//                 }),
-//             ) => Some(CircuitMsg::Wire),
-//             (
-//                 CircuitSt::Idle,
-//                 Event::Keyboard(iced::keyboard::Event::KeyPressed {
-//                     key_code: iced::keyboard::KeyCode::Space,
-//                     modifiers: _,
-//                 }),
-//             ) => Some(CircuitMsg::DcOp),
-//             (_, _) => Some(CircuitMsg::Event(event)),
 //         }
 //     }
 

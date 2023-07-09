@@ -81,8 +81,12 @@ pub trait SchematicElement: Hash + Eq + Drawable + Clone {
 #[derive(Debug, Clone, Copy)]
 pub enum Msg {
     None,
-    // Event(Event),
-    NewState(SchematicSt),
+    Event(Event, CSPoint),
+    // NewState(SchematicSt),
+}
+
+pub trait ContentMsg {
+    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self;
 }
 
 /// message type that is the union of content and schematic messages - allows content and schematic to process events simultaneously
@@ -92,6 +96,18 @@ pub struct CompositeMsg<ContentMsg> {
     pub content_msg: ContentMsg,
     /// schematic message processed from canvas event
     pub schematic_msg: Msg,
+}
+
+impl<M> viewport::ContentMsg for CompositeMsg<M>
+where
+    M: ContentMsg,
+{
+    fn canvas_event_msg(event: Event, curpos_csp: CSPoint) -> Self {
+        CompositeMsg {
+            content_msg: M::canvas_event_msg(event, curpos_csp.round().cast().cast_unit()),
+            schematic_msg: Msg::Event(event, curpos_csp),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -118,8 +134,6 @@ where
     // ex. wires + devices
     /// returns whether or not to clear the passive cache
     fn update(&mut self, msg: M) -> bool;
-    /// generate msg M from canvas event
-    fn events_handler(&self, event: Event) -> M;
     fn bounds(&self) -> VSBox;
     fn update_cursor_ssp(&mut self, ssp: SSPoint);
     fn clear_tentatives(&mut self);
@@ -174,149 +188,6 @@ where
             SchematicSt::Idle => mouse::Interaction::default(),
             SchematicSt::TransformSelected(_) => mouse::Interaction::Grabbing,
             SchematicSt::AreaSelect(_) => mouse::Interaction::Crosshair,
-        }
-    }
-
-    fn events_handler(&self, event: Event, curpos_ssp: SSPoint) -> CompositeMsg<M> {
-        let schematic_msg = match (&self.state, event) {
-            // cursor move
-            (
-                _,
-                Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
-            ) => {
-                Msg::CurposMoved(curpos_ssp)
-            }
-
-            // drag/area select
-            (
-                SchematicSt::Idle,
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
-            ) => {
-                let mut click_selected = false;
-
-                for s in &self.selected {
-                    if s.contains_ssp(curpos_ssp) {
-                        click_selected = true;
-                        break;
-                    }
-                }
-
-                let newst;
-                if click_selected {
-                    newst = SchematicSt::TransformSelected(Some((
-                        curpos_ssp,
-                        curpos_ssp,
-                        SSTransform::identity(),
-                    )))
-                } else {
-                    newst = SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp))
-                }
-                Msg::NewState(newst)
-            }
-
-            // area select
-            (
-                SchematicSt::AreaSelect(_),
-                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
-            ) => {
-                Msg::SelectTentatives
-                // self.tentatives_to_selected();
-                // state = SchematicSt::Idle;
-                // clear_passive = true;
-            }
-
-            // moving
-            (
-                _,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::M,
-                    modifiers: _,
-                }),
-            ) => {
-                Msg::NewState(SchematicSt::TransformSelected(None))
-            }
-            (
-                SchematicSt::TransformSelected(Some((_ssp0, _ssp1, sst))),
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::R,
-                    modifiers: modifier,
-                }),
-            ) => {
-                if modifier.shift() {
-                    *sst = sst.then(&transforms::SST_CCWR);
-                } else {
-                    *sst = sst.then(&transforms::SST_CWR);
-                }
-            }
-            (
-                SchematicSt::TransformSelected(mut opt_pts),
-                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
-            ) => {
-                if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
-                    // end transform if already started
-                    self.transform_selected(SchematicSt::move_transform(ssp0, ssp1, vvt));
-                    state = SchematicSt::Idle;
-                    clear_passive = true;
-                } else {
-                    // start transform if not yet started
-                    let ssp: euclid::Point2D<_, _> = curpos_ssp;
-                    let sst = SSTransform::identity();
-                    state = SchematicSt::TransformSelected(Some((ssp, ssp, sst)));
-                }
-            }
-
-            // drag/area select
-            (
-                SchematicSt::Idle,
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
-            ) => {
-                let mut click_selected = false;
-                let curpos_ssp = self.curpos_ssp;
-
-                for s in &self.selected {
-                    if s.contains_ssp(curpos_ssp) {
-                        click_selected = true;
-                        break;
-                    }
-                }
-
-                if click_selected {
-                    Msg::NewState(SchematicSt::TransformSelected(Some((
-                        curpos_ssp,
-                        curpos_ssp,
-                        SSTransform::identity(),
-                    ))))
-                } else {
-                    Msg::NewState(SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp)))
-                }
-            }
-            (_, _) => Msg::None,
-        };
-
-        //     let mut state = self.state.clone();
-        //     match (&mut state, event) {
-
-
-
-
-        //         // delete
-        //         (
-        //             SchematicSt::Idle,
-        //             Event::Keyboard(iced::keyboard::Event::KeyPressed {
-        //                 key_code: iced::keyboard::KeyCode::Delete,
-        //                 modifiers: _,
-        //             }),
-        //         ) => {
-        //             self.delete_selected();
-        //             clear_passive = true;
-        //         }
-        //         _ => {}
-        //     }
-        //     self.state = state;
-        // }
-        CompositeMsg {
-            content_msg: self.content.events_handler(event),
-            schematic_msg,
         }
     }
 
@@ -387,10 +258,8 @@ where
     fn update(&mut self, msg: CompositeMsg<M>, curpos_ssp: SSPoint) -> bool {
         let mut clear_passive = false;
         match msg.schematic_msg {
-            Msg::NewState(ns) => {
-                self.state = ns;
-            }
             Msg::None => {}
+            Msg::Event(_, _) => todo!(),
         }
         clear_passive = clear_passive || self.content.update(msg.content_msg);
         clear_passive

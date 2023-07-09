@@ -1,10 +1,10 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::circuit::{Circuit, CircuitElement, CircuitMsg};
+use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::{circuit_gui, schematic};
 
-use crate::schematic::{CompositeMsg, Msg, RcRDevice, Schematic, SchematicElement};
+use crate::schematic::{CompositeMsg, RcRDevice, Schematic, SchematicElement};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::{button, row};
@@ -53,7 +53,7 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
-    ViewportEvt(viewport::CompositeMsg<schematic::CompositeMsg<CircuitMsg>>),
+    ViewportEvt(viewport::CompositeMsg<schematic::CompositeMsg<Msg>>),
     TextInputChanged(String),
     TextInputSubmit,
 }
@@ -61,10 +61,7 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<
-        Schematic<Circuit, CircuitElement, CircuitMsg>,
-        schematic::CompositeMsg<CircuitMsg>,
-    >,
+    viewport: Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::CompositeMsg<Msg>>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -146,7 +143,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             CircuitPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
-                if let CircuitMsg::DcOp = msgs.content_msg.content_msg {
+                if let Msg::DcOp = msgs.content_msg.content_msg {
                     self.viewport.content.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
@@ -201,8 +198,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             row![
                 button("wire").on_press(CircuitPageMsg::ViewportEvt(viewport::CompositeMsg {
                     content_msg: schematic::CompositeMsg {
-                        content_msg: CircuitMsg::Wire,
-                        schematic_msg: Msg::None
+                        content_msg: Msg::Wire,
+                        schematic_msg: schematic::Msg::None
                     },
                     viewport_msg: viewport::Msg::None,
                 })),

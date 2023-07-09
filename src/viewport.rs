@@ -42,7 +42,10 @@ pub enum Msg {
 
 /// message type that is the union of content and viewport messages - allows content and viewport to process events simultaneously
 #[derive(Clone, Copy, Debug)]
-pub struct CompositeMsg<M> {
+pub struct CompositeMsg<M>
+where
+    M: ContentMsg,
+{
     /// content msg
     pub content_msg: M,
     /// viewport message processed from canvas event
@@ -52,8 +55,6 @@ pub struct CompositeMsg<M> {
 pub trait Content<Msg>: Default {
     /// returns the mouse interaction to display on canvas based on content state
     fn mouse_interaction(&self) -> mouse::Interaction;
-    /// returns a ContentMsg which will be processed
-    fn events_handler(&self, event: Event, curpos_ssp: SSPoint) -> Msg;
     /// mutate self based on ContentMsg. Returns whether to clear passive cache
     fn update(&mut self, msg: Msg, curpos_ssp: SSPoint) -> bool;
     /// draw geometry onto active frame
@@ -76,9 +77,14 @@ pub trait Content<Msg>: Default {
     }
 }
 
+pub trait ContentMsg {
+    fn canvas_event_msg(event: Event, curpos_csp: CSPoint) -> Self;
+}
+
 pub struct Viewport<C, M>
 where
     C: Default + Content<M>,
+    M: ContentMsg,
 {
     /// Contents displayed through this viewport
     pub content: C,
@@ -111,6 +117,7 @@ where
 impl<C, M> canvas::Program<CompositeMsg<M>> for Viewport<C, M>
 where
     C: Default + Content<M>,
+    M: ContentMsg,
 {
     type State = State;
 
@@ -214,6 +221,7 @@ where
 impl<C, M> IcedStruct<CompositeMsg<M>> for Viewport<C, M>
 where
     C: Content<M>,
+    M: ContentMsg,
 {
     fn update(&mut self, msgs: CompositeMsg<M>) {
         match msgs.viewport_msg {
@@ -251,6 +259,7 @@ where
 impl<C, M> Viewport<C, M>
 where
     C: Content<M>,
+    M: ContentMsg,
 {
     pub fn new(scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransform) -> Self {
         Viewport {
@@ -381,7 +390,7 @@ where
         }
         *state = stcp;
 
-        let content_msg = self.content.events_handler(event, self.curpos_ssp());
+        let content_msg = M::canvas_event_msg(event, self.curpos_csp());
         CompositeMsg {
             content_msg,
             viewport_msg,
