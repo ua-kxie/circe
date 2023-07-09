@@ -1,6 +1,7 @@
 //! Circuit
 //! Concrete types for schematic content
 
+use crate::schematic::devices::Devices;
 use crate::schematic::nets::{NetEdge, NetVertex, Nets};
 use crate::schematic::{self, RcRDevice, SchematicElement};
 use crate::{interactable, viewport};
@@ -17,7 +18,6 @@ use iced::{
     Color, Size,
 };
 use std::{collections::HashSet, fs};
-use crate::schematic::devices::Devices;
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -198,12 +198,8 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
     fn delete(&mut self, targets: &HashSet<CircuitElement>) {
         for e in targets {
             match e {
-                CircuitElement::NetEdge(edge) => {
-                    self.nets.delete_edge(edge)
-                },
-                CircuitElement::Device(d) => {
-                    self.devices.delete_device(d)
-                },
+                CircuitElement::NetEdge(edge) => self.nets.delete_edge(edge),
+                CircuitElement::Device(d) => self.devices.delete_device(d),
             }
         }
     }
@@ -212,7 +208,12 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
         todo!()
     }
 
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<CircuitElement> {
+    fn selectable(
+        &mut self,
+        ssp: SSPoint,
+        skip: &mut usize,
+        count: &mut usize,
+    ) -> Option<CircuitElement> {
         loop {
             let mut count = 0; // tracks the number of skipped elements
             if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
@@ -229,13 +230,17 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
         }
     }
 
-    fn update(&mut self, msg: CircuitMsg) {
+    fn update(&mut self, msg: CircuitMsg) -> bool {
         match msg {
             CircuitMsg::Event(_) => todo!(),
             CircuitMsg::Wire => todo!(),
             CircuitMsg::DcOp => todo!(),
             CircuitMsg::NewDevice(_) => todo!(),
         }
+    }
+
+    fn events_handler(&self, event: Event) -> CircuitMsg {
+        todo!()
     }
 }
 
@@ -342,7 +347,6 @@ impl schematic::Content<CircuitElement, CircuitMsg> for Circuit {
 //             })
 //             .collect();
 //     }
-
 
 //     /// mutate state based on message and cursor position
 //     fn update(&mut self, msg: CircuitMsg, curpos_ssp: SSPoint) -> bool {

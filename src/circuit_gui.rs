@@ -2,10 +2,9 @@
 //! includes paramter editor, toolbar, and the canvas itself
 
 use crate::circuit::{Circuit, CircuitElement, CircuitMsg};
-use crate::circuit_gui;
+use crate::{circuit_gui, schematic};
 
-use crate::schematic::{RcRDevice, Schematic, SchematicMsg, SchematicElement};
-use crate::viewport::ContentMsgs;
+use crate::schematic::{CompositeMsg, Msg, RcRDevice, Schematic, SchematicElement};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::{button, row};
@@ -54,7 +53,7 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
-    ViewportEvt(viewport::ContentMsgs<SchematicMsg<CircuitMsg>>),
+    ViewportEvt(viewport::CompositeMsg<schematic::CompositeMsg<CircuitMsg>>),
     TextInputChanged(String),
     TextInputSubmit,
 }
@@ -62,7 +61,10 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic<Circuit, CircuitElement, CircuitMsg>, SchematicMsg<CircuitMsg>>,
+    viewport: Viewport<
+        Schematic<Circuit, CircuitElement, CircuitMsg>,
+        schematic::CompositeMsg<CircuitMsg>,
+    >,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -144,7 +146,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             CircuitPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
-                if let Some(SchematicMsg::ContentMsg(CircuitMsg::DcOp)) = msgs.content_msg {
+                if let CircuitMsg::DcOp = msgs.content_msg.content_msg {
                     self.viewport.content.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
@@ -156,10 +158,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 match self.viewport.content.active_device() {
                     Some(CircuitElement::Device(rcrd)) => {
                         self.text = rcrd.0.borrow().class().param_summary();
-                    },
-                    _ => {
-                        self.text = String::from("")
                     }
+                    _ => self.text = String::from(""),
                 };
 
                 self.net_name = self.viewport.content.content.infobarstr.take();
@@ -197,13 +197,17 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 .vertical_alignment(iced::alignment::Vertical::Center),
         ]
         .spacing(10);
-        let toolbar = row![
-            button("wire").on_press(CircuitPageMsg::ViewportEvt(ContentMsgs {
-                content_msg: Some(SchematicMsg::ContentMsg(CircuitMsg::Wire)),
-                viewport_msg: None
-            })),
-        ]
-        .width(Length::Fill);
+        let toolbar =
+            row![
+                button("wire").on_press(CircuitPageMsg::ViewportEvt(viewport::CompositeMsg {
+                    content_msg: schematic::CompositeMsg {
+                        content_msg: CircuitMsg::Wire,
+                        schematic_msg: Msg::None
+                    },
+                    viewport_msg: viewport::Msg::None,
+                })),
+            ]
+            .width(Length::Fill);
 
         let schematic = iced::widget::column![
             toolbar,
