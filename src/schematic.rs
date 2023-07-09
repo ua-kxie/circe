@@ -10,7 +10,7 @@ use crate::{interactable, viewport};
 use crate::{
     interactable::Interactive,
     transforms::{
-        self, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox, ViewportSpace,
+        self, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox, ViewportSpace, VSPoint
     },
     viewport::Drawable,
 };
@@ -35,7 +35,7 @@ pub trait SchematicElement: Hash + Eq + Drawable + Clone {
 #[derive(Debug, Clone, Copy)]
 pub enum Msg {
     None,
-    Event(Event, CSPoint),
+    Event(Event, VSPoint),
     // NewState(SchematicSt),
 }
 
@@ -56,10 +56,10 @@ impl<M> viewport::ContentMsg for CompositeMsg<M>
 where
     M: ContentMsg,
 {
-    fn canvas_event_msg(event: Event, curpos_csp: CSPoint) -> Self {
+    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
         CompositeMsg {
-            content_msg: M::canvas_event_msg(event, curpos_csp.round().cast().cast_unit()),
-            schematic_msg: Msg::Event(event, curpos_csp),
+            content_msg: M::canvas_event_msg(event, curpos_vsp.round().cast().cast_unit()),
+            schematic_msg: Msg::Event(event, curpos_vsp),
         }
     }
 }
@@ -69,7 +69,6 @@ pub enum SchematicSt {
     #[default]
     Idle,
     AreaSelect(SSBox),
-    TransformSelected(Option<(SSPoint, SSPoint, SSTransform)>),
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
     Copying(Option<(SSPoint, SSPoint, SSTransform)>),
     // first click, second click, transform for rotation/flip ONLY
@@ -115,7 +114,6 @@ where
     C: Content<T, M>,
     T: SchematicElement,
 {
-    curpos_ssp: SSPoint,
     state: SchematicSt,
     pub content: C,
     /// phantom data to mark ContentMsg type
@@ -135,7 +133,6 @@ where
             content: Default::default(),
             selskip: Default::default(),
             selected: Default::default(),
-            curpos_ssp: Default::default(),
             content_msg: std::marker::PhantomData,
         }
     }
@@ -149,17 +146,15 @@ where
     fn mouse_interaction(&self) -> mouse::Interaction {
         match self.state {
             SchematicSt::Idle => mouse::Interaction::default(),
-            SchematicSt::TransformSelected(_) => mouse::Interaction::Grabbing,
             SchematicSt::AreaSelect(_) => mouse::Interaction::Crosshair,
-            SchematicSt::Moving(_) => todo!(),
-            SchematicSt::Copying(_) => todo!(),
+            SchematicSt::Moving(_) => mouse::Interaction::Grabbing,
+            SchematicSt::Copying(_) => mouse::Interaction::Grabbing,
         }
     }
 
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.content.draw_preview(vct, vcscale, frame);
-
         match &self.state {
             SchematicSt::Idle => {}
             SchematicSt::AreaSelect(ssb) => {
@@ -191,7 +186,7 @@ where
                 };
                 frame.stroke(&path_builder.build(), stroke);
             }
-            SchematicSt::TransformSelected(Some((ssp0, ssp1, sst))) => {
+            SchematicSt::Moving(Some((ssp0, ssp1, sst))) => {
                 // draw selected preview with transform applied
                 let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicSt::move_transform(
                     ssp0, ssp1, sst,
@@ -340,6 +335,7 @@ where
                     }
                     _ => {}
                 }
+                self.state = state;
             },
         }
         clear_passive = clear_passive || self.content.update(msg.content_msg);
@@ -388,7 +384,7 @@ where
                 ssb.max = curpos_ssp;
                 self.tentatives_by_ssbox(ssb);
             }
-            SchematicSt::TransformSelected(Some((_ssp0, ssp1, _sst))) => {
+            SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_ssp;
             }
             _ => {}

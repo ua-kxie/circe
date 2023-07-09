@@ -78,7 +78,7 @@ pub trait Content<Msg>: Default {
 }
 
 pub trait ContentMsg {
-    fn canvas_event_msg(event: Event, curpos_csp: CSPoint) -> Self;
+    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self;
 }
 
 pub struct Viewport<C, M>
@@ -390,7 +390,7 @@ where
         }
         *state = stcp;
 
-        let content_msg = M::canvas_event_msg(event, self.curpos_csp());
+        let content_msg = M::canvas_event_msg(event, self.curpos_vsp());
         CompositeMsg {
             content_msg,
             viewport_msg,
