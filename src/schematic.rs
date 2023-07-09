@@ -25,52 +25,6 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::{collections::HashSet, fs};
 
-// /// trait for a type of element in schematic. e.g. nets or devices
-// pub trait SchematicSet {
-//     /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
-//     /// count is incremented by 1 for every element skipped over
-//     /// skip is updated if an element is returned, equal to count
-//     fn selectable(
-//         &mut self,
-//         curpos_ssp: SSPoint,
-//         skip: &mut usize,
-//         count: &mut usize,
-//     ) -> Option<BaseElement>;
-
-//     /// returns the bounding box of all contained elements
-//     fn bounding_box(&self) -> VSBox;
-// }
-
-// /// an enum to unify different types in schematic (nets and devices)
-// #[derive(Debug, Clone)]
-// pub enum BaseElement {
-//     NetEdge(NetEdge),
-//     Device(RcRDevice),
-// }
-
-// impl PartialEq for BaseElement {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (self, other) {
-//             (Self::NetEdge(l0), Self::NetEdge(r0)) => *l0 == *r0,
-//             (Self::Device(l0), Self::Device(r0)) => {
-//                 by_address::ByAddress(l0) == by_address::ByAddress(r0)
-//             }
-//             _ => false,
-//         }
-//     }
-// }
-
-// impl Eq for BaseElement {}
-
-// impl std::hash::Hash for BaseElement {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         match self {
-//             BaseElement::NetEdge(e) => e.hash(state),
-//             BaseElement::Device(d) => by_address::ByAddress(d).hash(state),
-//         }
-//     }
-// }
-
 pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     // device designer: line, arc
     // circuit: wire, device
@@ -116,6 +70,8 @@ pub enum SchematicSt {
     Idle,
     AreaSelect(SSBox),
     TransformSelected(Option<(SSPoint, SSPoint, SSTransform)>),
+    Moving(Option<(SSPoint, SSPoint, SSTransform)>),
+    Copying(Option<(SSPoint, SSPoint, SSTransform)>),
     // first click, second click, transform for rotation/flip ONLY
 }
 
@@ -131,8 +87,14 @@ pub trait Content<T, M>: Drawable + Default
 where
     T: SchematicElement,
 {
+    // apply sst to elements
+    fn move_elements(&mut self, elements: &HashSet<T>, sst: &SSTransform);
+    // apply sst to a copy of elements
+    fn copy_elements(&mut self, elements: &HashSet<T>, sst: &SSTransform);
+    // delete elements
+    fn delete_elements(&mut self, elements: &HashSet<T>);
     // ex. wires + devices
-    /// returns whether or not to clear the passive cache
+    // returns whether or not to clear the passive cache
     fn update(&mut self, msg: M) -> bool;
     fn bounds(&self) -> VSBox;
     fn update_cursor_ssp(&mut self, ssp: SSPoint);
@@ -188,6 +150,8 @@ where
             SchematicSt::Idle => mouse::Interaction::default(),
             SchematicSt::TransformSelected(_) => mouse::Interaction::Grabbing,
             SchematicSt::AreaSelect(_) => mouse::Interaction::Crosshair,
+            SchematicSt::Moving(_) => todo!(),
+            SchematicSt::Copying(_) => todo!(),
         }
     }
 
@@ -255,11 +219,126 @@ where
         self.content.bounds()
     }
     /// mutate state based on message and cursor position
-    fn update(&mut self, msg: CompositeMsg<M>, curpos_ssp: SSPoint) -> bool {
+    fn update(&mut self, msg: CompositeMsg<M>) -> bool {
         let mut clear_passive = false;
         match msg.schematic_msg {
-            Msg::None => {}
-            Msg::Event(_, _) => todo!(),
+            Msg::None => {},
+            Msg::Event(event, curpos_csp) => {
+                let curpos_ssp = curpos_csp.round().cast().cast_unit();
+
+                if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
+                    self.update_cursor_ssp(curpos_ssp);
+                }
+
+                let mut state = self.state.clone();
+                match (&mut state, event) {
+                    // drag/area select - todo move to viewport - content should allow viewport to discern areaselect or drag
+                    (
+                        SchematicSt::Idle,
+                        Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
+                    ) => {
+                        let mut click_selected = false;
+
+                        for s in &self.selected {
+                            if s.contains_ssp(curpos_ssp) {
+                                click_selected = true;
+                                break;
+                            }
+                        }
+
+                        if click_selected {
+                            state = SchematicSt::Moving(Some((
+                                curpos_ssp,
+                                curpos_ssp,
+                                SSTransform::identity(),
+                            )));
+                        } else {
+                            state =
+                            SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
+                        }
+                    }
+
+                    // area select
+                    (
+                        SchematicSt::AreaSelect(_),
+                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
+                    ) => {
+                        self.tentatives_to_selected();
+                        state = SchematicSt::Idle;
+                        clear_passive = true;
+                    }
+                    // moving
+                    (
+                        _,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::M,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        state = SchematicSt::Moving(None);
+                    }
+                    (
+                        SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::R,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        *sst = sst.then(&transforms::SST_CWR);
+                    }
+                    (
+                        SchematicSt::Moving(mut opt_pts),
+                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
+                    ) => {
+                        if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
+                            self.content.move_elements(&self.selected, sst);
+                            clear_passive = true;
+                            state = SchematicSt::Idle;
+                        } else {
+                            let sst = SSTransform::identity();
+                            state = SchematicSt::Moving(Some((curpos_ssp, curpos_ssp, sst)));
+                        }
+                    }
+                    // copying
+                    (
+                        SchematicSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::C,
+                            modifiers: m,
+                        }),
+                    ) => {
+                        if m.control() {
+                            state = SchematicSt::Copying(Some((
+                                curpos_ssp,
+                                curpos_ssp,
+                                SSTransform::identity(),
+                            )));
+                        }
+                    }
+                    (
+                        SchematicSt::Copying(mut opt_pts),
+                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
+                    ) => {
+                        if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
+                            self.content.copy_elements(&self.selected, sst);
+                            clear_passive = true;
+                            state = SchematicSt::Idle;
+                        }
+                    }
+                    // delete
+                    (
+                        SchematicSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::Delete,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        self.content.delete_elements(&self.selected);
+                        clear_passive = true;
+                    }
+                    _ => {}
+                }
+            },
         }
         clear_passive = clear_passive || self.content.update(msg.content_msg);
         clear_passive

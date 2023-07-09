@@ -56,7 +56,7 @@ pub trait Content<Msg>: Default {
     /// returns the mouse interaction to display on canvas based on content state
     fn mouse_interaction(&self) -> mouse::Interaction;
     /// mutate self based on ContentMsg. Returns whether to clear passive cache
-    fn update(&mut self, msg: Msg, curpos_ssp: SSPoint) -> bool;
+    fn update(&mut self, msg: Msg) -> bool;
     /// draw geometry onto active frame
     fn draw_active(&self, vct: VCTransform, scale: f32, frame: &mut Frame);
     /// draw geometry onto passive frame
@@ -243,7 +243,7 @@ where
             }
             Msg::None => {}
         }
-        if self.content.update(msgs.content_msg, self.curpos_ssp()) {
+        if self.content.update(msgs.content_msg) {
             self.passive_cache.clear();
         }
     }

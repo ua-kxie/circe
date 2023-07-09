@@ -237,6 +237,18 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             Msg::None => todo!(),
         }
     }
+
+    fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
+        todo!()
+    }
+
+    fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
+        todo!()
+    }
+
+    fn delete_elements(&mut self, elements: &HashSet<CircuitElement>) {
+        todo!()
+    }
 }
 
 // impl viewport::ViewportContent<CircuitMsg> for SchematicContent {
