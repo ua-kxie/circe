@@ -3,7 +3,7 @@
 
 use crate::schematic::devices::Devices;
 use crate::schematic::nets::{NetEdge, NetVertex, Nets};
-use crate::schematic::{self, RcRDevice, SchematicElement};
+use crate::schematic::{self, RcRDevice, SchematicElement, SchematicMsg};
 use crate::{interactable, viewport};
 use crate::{
     interactable::Interactive,
@@ -225,11 +225,12 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         }
     }
 
-    fn update(&mut self, msg: Msg) -> bool {
+    fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
         let mut clear_passive = false;
-        match msg {
+        let ret_msg = match msg {
             Msg::Event(event, curpos_ssp) => {
                 let mut state = self.state.clone();
+                let mut ret_msg = SchematicMsg::None;
                 match (&mut state, event) {
                     // wiring
                     (
@@ -239,7 +240,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             modifiers: _,
                         }),
                     ) => {
-                        state = CircuitSt::Wiring(None)
+                        state = CircuitSt::Wiring(None);
                     }
                     (
                         CircuitSt::Wiring(opt_ws),
@@ -272,15 +273,8 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             modifiers: _,
                         }),
                     ) => {
-                        self.selected.clear();
                         let d = self.devices.new_res();
-                        d.0.borrow_mut().set_position(curpos_ssp);
-                        self.selected.insert(BaseElement::Device(d));
-                        state = SchematicContentSt::Moving(Some((
-                            curpos_ssp,
-                            curpos_ssp,
-                            SSTransform::identity(),
-                        )));
+                        ret_msg = SchematicMsg::NewElement(CircuitElement::Device(d));
                     }
                     (
                         CircuitSt::Idle,
@@ -289,15 +283,8 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             modifiers: _,
                         }),
                     ) => {
-                        self.selected.clear();
                         let d = self.devices.new_gnd();
-                        d.0.borrow_mut().set_position(curpos_ssp);
-                        self.selected.insert(BaseElement::Device(d));
-                        state = SchematicContentSt::Moving(Some((
-                            curpos_ssp,
-                            curpos_ssp,
-                            SSTransform::identity(),
-                        )));
+                        ret_msg = SchematicMsg::NewElement(CircuitElement::Device(d));
                     }
                     (
                         CircuitSt::Idle,
@@ -306,25 +293,25 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             modifiers: _,
                         }),
                     ) => {
-                        self.selected.clear();
                         let d = self.devices.new_vs();
-                        d.0.borrow_mut().set_position(curpos_ssp);
-                        self.selected.insert(BaseElement::Device(d));
-                        state = SchematicContentSt::Moving(Some((
-                            curpos_ssp,
-                            curpos_ssp,
-                            SSTransform::identity(),
-                        )));
+                        ret_msg = SchematicMsg::NewElement(CircuitElement::Device(d));
                     }
                     _ => {}
                 }
                 self.state = state;
+                ret_msg
             }
-            Msg::Wire => todo!(),
-            Msg::DcOp => todo!(),
-            Msg::None => todo!(),
-        }
-        clear_passive
+            Msg::Wire => {
+                SchematicMsg::None
+            },
+            Msg::DcOp => {
+                SchematicMsg::None
+            },
+            Msg::None => {
+                SchematicMsg::None
+            },
+        };
+        ret_msg
     }
 
     fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {

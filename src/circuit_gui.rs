@@ -4,7 +4,7 @@
 use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::{circuit_gui, schematic};
 
-use crate::schematic::{CompositeMsg, RcRDevice, Schematic, SchematicElement};
+use crate::schematic::{RcRDevice, Schematic, SchematicElement};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::{button, row};
@@ -53,7 +53,7 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
-    ViewportEvt(viewport::CompositeMsg<schematic::CompositeMsg<Msg, CircuitElement>>),
+    ViewportEvt(viewport::CompositeMsg<schematic::Msg<Msg, CircuitElement>>),
     TextInputChanged(String),
     TextInputSubmit,
 }
@@ -61,7 +61,7 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::CompositeMsg<Msg, CircuitElement>>,
+    viewport: Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::Msg<Msg, CircuitElement>>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -143,7 +143,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             CircuitPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
-                if let Msg::DcOp = msgs.content_msg.content_msg {
+                if let schematic::Msg::ContentMsg(Msg::DcOp) = msgs.content_msg {
                     self.viewport.content.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
@@ -197,10 +197,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
         let toolbar =
             row![
                 button("wire").on_press(CircuitPageMsg::ViewportEvt(viewport::CompositeMsg {
-                    content_msg: schematic::CompositeMsg {
-                        content_msg: Msg::Wire,
-                        schematic_msg: schematic::Msg::None
-                    },
+                    content_msg: schematic::Msg::ContentMsg(Msg::Wire),
                     viewport_msg: viewport::Msg::None,
                 })),
             ]
