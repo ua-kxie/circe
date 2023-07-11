@@ -19,6 +19,7 @@ paprika = { path = "./paprika", features = ["serde"] }
 colored = "2.0"
 serde_json = "1.0.97"
 serde = {version="1.0.164", features = ["derive"]}
+send_wrapper = "0.6.0"
 
 [workspace]
 members = [

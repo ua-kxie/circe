@@ -18,6 +18,7 @@ use iced::{
     Color, Size,
 };
 use std::{collections::HashSet, fs};
+use send_wrapper::SendWrapper;
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -274,7 +275,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_res();
-                        ret_msg = SchematicMsg::NewElement(CircuitElement::Device(d));
+                        ret_msg = SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -284,7 +285,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_gnd();
-                        ret_msg = SchematicMsg::NewElement(CircuitElement::Device(d));
+                        ret_msg = SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -294,7 +295,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_vs();
-                        ret_msg = SchematicMsg::NewElement(CircuitElement::Device(d));
+                        ret_msg = SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     _ => {}
                 }

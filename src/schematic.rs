@@ -23,7 +23,9 @@ use iced::{
 use nets::{NetEdge, NetVertex, Nets};
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::{collections::HashSet};
+use std::sync::{Mutex, Arc};
+use std::collections::HashSet;
+use send_wrapper::SendWrapper;
 
 pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     // device designer: line, arc
@@ -32,19 +34,19 @@ pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     fn set_tentative(&mut self);
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum SchematicMsg<E> 
 where E: SchematicElement
 {
     None,
-    NewElement(E),
+    NewElement(SendWrapper<E>),
 }
 
 pub trait ContentMsg {
     fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self;
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Msg<M, E> 
 where 
     M: ContentMsg,
@@ -342,21 +344,23 @@ where
                     }
                     // something else - pass on to content
                     _ => {
-                        let m = M::canvas_event_msg(event, curpos_ssp);
-                        clear_passive = self.update(Msg::SchematicMsg(self.content.update(m)));
+                        let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
+                        clear_passive = self.update(Msg::SchematicMsg(m));
                     }
                 }
                 self.state = state;
             }
             Msg::ContentMsg(content_msg) => {
-                clear_passive = self.update(Msg::SchematicMsg(self.content.update(content_msg)))
+                let m = self.content.update(content_msg);
+                clear_passive = self.update(Msg::SchematicMsg(m));
             }
             Msg::SchematicMsg(schematic_msg) => {
                 match schematic_msg {
                     SchematicMsg::None => {},
                     SchematicMsg::NewElement(e) => {
                         self.selected.clear();
-                        self.selected.insert(e);
+                        
+                        self.selected.insert(e.take());
                         self.state = SchematicSt::Moving(Some((
                             self.curpos_ssp,
                             self.curpos_ssp,

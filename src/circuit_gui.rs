@@ -141,7 +141,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 }
             }
             CircuitPageMsg::ViewportEvt(msgs) => {
-                self.viewport.update(msgs);
+                self.viewport.update(msgs.clone());
 
                 if let schematic::Msg::ContentMsg(Msg::DcOp) = msgs.content_msg {
                     self.viewport.content.content.netlist();
