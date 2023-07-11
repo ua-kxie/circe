@@ -61,7 +61,8 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitPage {
     /// viewport
-    viewport: Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::Msg<Msg, CircuitElement>>,
+    viewport:
+        Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::Msg<Msg, CircuitElement>>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,

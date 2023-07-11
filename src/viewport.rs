@@ -36,8 +36,6 @@ pub enum Msg {
     None,
     NewView(VCTransform, f32, CSPoint),
     CursorMoved(CSPoint),
-    ContentSingleTentativeCycle(SSPoint),
-    ContentRst,
 }
 
 /// message type that is the union of content and viewport messages - allows content and viewport to process events simultaneously
@@ -83,7 +81,7 @@ pub trait ContentMsg {
 
 pub struct Viewport<C, M>
 where
-    C: Default + Content<M>,
+    C: Content<M>,
     M: ContentMsg,
 {
     /// Contents displayed through this viewport
@@ -116,7 +114,7 @@ where
 
 impl<C, M> canvas::Program<CompositeMsg<M>> for Viewport<C, M>
 where
-    C: Default + Content<M>,
+    C: Content<M>,
     M: ContentMsg,
 {
     type State = State;
@@ -234,12 +232,6 @@ where
             }
             Msg::CursorMoved(curpos_csp) => {
                 self.curpos_update(curpos_csp);
-            }
-            Msg::ContentSingleTentativeCycle(curpos_ssp) => {
-                self.content.cycle(curpos_ssp);
-            }
-            Msg::ContentRst => {
-                self.content.rst();
             }
             Msg::None => {}
         }
@@ -370,22 +362,22 @@ where
                 let csp = self.curpos_csp();
                 viewport_msg = self.display_bounds(bounds_csb, vsb, csp);
             }
-            // esc key / reset
-            (
-                _,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::Escape,
-                    modifiers: _,
-                }),
-            ) => viewport_msg = Msg::ContentRst,
-            (
-                // to be migrated to viewport - no state
-                _,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::C,
-                    modifiers: _,
-                }),
-            ) => viewport_msg = Msg::ContentSingleTentativeCycle(self.curpos_ssp()),
+            // // esc key / reset
+            // (
+            //     _,
+            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::Escape,
+            //         modifiers: _,
+            //     }),
+            // ) => viewport_msg = Msg::ContentRst,
+            // (
+            //     // to be migrated to viewport - no state
+            //     _,
+            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::C,
+            //         modifiers: _,
+            //     }),
+            // ) => viewport_msg = Msg::ContentSingleTentativeCycle(self.curpos_ssp()),
             _ => {}
         }
         *state = stcp;

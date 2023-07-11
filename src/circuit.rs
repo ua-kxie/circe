@@ -17,8 +17,8 @@ use iced::{
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
     Color, Size,
 };
-use std::{collections::HashSet, fs};
 use send_wrapper::SendWrapper;
+use std::{collections::HashSet, fs};
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -98,7 +98,14 @@ impl SchematicElement for CircuitElement {
     }
 
     fn set_tentative(&mut self) {
-        todo!()
+        match self {
+            CircuitElement::NetEdge(seg) => {
+                seg.interactable.tentative = true;
+            }
+            CircuitElement::Device(device) => {
+                device.0.borrow_mut().interactable.tentative = true;
+            }
+        }
     }
 }
 
@@ -148,14 +155,17 @@ pub struct Circuit {
 impl Drawable for Circuit {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.nets.draw_persistent(vct, vcscale, frame);
+        self.devices.draw_persistent(vct, vcscale, frame);
     }
 
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.nets.draw_selected(vct, vcscale, frame);
+        self.devices.draw_selected(vct, vcscale, frame);
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.nets.draw_preview(vct, vcscale, frame);
+        self.devices.draw_preview(vct, vcscale, frame);
     }
 }
 
@@ -227,7 +237,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     }
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
-        let mut clear_passive = false;
         let ret_msg = match msg {
             Msg::Event(event, curpos_ssp) => {
                 let mut state = self.state.clone();
@@ -264,7 +273,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             new_ws = Some((Box::<Nets>::default(), ssp));
                         }
                         state = CircuitSt::Wiring(new_ws);
-                        clear_passive = true;
                     }
                     // device placement
                     (
@@ -275,7 +283,9 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_res();
-                        ret_msg = SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                        d.0.borrow_mut().set_position(curpos_ssp);
+                        ret_msg =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -285,7 +295,9 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_gnd();
-                        ret_msg = SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                        d.0.borrow_mut().set_position(curpos_ssp);
+                        ret_msg =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -295,22 +307,18 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_vs();
-                        ret_msg = SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                        d.0.borrow_mut().set_position(curpos_ssp);
+                        ret_msg =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     _ => {}
                 }
                 self.state = state;
                 ret_msg
             }
-            Msg::Wire => {
-                SchematicMsg::None
-            },
-            Msg::DcOp => {
-                SchematicMsg::None
-            },
-            Msg::None => {
-                SchematicMsg::None
-            },
+            Msg::Wire => SchematicMsg::None,
+            Msg::DcOp => SchematicMsg::None,
+            Msg::None => SchematicMsg::None,
         };
         ret_msg
     }
