@@ -81,14 +81,6 @@ pub enum SchematicSt {
     // first click, second click, transform for rotation/flip ONLY
 }
 
-impl SchematicSt {
-    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
-        sst.pre_translate(SSVec::new(-ssp0.x, -ssp0.y))
-            .then_translate(SSVec::new(ssp0.x, ssp0.y))
-            .then_translate(*ssp1 - *ssp0)
-    }
-}
-
 pub trait Content<E, M>: Drawable + Default
 where
     E: SchematicElement,
@@ -199,9 +191,7 @@ where
             }
             SchematicSt::Moving(Some((ssp0, ssp1, sst))) => {
                 // draw selected preview with transform applied
-                let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicSt::move_transform(
-                    ssp0, ssp1, sst,
-                ));
+                let vvt = transforms::sst_to_xxt::<ViewportSpace>(sst.then_translate(*ssp1 - *ssp0));
 
                 let vct_c = vvt.then(&vct);
                 for be in &self.selected {
@@ -235,7 +225,6 @@ where
 
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
-                    self.content.tentative_by_ssp(curpos_ssp);
                 }
 
                 match (&mut self.state, event) {
@@ -298,7 +287,7 @@ where
                         Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
                     ) => {
                         if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
-                            self.content.move_elements(&self.selected, sst);
+                            self.content.move_elements(&self.selected, &sst.then_translate(*ssp1 - *ssp0));
                             clear_passive = true;
                             self.state = SchematicSt::Idle;
                         } else {
@@ -311,16 +300,14 @@ where
                         SchematicSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::C,
-                            modifiers: m,
+                            modifiers: Modifiers::CTRL,
                         }),
                     ) => {
-                        if m.control() {
-                            self.state = SchematicSt::Copying(Some((
-                                curpos_ssp,
-                                curpos_ssp,
-                                SSTransform::identity(),
-                            )));
-                        }
+                        self.state = SchematicSt::Copying(Some((
+                            curpos_ssp,
+                            curpos_ssp,
+                            SSTransform::identity(),
+                        )));
                     }
                     (
                         SchematicSt::Copying(mut opt_pts),
@@ -343,6 +330,18 @@ where
                         self.content.delete_elements(&self.selected);
                         clear_passive = true;
                     }
+                    // tentative selection cycle
+                    (
+                        SchematicSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::C,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        self.tentative_next_by_ssp(curpos_ssp);
+                        clear_passive = true;
+                    },
+
                     // rst
                     (
                         st,
@@ -388,10 +387,6 @@ where
         }
         clear_passive
     }
-    fn cycle(&mut self, curpos_ssp: SSPoint) -> bool {
-        self.tentative_next_by_ssp(curpos_ssp);
-        true
-    }
 }
 
 impl<C, T, M> Schematic<C, T, M>
@@ -411,6 +406,7 @@ where
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         self.curpos_ssp = curpos_ssp;
+        self.tentative_by_sspoint(curpos_ssp, &mut 0);
         let mut skip = self.selskip;
 
         let mut stcp = self.state.clone();
@@ -421,25 +417,20 @@ where
             }
             SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_ssp;
-                // dbg!(_ssp0, ssp1);
             }
             _ => {}
         }
         self.state = stcp;
     }
-    /// clear tentative selections (cursor hover highlight)
-    fn clear_tentatives(&mut self) {
-        self.content.clear_tentatives();
-    }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        self.clear_tentatives();
+        self.content.clear_tentatives();
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
         self.content.tentatives_by_ssbox(ssb_p);
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
-        self.clear_tentatives();
+        self.content.clear_tentatives();
         if let Some(mut e) = self.selectable(ssp, skip) {
             e.set_tentative();
         }
@@ -447,7 +438,7 @@ where
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
     pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) {
         let mut skip = self.selskip.wrapping_add(1);
-        let s = self.tentative_by_sspoint(ssp, &mut skip);
+        self.tentative_by_sspoint(ssp, &mut skip);
         self.selskip = skip;
     }
     /// put every element with tentative flag set into selected vector

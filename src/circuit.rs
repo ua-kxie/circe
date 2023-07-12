@@ -321,7 +321,19 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     }
 
     fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
-        todo!()
+        for e in elements {
+            match e {
+                CircuitElement::NetEdge(e) => {
+                    self.nets.transform(e.clone(), *sst);
+                },
+                CircuitElement::Device(d) => {
+                    d.0.borrow_mut().transform(*sst);
+                    // if moving an existing device, does nothing
+                    // inserts the device if placing a new device
+                    self.devices.insert(d.clone());
+                },
+            }
+        }
     }
 
     fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
