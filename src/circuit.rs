@@ -283,7 +283,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_res();
-                        d.0.borrow_mut().set_position(curpos_ssp);
                         ret_msg =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
@@ -295,7 +294,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_gnd();
-                        d.0.borrow_mut().set_position(curpos_ssp);
                         ret_msg =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
@@ -307,7 +305,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_vs();
-                        d.0.borrow_mut().set_position(curpos_ssp);
                         ret_msg =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }

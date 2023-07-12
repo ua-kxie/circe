@@ -166,7 +166,6 @@ where
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.content.draw_preview(vct, vcscale, frame);
-        dbg!(self.state);
         match &self.state {
             SchematicSt::Idle => {}
             SchematicSt::AreaSelect(ssb) => {
@@ -379,7 +378,7 @@ where
                         self.selected.clear();
                         self.selected.insert(e.take());
                         self.state = SchematicSt::Moving(Some((
-                            self.curpos_ssp,
+                            SSPoint::origin(),
                             self.curpos_ssp,
                             SSTransform::identity(),
                         )));
@@ -411,6 +410,7 @@ where
     }
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+        self.curpos_ssp = curpos_ssp;
         let mut skip = self.selskip;
 
         let mut stcp = self.state.clone();
@@ -421,6 +421,7 @@ where
             }
             SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_ssp;
+                // dbg!(_ssp0, ssp1);
             }
             _ => {}
         }
