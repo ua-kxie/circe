@@ -96,17 +96,6 @@ impl SchematicElement for CircuitElement {
             CircuitElement::Device(d) => d.0.borrow().interactable.contains_ssp(ssp),
         }
     }
-
-    fn set_tentative(&mut self) {
-        match self {
-            CircuitElement::NetEdge(seg) => {
-                seg.interactable.tentative = true;
-            }
-            CircuitElement::Device(device) => {
-                device.0.borrow_mut().interactable.tentative = true;
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -353,6 +342,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 },
             }
         }
+        self.nets.prune(self.devices.ports_ssp());
     }
 
     fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
@@ -360,11 +350,21 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     }
 
     fn delete_elements(&mut self, elements: &HashSet<CircuitElement>) {
-        todo!()
+        for e in elements {
+            match e {
+                CircuitElement::NetEdge(e) => {
+                    self.nets.delete_edge(e);
+                },
+                CircuitElement::Device(d) => {
+                    self.devices.delete_device(d);
+                },
+            }
+        }
+        self.nets.prune(self.devices.ports_ssp());
     }
 
     fn tentative_by_ssp(&mut self, curpos_ssp: SSPoint) {
-        // todo!()
+        todo!();
     }
 
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
@@ -376,6 +376,17 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             },
             CircuitSt::Idle => {},
             _ => {},
+        }
+    }
+
+    fn set_tentative(&mut self, e: CircuitElement) {
+        match e {
+            CircuitElement::NetEdge(seg) => {
+                self.nets.set_tentative(seg);
+            }
+            CircuitElement::Device(device) => {
+                device.0.borrow_mut().interactable.tentative = true;
+            }
         }
     }
 }

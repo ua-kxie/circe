@@ -33,7 +33,6 @@ pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     // device designer: line, arc
     // circuit: wire, device
     fn contains_ssp(&self, ssp: SSPoint) -> bool;
-    fn set_tentative(&mut self);
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +104,7 @@ where
     fn delete(&mut self, targets: &HashSet<E>);
     fn transform(&mut self, targets: &HashSet<E>);
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<E>;
+    fn set_tentative(&mut self, e: E);
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
@@ -329,6 +329,7 @@ where
                         }),
                     ) => {
                         self.content.delete_elements(&self.selected);
+                        self.selected.clear();
                         clear_passive = true;
                     }
                     // tentative selection cycle
@@ -432,7 +433,8 @@ where
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
         self.content.clear_tentatives();
         if let Some(mut e) = self.selectable(ssp, skip) {
-            e.set_tentative();
+            self.content.set_tentative(e);
+            // e.set_tentative();
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment

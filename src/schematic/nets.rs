@@ -131,6 +131,13 @@ impl Nets {
             }
         }
     }
+    /// set tentatives flag for seg
+    pub fn set_tentative(&mut self, mut seg: NetEdge) {
+        if self.graph.contains_edge(NetVertex(seg.src), NetVertex(seg.dst)) {
+            seg.interactable.tentative = true;
+            self.graph.add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg);
+        }
+    }
     /// returns an iterator over all net edges which are under tentative selection
     pub fn tentatives(&self) -> impl Iterator<Item = NetEdge> + '_ {
         self.graph.all_edges().filter_map(|e| {
@@ -446,7 +453,7 @@ impl Drawable for Nets {
             .all_edges()
             .filter(|e| e.2.interactable.tentative)
         {
-            edge.draw_preview(vct, vcscale, frame)
+            edge.draw_preview(vct, vcscale, frame);
         }
     }
 }
