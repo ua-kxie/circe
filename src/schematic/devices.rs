@@ -231,9 +231,3 @@ impl SchematicElement for RcRDevice {
         self.0.borrow().interactable.contains_ssp(ssp)
     }
 }
-
-impl RcRDevice {
-    fn set_tentative(&mut self) {
-        self.0.borrow_mut().interactable.tentative = true;
-    }
-}

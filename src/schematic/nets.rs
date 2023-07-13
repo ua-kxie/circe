@@ -133,9 +133,13 @@ impl Nets {
     }
     /// set tentatives flag for seg
     pub fn set_tentative(&mut self, mut seg: NetEdge) {
-        if self.graph.contains_edge(NetVertex(seg.src), NetVertex(seg.dst)) {
+        if self
+            .graph
+            .contains_edge(NetVertex(seg.src), NetVertex(seg.dst))
+        {
             seg.interactable.tentative = true;
-            self.graph.add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg);
+            self.graph
+                .add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg);
         }
     }
     /// returns an iterator over all net edges which are under tentative selection

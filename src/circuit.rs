@@ -25,7 +25,7 @@ pub trait SchematicSet {
     /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
     /// count is incremented by 1 for every element skipped over
     /// skip is updated if an element is returned, equal to count
-    fn selectable( 
+    fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
         skip: &mut usize,
@@ -139,6 +139,20 @@ pub struct Circuit {
     curpos_ssp: SSPoint,
 }
 
+impl Circuit {
+    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+        self.curpos_ssp = curpos_ssp;
+        match &mut self.state {
+            CircuitSt::Wiring(Some((nets, ssp_prev))) => {
+                nets.clear();
+                nets.route(*ssp_prev, curpos_ssp);
+            }
+            CircuitSt::Idle => {}
+            _ => {}
+        }
+    }
+}
+
 impl Drawable for Circuit {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.nets.draw_persistent(vct, vcscale, frame);
@@ -156,9 +170,9 @@ impl Drawable for Circuit {
         match &self.state {
             CircuitSt::Wiring(Some((nets, _))) => {
                 nets.draw_preview(vct, vcscale, frame);
-            },
-            CircuitSt::Idle => {},
-            _ => {},
+            }
+            CircuitSt::Idle => {}
+            _ => {}
         }
     }
 }
@@ -233,13 +247,12 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
         let ret_msg = match msg {
             Msg::Event(event, curpos_ssp) => {
-
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
                 }
 
                 let mut state = self.state.clone();
-                let mut ret_msg = SchematicMsg::None;
+                let mut ret_msg_tmp = SchematicMsg::None;
                 match (&mut state, event) {
                     // wiring
                     (
@@ -267,6 +280,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                                 self.nets.merge(g.as_ref(), self.devices.ports_ssp());
                                 new_ws = Some((Box::<Nets>::default(), ssp));
                             }
+                            ret_msg_tmp = SchematicMsg::ClearPassive;
                         } else {
                             // first click
                             new_ws = Some((Box::<Nets>::default(), ssp));
@@ -282,7 +296,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_res();
-                        ret_msg =
+                        ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
@@ -293,7 +307,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_gnd();
-                        ret_msg =
+                        ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
@@ -304,7 +318,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }),
                     ) => {
                         let d = self.devices.new_vs();
-                        ret_msg =
+                        ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
                     (
@@ -319,7 +333,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     _ => {}
                 }
                 self.state = state;
-                ret_msg
+                ret_msg_tmp
             }
             Msg::Wire => SchematicMsg::None,
             Msg::DcOp => SchematicMsg::None,
@@ -333,16 +347,16 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             match e {
                 CircuitElement::NetEdge(e) => {
                     self.nets.transform(e.clone(), *sst);
-                },
+                }
                 CircuitElement::Device(d) => {
                     d.0.borrow_mut().transform(*sst);
                     // if moving an existing device, does nothing
                     // inserts the device if placing a new device
                     self.devices.insert(d.clone());
-                },
+                }
             }
         }
-        self.nets.prune(self.devices.ports_ssp());
+        self.prune();
     }
 
     fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
@@ -354,29 +368,13 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             match e {
                 CircuitElement::NetEdge(e) => {
                     self.nets.delete_edge(e);
-                },
+                }
                 CircuitElement::Device(d) => {
                     self.devices.delete_device(d);
-                },
+                }
             }
         }
-        self.nets.prune(self.devices.ports_ssp());
-    }
-
-    fn tentative_by_ssp(&mut self, curpos_ssp: SSPoint) {
-        todo!();
-    }
-
-    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
-        self.curpos_ssp = curpos_ssp;
-        match &mut self.state {
-            CircuitSt::Wiring(Some((nets, ssp_prev))) => {
-                nets.clear();
-                nets.route(*ssp_prev, curpos_ssp);
-            },
-            CircuitSt::Idle => {},
-            _ => {},
-        }
+        self.prune();
     }
 
     fn set_tentative(&mut self, e: CircuitElement) {
@@ -388,6 +386,10 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 device.0.borrow_mut().interactable.tentative = true;
             }
         }
+    }
+
+    fn is_idle(&self) -> bool {
+        matches!(self.state, CircuitSt::Idle)
     }
 }
 
@@ -407,7 +409,7 @@ impl Circuit {
         fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
     }
     /// clear up nets graph: merging segments, cleaning up segment net names, etc.
-    fn prune_nets(&mut self) {
+    fn prune(&mut self) {
         self.nets.prune(self.devices.ports_ssp());
     }
 }
