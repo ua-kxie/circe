@@ -96,6 +96,7 @@ where
     // ex. wires + devices
     // returns whether or not to clear the passive cache
     fn update(&mut self, msg: M) -> SchematicMsg<E>;
+    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint);
     fn bounds(&self) -> VSBox;
     fn clear_tentatives(&mut self);
     fn tentatives_by_ssbox(&mut self, ssb: SSBox);
@@ -163,7 +164,7 @@ where
             SchematicSt::AreaSelect(ssb) => {
                 // draw the selection area
                 let color = if ssb.height() > 0 {
-                    Color::from_rgba(1., 1., 0., 0.1)
+                    Color::from_rgba(1., 1., 0., 0.1) 
                 } else {
                     Color::from_rgba(0., 1., 1., 0.1)
                 };
@@ -358,12 +359,11 @@ where
                             self.state = SchematicSt::Idle;
                         }
                     },
-                    // something else - pass on to content
-                    _ => {
-                        let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
-                        clear_passive = self.update(Msg::SchematicMsg(m));
-                    }
+                    // something else
+                    _ => {}
                 }
+                let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
+                clear_passive = clear_passive || self.update(Msg::SchematicMsg(m));
             }
             Msg::ContentMsg(content_msg) => {
                 let m = self.content.update(content_msg);

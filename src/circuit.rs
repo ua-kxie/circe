@@ -25,7 +25,7 @@ pub trait SchematicSet {
     /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
     /// count is incremented by 1 for every element skipped over
     /// skip is updated if an element is returned, equal to count
-    fn selectable(
+    fn selectable( 
         &mut self,
         curpos_ssp: SSPoint,
         skip: &mut usize,
@@ -128,9 +128,6 @@ pub enum CircuitSt {
     #[default]
     Idle,
     Wiring(Option<(Box<Nets>, SSPoint)>),
-    AreaSelect(SSBox),
-    Moving(Option<(SSPoint, SSPoint, SSTransform)>),
-    // first click, second click, transform for rotation/flip ONLY
 }
 
 impl CircuitSt {
@@ -150,6 +147,7 @@ pub struct Circuit {
 
     nets: Nets,
     devices: Devices,
+    curpos_ssp: SSPoint,
 }
 
 impl Drawable for Circuit {
@@ -166,6 +164,13 @@ impl Drawable for Circuit {
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.nets.draw_preview(vct, vcscale, frame);
         self.devices.draw_preview(vct, vcscale, frame);
+        match &self.state {
+            CircuitSt::Wiring(Some((nets, _))) => {
+                nets.draw_preview(vct, vcscale, frame);
+            },
+            CircuitSt::Idle => {},
+            _ => {},
+        }
     }
 }
 
@@ -239,6 +244,11 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
         let ret_msg = match msg {
             Msg::Event(event, curpos_ssp) => {
+
+                if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
+                    self.update_cursor_ssp(curpos_ssp);
+                }
+
                 let mut state = self.state.clone();
                 let mut ret_msg = SchematicMsg::None;
                 match (&mut state, event) {
@@ -308,6 +318,15 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         ret_msg =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
+                    (
+                        _,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::Escape,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        state = CircuitSt::Idle;
+                    }
                     _ => {}
                 }
                 self.state = state;
@@ -346,6 +365,18 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 
     fn tentative_by_ssp(&mut self, curpos_ssp: SSPoint) {
         // todo!()
+    }
+
+    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+        self.curpos_ssp = curpos_ssp;
+        match &mut self.state {
+            CircuitSt::Wiring(Some((nets, ssp_prev))) => {
+                nets.clear();
+                nets.route(*ssp_prev, curpos_ssp);
+            },
+            CircuitSt::Idle => {},
+            _ => {},
+        }
     }
 }
 
