@@ -144,7 +144,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             CircuitPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs.clone());
 
-                if let schematic::Msg::ContentMsg(Msg::DcOp) = msgs.content_msg {
+                if let schematic::Msg::ContentMsg(Msg::NetList) = msgs.content_msg {
                     self.viewport.content.content.netlist();
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist

@@ -102,8 +102,7 @@ impl SchematicElement for CircuitElement {
 pub enum Msg {
     Event(Event, SSPoint),
     Wire,
-    DcOp,
-    None,
+    NetList,
 }
 
 impl schematic::ContentMsg for Msg {
@@ -335,9 +334,14 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 self.state = state;
                 ret_msg_tmp
             }
-            Msg::Wire => SchematicMsg::None,
-            Msg::DcOp => SchematicMsg::None,
-            Msg::None => SchematicMsg::None,
+            Msg::NetList => {
+                self.netlist();
+                SchematicMsg::None
+            },
+            Msg::Wire => {
+                self.state = CircuitSt::Wiring(None);
+                SchematicMsg::None
+            }
         };
         ret_msg
     }
