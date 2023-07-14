@@ -1,12 +1,14 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::circuit::{Circuit, CircuitElement, Msg};
+use crate::circuit::{Circuit, CircuitElement, CircuitSt, Msg};
+use crate::viewport::CompositeMsg;
 use crate::{circuit_gui, schematic};
 
 use crate::schematic::{RcRDevice, Schematic, SchematicElement};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
+use iced::widget::canvas::Event;
 use iced::widget::{button, row};
 use iced::Length;
 use std::sync::Arc;
@@ -142,15 +144,30 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 }
             }
             CircuitPageMsg::ViewportEvt(msgs) => {
-                self.viewport.update(msgs.clone());
-
-                if let schematic::Msg::ContentMsg(Msg::NetList) = msgs.content_msg {
-                    self.viewport.content.content.netlist();
+                if let schematic::Msg::Event(
+                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                        key_code: iced::keyboard::KeyCode::Space,
+                        modifiers: _,
+                    }),
+                    _,
+                ) = msgs.content_msg
+                {
+                    self.viewport.update(CompositeMsg {
+                        content_msg: schematic::Msg::ContentMsg(Msg::NetList),
+                        viewport_msg: viewport::Msg::None,
+                    });
                     self.lib.command("source netlist.cir"); // results pointer array starts at same address
                     self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
                     if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
-                        self.viewport.content.content.op(pkvecvaluesall);
+                        self.viewport.update(CompositeMsg {
+                            content_msg: schematic::Msg::ContentMsg(Msg::DcOp(
+                                pkvecvaluesall.clone(),
+                            )),
+                            viewport_msg: viewport::Msg::None,
+                        });
                     }
+                } else {
+                    self.viewport.update(msgs);
                 }
 
                 match self.viewport.content.active_device() {

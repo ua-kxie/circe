@@ -17,7 +17,9 @@ use iced::{
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
     Color, Size,
 };
+use paprika::PkVecvaluesall;
 use send_wrapper::SendWrapper;
+use std::rc::Rc;
 use std::{collections::HashSet, fs};
 
 /// trait for a type of element in schematic. e.g. nets or devices
@@ -98,11 +100,12 @@ impl SchematicElement for CircuitElement {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Msg {
     Event(Event, SSPoint),
     Wire,
     NetList,
+    DcOp(PkVecvaluesall),
 }
 
 impl schematic::ContentMsg for Msg {
@@ -320,6 +323,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
+                    // state reset
                     (
                         _,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
@@ -337,10 +341,14 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             Msg::NetList => {
                 self.netlist();
                 SchematicMsg::None
-            },
+            }
             Msg::Wire => {
                 self.state = CircuitSt::Wiring(None);
                 SchematicMsg::None
+            }
+            Msg::DcOp(pkvecvaluesall) => {
+                self.devices.op(&pkvecvaluesall);
+                SchematicMsg::ClearPassive
             }
         };
         ret_msg
