@@ -31,7 +31,7 @@ C - cycle tentative selection
 
 Del - delete selected
 
-R - resistor, rotate selected during move, placement
+R - resistor, (during move/copy, rotates selected, ctrl-R to counter rotate)
 
 G - ground
 

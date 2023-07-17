@@ -17,7 +17,7 @@ use crate::{
     viewport::Drawable,
 };
 use iced::keyboard::Modifiers;
-use iced::widget::canvas::{Path, stroke};
+use iced::widget::canvas::{stroke, Path};
 use iced::{
     mouse,
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
@@ -81,6 +81,15 @@ pub enum SchematicSt {
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
     Copying(Option<(SSPoint, SSPoint, SSTransform)>),
     // first click, second click, transform for rotation/flip ONLY
+}
+
+impl SchematicSt {
+    /// this function returns a transform which applies sst about ssp0 and then translates to ssp1
+    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
+        sst.pre_translate(SSPoint::origin() - *ssp0)
+            .then_translate(*ssp0 - SSPoint::origin())
+            .then_translate(*ssp1 - *ssp0)
+    }
 }
 
 pub trait Content<E, M>: Drawable + Default
@@ -210,20 +219,12 @@ where
                 };
                 frame.stroke(&path_builder.build(), stroke);
             }
-            SchematicSt::Moving(Some((ssp0, ssp1, sst))) => {
+            SchematicSt::Moving(Some((ssp0, ssp1, sst)))
+            | SchematicSt::Copying(Some((ssp0, ssp1, sst))) => {
                 // draw selected preview with transform applied
-                let vvt =
-                    transforms::sst_to_xxt::<ViewportSpace>(sst.then_translate(*ssp1 - *ssp0));
-
-                let vct_c = vvt.then(&vct);
-                for be in &self.selected {
-                    be.draw_preview(vct_c, vcscale, frame);
-                }
-            }
-            SchematicSt::Copying(Some((ssp0, ssp1, sst))) => {
-                // draw selected preview with transform applied
-                let vvt =
-                    transforms::sst_to_xxt::<ViewportSpace>(sst.then_translate(*ssp1 - *ssp0));
+                let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicSt::move_transform(
+                    ssp0, ssp1, sst,
+                ));
 
                 let vct_c = vvt.then(&vct);
                 for be in &self.selected {
@@ -317,10 +318,14 @@ where
                             SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::R,
-                                modifiers: _,
+                                modifiers: m,
                             }),
                         ) => {
-                            *sst = sst.then(&transforms::SST_CWR);
+                            if m.control() {
+                                *sst = sst.then(&transforms::SST_CCWR);
+                            } else {
+                                *sst = sst.then(&transforms::SST_CWR);
+                            }
                         }
                         (
                             SchematicSt::Moving(mut opt_pts),
@@ -331,7 +336,7 @@ where
                             if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
                                 self.content.move_elements(
                                     &self.selected,
-                                    &sst.then_translate(*ssp1 - *ssp0),
+                                    &SchematicSt::move_transform(ssp0, ssp1, sst),
                                 );
                                 clear_passive = true;
                                 self.state = SchematicSt::Idle;
@@ -358,8 +363,10 @@ where
                             )),
                         ) => match opt_pts {
                             Some((ssp0, ssp1, sst)) => {
-                                let sst1 = sst.then_translate(*ssp1 - *ssp0);
-                                self.content.copy_elements(&self.selected, &sst1);
+                                self.content.copy_elements(
+                                    &self.selected,
+                                    &SchematicSt::move_transform(ssp0, ssp1, sst),
+                                );
                                 clear_passive = true;
                                 self.state = SchematicSt::Idle;
                             }
