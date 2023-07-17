@@ -173,8 +173,12 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 match self.viewport.content.active_device() {
                     Some(CircuitElement::Device(rcrd)) => {
                         self.text = rcrd.0.borrow().class().param_summary();
+                        self.active_device = Some(rcrd.clone());
                     }
-                    _ => self.text = String::from(""),
+                    _ => {
+                        self.text = String::from("");
+                        self.active_device = None;
+                    }
                 };
 
                 self.net_name = self.viewport.content.content.infobarstr.take();
