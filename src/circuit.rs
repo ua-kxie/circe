@@ -19,6 +19,7 @@ use iced::{
 };
 use paprika::PkVecvaluesall;
 use send_wrapper::SendWrapper;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::{collections::HashSet, fs};
 
@@ -372,7 +373,29 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     }
 
     fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
-        todo!()
+        for e in elements {
+            match e {
+                CircuitElement::NetEdge(seg) => {
+                    let mut seg = seg.clone();
+                    seg.transform(*sst);
+                    self.nets
+                        .graph
+                        .add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg.clone());
+                }
+                CircuitElement::Device(rcr) => {
+                    //unwrap refcell
+                    let refcell_d = rcr.0.borrow();
+                    let mut device = (*refcell_d).clone();
+                    device.transform(*sst);
+
+                    //build BaseElement
+                    let d_refcell = RefCell::new(device);
+                    let d_refcnt = Rc::new(d_refcell);
+                    let rcr_device = RcRDevice(d_refcnt);
+                    self.devices.insert(rcr_device);
+                }
+            }
+        }
     }
 
     fn delete_elements(&mut self, elements: &HashSet<CircuitElement>) {

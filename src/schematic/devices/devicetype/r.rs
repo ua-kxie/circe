@@ -34,7 +34,7 @@ lazy_static! {
 }
 
 /// Enumerates the different ways to specifify parameters for a resistor
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParamR {
     /// specify the spice line directly (after id and port connections)
     Raw(params::Raw),
@@ -67,7 +67,7 @@ impl ParamR {
 }
 
 /// resistor device class
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct R {
     /// parameters of the resistor
     pub params: ParamR,

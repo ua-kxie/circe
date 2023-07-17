@@ -201,6 +201,16 @@ where
                     be.draw_preview(vct_c, vcscale, frame);
                 }
             }
+            SchematicSt::Copying(Some((ssp0, ssp1, sst))) => {
+                // draw selected preview with transform applied
+                let vvt =
+                    transforms::sst_to_xxt::<ViewportSpace>(sst.then_translate(*ssp1 - *ssp0));
+
+                let vct_c = vvt.then(&vct);
+                for be in &self.selected {
+                    be.draw_preview(vct_c, vcscale, frame);
+                }
+            }
             _ => {}
         }
     }
@@ -319,24 +329,28 @@ where
                                 modifiers: Modifiers::CTRL,
                             }),
                         ) => {
-                            self.state = SchematicSt::Copying(Some((
-                                curpos_ssp,
-                                curpos_ssp,
-                                SSTransform::identity(),
-                            )));
+                            self.state = SchematicSt::Copying(None);
                         }
                         (
-                            SchematicSt::Copying(mut opt_pts),
+                            SchematicSt::Copying(opt_pts),
                             Event::Mouse(iced::mouse::Event::ButtonReleased(
                                 iced::mouse::Button::Left,
                             )),
-                        ) => {
-                            if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
-                                self.content.copy_elements(&self.selected, sst);
+                        ) => match opt_pts {
+                            Some((ssp0, ssp1, sst)) => {
+                                let sst1 = sst.then_translate(*ssp1 - *ssp0);
+                                self.content.copy_elements(&self.selected, &sst1);
                                 clear_passive = true;
                                 self.state = SchematicSt::Idle;
                             }
-                        }
+                            None => {
+                                self.state = SchematicSt::Copying(Some((
+                                    curpos_ssp,
+                                    curpos_ssp,
+                                    SSTransform::identity(),
+                                )));
+                            }
+                        },
                         // delete
                         (
                             SchematicSt::Idle,
@@ -443,6 +457,9 @@ where
                 self.tentatives_by_ssbox(ssb);
             }
             SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
+                *ssp1 = curpos_ssp;
+            }
+            SchematicSt::Copying(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_ssp;
             }
             _ => {}

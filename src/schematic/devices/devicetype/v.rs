@@ -10,7 +10,7 @@ lazy_static! {
             .unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParamV {
     Raw(params::Raw),
 }
@@ -27,7 +27,7 @@ impl ParamV {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct V {
     pub params: ParamV,
     pub graphics: &'static Graphics,
