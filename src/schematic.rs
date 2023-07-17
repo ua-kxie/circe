@@ -6,6 +6,7 @@ pub(crate) mod nets;
 
 use self::devices::Devices;
 pub use self::devices::RcRDevice;
+use crate::transforms::CSVec;
 use crate::{interactable, viewport};
 use crate::{
     interactable::Interactive,
@@ -16,6 +17,7 @@ use crate::{
     viewport::Drawable,
 };
 use iced::keyboard::Modifiers;
+use iced::widget::canvas::{Path, stroke};
 use iced::{
     mouse,
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
@@ -159,6 +161,23 @@ where
 
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        /// draw the cursor onto canvas
+        pub fn draw_cursor(vct: VCTransform, vcscale: f32, frame: &mut Frame, curpos_ssp: SSPoint) {
+            let cursor_stroke = || -> Stroke {
+                Stroke {
+                    width: 1.0,
+                    style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
+                    line_cap: LineCap::Round,
+                    ..Stroke::default()
+                }
+            };
+            let curdim = 5.0;
+            let csp = vct.transform_point(curpos_ssp.cast().cast_unit());
+            let csp_topleft = csp - CSVec::from([curdim / 2.; 2]);
+            let s = iced::Size::from([curdim, curdim]);
+            let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
+            frame.stroke(&c, cursor_stroke());
+        }
         self.content.draw_preview(vct, vcscale, frame);
         match &self.state {
             SchematicSt::Idle => {}
@@ -213,6 +232,7 @@ where
             }
             _ => {}
         }
+        draw_cursor(vct, vcscale, frame, self.curpos_ssp);
     }
     /// draw onto passive cache
     fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {

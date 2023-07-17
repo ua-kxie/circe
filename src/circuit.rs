@@ -276,6 +276,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         if let Some((g, prev_ssp)) = opt_ws {
                             // subsequent click
                             if ssp == *prev_ssp {
+                                new_ws = None;
                             } else if self.occupies_ssp(ssp) {
                                 self.nets.merge(g.as_ref(), self.devices.ports_ssp());
                                 new_ws = None;

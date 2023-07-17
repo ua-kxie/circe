@@ -153,7 +153,6 @@ where
         let active = self.active_cache.draw(bounds.size(), |frame| {
             self.content
                 .draw_active(self.vc_transform(), self.vc_scale(), frame);
-            self.draw_cursor(frame);
 
             if let State::NewView(vsp0, vsp1) = state {
                 let csp0 = self.vc_transform().transform_point(*vsp0);
@@ -501,26 +500,6 @@ where
             new_transform.determinant().abs().sqrt(),
             curpos_csp,
         )
-    }
-
-    /// draw the cursor onto canvas
-    pub fn draw_cursor(&self, frame: &mut Frame) {
-        let cursor_stroke = || -> Stroke {
-            Stroke {
-                width: 1.0,
-                style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
-                line_cap: LineCap::Round,
-                ..Stroke::default()
-            }
-        };
-        let curdim = 5.0;
-        let csp = self
-            .vc_transform()
-            .transform_point(self.curpos.2.cast().cast_unit());
-        let csp_topleft = csp - CSVec::from([curdim / 2.; 2]);
-        let s = iced::Size::from([curdim, curdim]);
-        let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
-        frame.stroke(&c, cursor_stroke());
     }
 
     pub fn draw_origin_marker(&self, frame: &mut Frame) {
