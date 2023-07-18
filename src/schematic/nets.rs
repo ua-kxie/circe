@@ -131,6 +131,16 @@ impl Nets {
             }
         }
     }
+    /// return unique NetEdges bound within ssb
+    pub fn intersects_ssbox(&mut self, ssb: &SSBox) -> Vec<NetEdge> {
+        let mut ret = vec![];
+        for e in self.graph.all_edges() {
+            if e.2.interactable.bounds.intersects(ssb) {
+                ret.push(e.2.clone());
+            }
+        }
+        ret
+    }
     /// set tentatives flag for seg
     pub fn set_tentative(&mut self, mut seg: NetEdge) {
         if self

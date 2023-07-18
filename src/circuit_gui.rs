@@ -5,7 +5,7 @@ use crate::circuit::{Circuit, CircuitElement, CircuitSt, Msg};
 use crate::viewport::CompositeMsg;
 use crate::{circuit_gui, schematic};
 
-use crate::schematic::{RcRDevice, Schematic, SchematicElement};
+use crate::schematic::{RcRDevice, Schematic};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::canvas::Event;

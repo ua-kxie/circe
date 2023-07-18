@@ -6,7 +6,6 @@ mod deviceinstance;
 mod devicetype;
 mod params;
 
-use super::SchematicElement;
 use crate::{
     transforms::{SSBox, SSPoint, VCTransform, VSBox},
     viewport::Drawable,
@@ -168,6 +167,21 @@ impl Devices {
             })
             .collect();
     }
+    /// return vector of RcRDevice which intersects ssb
+    pub fn intersects_ssb(&self, ssb: &SSBox) -> Vec<RcRDevice> {
+        let ret: Vec<_> = self
+            .set
+            .iter()
+            .filter_map(|d| {
+                if d.0.borrow_mut().interactable.bounds.intersects(ssb) {
+                    Some(d.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        ret
+    }
     /// create a new resistor with unique ID
     pub fn new_res(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::R(R::new()));
@@ -223,11 +237,5 @@ impl Drawable for RcRDevice {
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.0.borrow().draw_preview(vct, vcscale, frame);
-    }
-}
-
-impl SchematicElement for RcRDevice {
-    fn contains_ssp(&self, ssp: SSPoint) -> bool {
-        self.0.borrow().interactable.contains_ssp(ssp)
     }
 }

@@ -29,7 +29,10 @@ use std::hash::Hash;
 pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     // device designer: line, arc
     // circuit: wire, device
+    /// returns true if self contains ssp
     fn contains_ssp(&self, ssp: SSPoint) -> bool;
+    // /// returns true if self intersects ssb
+    // fn intersects_ssb(&self, ssb: SSBox) -> bool;
 }
 
 #[derive(Debug, Clone)]
@@ -106,14 +109,8 @@ where
     fn occupies_ssp(&self, ssp: SSPoint) -> bool;
     /// returns a single SchematicElement over which ssp lies. Skips the first skip elements
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<E>;
-    /// clears all tentative selection
-    fn clear_tentatives(&mut self);
-    /// set tentative flags by ssb
-    fn tentatives_by_ssbox(&mut self, ssb: SSBox);
-    /// return vector of tentative SchematicElements 
-    fn tentatives(&self) -> Vec<E>;
-    /// sets the tentative flag on e
-    fn set_tentative(&mut self, e: E);
+    ///  returns hashset of elements which intersects ssb
+    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<E>;
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
@@ -128,7 +125,9 @@ where
     /// phantom data to mark ContentMsg type
     content_msg: std::marker::PhantomData<M>,
     selskip: usize,
+
     selected: HashSet<T>,
+    tentatives: HashSet<T>,
 
     curpos_ssp: SSPoint,
 }
@@ -144,6 +143,7 @@ where
             content: Default::default(),
             selskip: Default::default(),
             selected: Default::default(),
+            tentatives: Default::default(),
             content_msg: std::marker::PhantomData,
             curpos_ssp: Default::default(),
         }
@@ -184,7 +184,14 @@ where
             let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
             frame.stroke(&c, cursor_stroke());
         }
+
+        let _: Vec<_> = self
+            .tentatives
+            .iter()
+            .map(|e| e.draw_preview(vct, vcscale, frame))
+            .collect();
         self.content.draw_preview(vct, vcscale, frame);
+
         match &self.state {
             SchematicSt::Idle => {}
             SchematicSt::AreaSelect(ssb) => {
@@ -491,15 +498,22 @@ where
     }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        self.content.clear_tentatives();
+        // self.content.clear_tentatives();
+        // let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
+        // self.content.tentatives_by_ssbox(ssb_p);
+
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-        self.content.tentatives_by_ssbox(ssb_p);
+        self.tentatives = self.content.intersects_ssb(ssb_p)
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
-        self.content.clear_tentatives();
+        // self.content.clear_tentatives();
+        // if let Some(e) = self.selectable(ssp, skip) {
+        //     self.content.set_tentative(e);
+        // }
+        self.tentatives.clear();
         if let Some(e) = self.selectable(ssp, skip) {
-            self.content.set_tentative(e);
+            self.tentatives.insert(e);
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
@@ -510,14 +524,16 @@ where
     }
     /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
-        let _: Vec<_> = self
-            .content
-            .tentatives()
-            .iter()
-            .map(|e| {
-                self.selected.insert(e.clone());
-            })
-            .collect();
+        // let _: Vec<_> = self
+        //     .content
+        //     .tentatives()
+        //     .iter()
+        //     .map(|e| {
+        //         self.selected.insert(e.clone());
+        //     })
+        //     .collect();
+        self.selected = self.tentatives.clone();
+        self.tentatives.clear();
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<T> {

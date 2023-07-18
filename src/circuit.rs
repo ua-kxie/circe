@@ -186,26 +186,15 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         let bbi = self.devices.bounding_box();
         bbn.union(&bbi)
     }
-
-    fn clear_tentatives(&mut self) {
-        self.nets.clear_tentatives();
-        self.devices.clear_tentatives();
-    }
-
-    fn tentatives_by_ssbox(&mut self, ssb: SSBox) {
-        self.nets.tentatives_by_ssbox(&ssb);
-        self.devices.tentatives_by_ssbox(&ssb);
-    }
-
-    fn tentatives(&self) -> Vec<CircuitElement> {
-        let mut v = vec![];
-        for e in self.nets.tentatives() {
-            v.push(CircuitElement::NetEdge(e));
+    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<CircuitElement> {
+        let mut ret = HashSet::new();
+        for seg in self.nets.intersects_ssbox(&ssb) {
+            ret.insert(CircuitElement::NetEdge(seg));
         }
-        for d in self.devices.tentatives() {
-            v.push(CircuitElement::Device(d));
+        for rcrd in self.devices.intersects_ssb(&ssb) {
+            ret.insert(CircuitElement::Device(rcrd));
         }
-        v
+        ret
     }
 
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
@@ -398,17 +387,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             }
         }
         self.prune();
-    }
-
-    fn set_tentative(&mut self, e: CircuitElement) {
-        match e {
-            CircuitElement::NetEdge(seg) => {
-                self.nets.set_tentative(seg);
-            }
-            CircuitElement::Device(device) => {
-                device.0.borrow_mut().interactable.tentative = true;
-            }
-        }
     }
 
     fn is_idle(&self) -> bool {
