@@ -86,13 +86,7 @@ impl Drawable for Devices {
         panic!("not intended for use");
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        for d in self
-            .set
-            .iter()
-            .filter(|&d| d.0.borrow().interactable.tentative)
-        {
-            d.0.borrow().draw_preview(vct, vcscale, frame);
-        }
+        panic!("not intended for use");
     }
 }
 
@@ -146,27 +140,6 @@ impl Devices {
             self.set.insert(d);
         }
     }
-    /// returns an iterator over all devices which have tentative flag set
-    pub fn tentatives(&self) -> impl Iterator<Item = RcRDevice> + '_ {
-        self.set.iter().filter_map(|x| {
-            if x.0.borrow().interactable.tentative {
-                Some(x.clone())
-            } else {
-                None
-            }
-        })
-    }
-    /// sets tentative flags for all devices based on ssb
-    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        let _: Vec<_> = self
-            .set
-            .iter()
-            .map(|d| {
-                // d.0.borrow_mut().tentative_by_vsb(vsb);
-                d.0.borrow_mut().interactable.tentative_by_ssb(ssb);
-            })
-            .collect();
-    }
     /// return vector of RcRDevice which intersects ssb
     pub fn intersects_ssb(&self, ssb: &SSBox) -> Vec<RcRDevice> {
         let ret: Vec<_> = self
@@ -203,12 +176,6 @@ impl Devices {
             .iter()
             .flat_map(|d| d.0.borrow().ports_ssp())
             .collect()
-    }
-    /// clears tentative flags from all devices
-    pub fn clear_tentatives(&mut self) {
-        for d in &self.set {
-            d.0.borrow_mut().interactable.tentative = false;
-        }
     }
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         for d in &self.set {

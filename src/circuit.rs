@@ -163,13 +163,10 @@ impl Drawable for Circuit {
     }
 
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.nets.draw_selected(vct, vcscale, frame);
-        self.devices.draw_selected(vct, vcscale, frame);
+        panic!("not intended for use");
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.nets.draw_preview(vct, vcscale, frame);
-        self.devices.draw_preview(vct, vcscale, frame);
         match &self.state {
             CircuitSt::Wiring(Some((nets, _))) => {
                 nets.draw_preview(vct, vcscale, frame);

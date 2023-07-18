@@ -123,14 +123,6 @@ impl Nets {
         }
         self.label_manager.new_floating_label()
     }
-    /// set tentatives flag for individual net segments based on ssb
-    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        for e in self.graph.all_edges_mut() {
-            if e.2.interactable.bounds.intersects(ssb) {
-                e.2.interactable.tentative = true;
-            }
-        }
-    }
     /// return unique NetEdges bound within ssb
     pub fn intersects_ssbox(&mut self, ssb: &SSBox) -> Vec<NetEdge> {
         let mut ret = vec![];
@@ -140,27 +132,6 @@ impl Nets {
             }
         }
         ret
-    }
-    /// set tentatives flag for seg
-    pub fn set_tentative(&mut self, mut seg: NetEdge) {
-        if self
-            .graph
-            .contains_edge(NetVertex(seg.src), NetVertex(seg.dst))
-        {
-            seg.interactable.tentative = true;
-            self.graph
-                .add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg);
-        }
-    }
-    /// returns an iterator over all net edges which are under tentative selection
-    pub fn tentatives(&self) -> impl Iterator<Item = NetEdge> + '_ {
-        self.graph.all_edges().filter_map(|e| {
-            if e.2.interactable.tentative {
-                Some(e.2.clone())
-            } else {
-                None
-            }
-        })
     }
     /// delete all nets
     pub fn clear(&mut self) {
@@ -235,7 +206,7 @@ impl Nets {
                             src: e.0 .0,
                             dst: v.0,
                             label: e.2.clone(),
-                            interactable: NetEdge::interactable(e.0 .0, v.0, false),
+                            interactable: NetEdge::interactable(e.0 .0, v.0),
                             ..Default::default()
                         },
                     );
@@ -246,7 +217,7 @@ impl Nets {
                             src: e.1 .0,
                             dst: v.0,
                             label: e.2,
-                            interactable: NetEdge::interactable(e.1 .0, v.0, false),
+                            interactable: NetEdge::interactable(e.1 .0, v.0),
                             ..Default::default()
                         },
                     );
@@ -275,7 +246,7 @@ impl Nets {
                         src: src.0,
                         dst: dst.0,
                         label: first_e.2.label.clone(),
-                        interactable: NetEdge::interactable(src.0, dst.0, false),
+                        interactable: NetEdge::interactable(src.0, dst.0),
                         ..Default::default()
                     };
                     if ew.intersects_ssp(v.0) {
@@ -304,7 +275,7 @@ impl Nets {
                             src: e.0 .0,
                             dst: v,
                             label: e.2.clone(),
-                            interactable: NetEdge::interactable(e.0 .0, v, false),
+                            interactable: NetEdge::interactable(e.0 .0, v),
                             ..Default::default()
                         },
                     );
@@ -315,7 +286,7 @@ impl Nets {
                             src: e.1 .0,
                             dst: v,
                             label: e.2,
-                            interactable: NetEdge::interactable(e.1 .0, v, false),
+                            interactable: NetEdge::interactable(e.1 .0, v),
                             ..Default::default()
                         },
                     );
@@ -349,7 +320,7 @@ impl Nets {
         match (delta.x, delta.y) {
             (0, 0) => {}
             (0, _y) => {
-                let interactable = NetEdge::interactable(src, dst, true);
+                let interactable = NetEdge::interactable(src, dst);
                 self.graph.add_edge(
                     NetVertex(src),
                     NetVertex(dst),
@@ -362,7 +333,7 @@ impl Nets {
                 );
             }
             (_x, 0) => {
-                let interactable = NetEdge::interactable(src, dst, true);
+                let interactable = NetEdge::interactable(src, dst);
                 self.graph.add_edge(
                     NetVertex(src),
                     NetVertex(dst),
@@ -376,7 +347,7 @@ impl Nets {
             }
             (_x, y) => {
                 let corner = SSPoint::new(src.x, src.y + y);
-                let interactable = NetEdge::interactable(src, corner, true);
+                let interactable = NetEdge::interactable(src, corner);
                 self.graph.add_edge(
                     NetVertex(src),
                     NetVertex(corner),
@@ -387,7 +358,7 @@ impl Nets {
                         ..Default::default()
                     },
                 );
-                let interactable = NetEdge::interactable(corner, dst, true);
+                let interactable = NetEdge::interactable(corner, dst);
                 self.graph.add_edge(
                     NetVertex(corner),
                     NetVertex(dst),
@@ -405,7 +376,7 @@ impl Nets {
     pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
         for edge in other.graph.all_edges() {
             let mut ew = edge.2.clone();
-            ew.interactable = NetEdge::interactable(edge.0 .0, edge.1 .0, false);
+            ew.interactable = NetEdge::interactable(edge.0 .0, edge.1 .0);
             self.graph.add_edge(edge.0, edge.1, ew); // adding edges also add nodes if they do not already exist
         }
         self.prune(extra_vertices);
@@ -415,12 +386,6 @@ impl Nets {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
         e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
-    }
-    /// reset tentative flags for all net edges
-    pub fn clear_tentatives(&mut self) {
-        for e in self.graph.all_edges_mut() {
-            e.2.interactable.tentative = false;
-        }
     }
     /// deletes NetEdge e from self
     pub fn delete_edge(&mut self, e: &NetEdge) {
@@ -465,7 +430,6 @@ impl Drawable for Nets {
         for (_, _, edge) in self
             .graph
             .all_edges()
-            .filter(|e| e.2.interactable.tentative)
         {
             edge.draw_preview(vct, vcscale, frame);
         }
