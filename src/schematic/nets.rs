@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::{
-    schematic::{interactable::Interactive, SchematicElement},
+    schematic::interactable::Interactive,
     transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
 };
 use petgraph::algo::tarjan_scc;

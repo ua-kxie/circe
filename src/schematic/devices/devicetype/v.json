@@ -20,14 +20,14 @@
   ],
   "ports": [
     {
-      "name": "+",
+      "name": "plus",
       "offset": [
         0,
         3
       ]
     },
     {
-      "name": "-",
+      "name": "minus",
       "offset": [
         0,
         -3

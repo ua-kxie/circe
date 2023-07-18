@@ -115,10 +115,10 @@ where
 
 /// struct holding schematic state (nets, devices, and their locations)
 #[derive(Debug, Clone)]
-pub struct Schematic<C, T, M>
+pub struct Schematic<C, E, M>
 where
-    C: Content<T, M>,
-    T: SchematicElement,
+    C: Content<E, M>,
+    E: SchematicElement,
 {
     state: SchematicSt,
     pub content: C,
@@ -126,16 +126,16 @@ where
     content_msg: std::marker::PhantomData<M>,
     selskip: usize,
 
-    selected: HashSet<T>,
-    tentatives: HashSet<T>,
+    selected: HashSet<E>,
+    tentatives: HashSet<E>,
 
     curpos_ssp: SSPoint,
 }
 
-impl<C, T, M> Default for Schematic<C, T, M>
+impl<C, E, M> Default for Schematic<C, E, M>
 where
-    C: Content<T, M>,
-    T: SchematicElement,
+    C: Content<E, M>,
+    E: SchematicElement,
 {
     fn default() -> Self {
         Self {
@@ -461,13 +461,13 @@ where
     }
 }
 
-impl<C, T, M> Schematic<C, T, M>
+impl<C, E, M> Schematic<C, E, M>
 where
-    C: Content<T, M>,
-    T: SchematicElement,
+    C: Content<E, M>,
+    E: SchematicElement,
 {
     /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
-    pub fn active_device(&self) -> Option<&T> {
+    pub fn active_device(&self) -> Option<&E> {
         let mut v: Vec<_> = self.selected.iter().collect();
         if v.len() == 1 {
             v.pop()
@@ -536,7 +536,7 @@ where
         self.tentatives.clear();
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<T> {
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<E> {
         loop {
             let mut count = 0; // tracks the number of skipped elements
             if let Some(e) = self.content.selectable(ssp, skip, &mut count) {
