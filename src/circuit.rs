@@ -212,19 +212,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
     }
 
-    fn delete(&mut self, targets: &HashSet<CircuitElement>) {
-        for e in targets {
-            match e {
-                CircuitElement::NetEdge(edge) => self.nets.delete_edge(edge),
-                CircuitElement::Device(d) => self.devices.delete_device(d),
-            }
-        }
-    }
-
-    fn transform(&mut self, targets: &HashSet<CircuitElement>) {
-        todo!()
-    }
-
     fn selectable(
         &mut self,
         ssp: SSPoint,

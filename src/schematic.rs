@@ -4,14 +4,12 @@
 pub(crate) mod devices;
 pub(crate) mod nets;
 
-use self::devices::Devices;
 pub use self::devices::RcRDevice;
 use crate::transforms::CSVec;
 use crate::{interactable, viewport};
 use crate::{
-    interactable::Interactive,
     transforms::{
-        self, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox, VSPoint,
+        self, CSPoint, Point, SSBox, SSPoint, SSTransform, VCTransform, VSBox, VSPoint,
         ViewportSpace,
     },
     viewport::Drawable,
@@ -23,13 +21,10 @@ use iced::{
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
     Color, Size,
 };
-use nets::{NetEdge, NetVertex, Nets};
+use nets::Nets;
 use send_wrapper::SendWrapper;
-use std::borrow::BorrowMut;
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex};
 
 pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     // device designer: line, arc
@@ -60,7 +55,6 @@ where
     Event(Event, VSPoint),
     SchematicMsg(SchematicMsg<E>),
     ContentMsg(M),
-    // NewState(SchematicSt),
 }
 
 impl<M, E> viewport::ContentMsg for Msg<M, E>
@@ -96,26 +90,29 @@ pub trait Content<E, M>: Drawable + Default
 where
     E: SchematicElement,
 {
-    // return true if content is in its default/idle state
+    /// return true if content is in its default/idle state
     fn is_idle(&self) -> bool;
-    // apply sst to elements
+    /// apply sst to elements
     fn move_elements(&mut self, elements: &HashSet<E>, sst: &SSTransform);
-    // apply sst to a copy of elements
+    /// apply sst to a copy of elements
     fn copy_elements(&mut self, elements: &HashSet<E>, sst: &SSTransform);
-    // delete elements
+    /// delete elements
     fn delete_elements(&mut self, elements: &HashSet<E>);
-    // ex. wires + devices
-    // returns whether or not to clear the passive cache
+    /// process message, returns whether or not to clear the passive cache
     fn update(&mut self, msg: M) -> SchematicMsg<E>;
-    // fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint);
+    /// return bounds which enclose all elements
     fn bounds(&self) -> VSBox;
-    fn clear_tentatives(&mut self);
-    fn tentatives_by_ssbox(&mut self, ssb: SSBox);
-    fn tentatives(&self) -> Vec<E>;
+    /// return whether or not ssp intersects with any schematic element
     fn occupies_ssp(&self, ssp: SSPoint) -> bool;
-    fn delete(&mut self, targets: &HashSet<E>);
-    fn transform(&mut self, targets: &HashSet<E>);
+    /// returns a single SchematicElement over which ssp lies. Skips the first skip elements
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<E>;
+    /// clears all tentative selection
+    fn clear_tentatives(&mut self);
+    /// set tentative flags by ssb
+    fn tentatives_by_ssbox(&mut self, ssb: SSBox);
+    /// return vector of tentative SchematicElements 
+    fn tentatives(&self) -> Vec<E>;
+    /// sets the tentative flag on e
     fn set_tentative(&mut self, e: E);
 }
 
@@ -171,7 +168,7 @@ where
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         /// draw the cursor onto canvas
-        pub fn draw_cursor(vct: VCTransform, vcscale: f32, frame: &mut Frame, curpos_ssp: SSPoint) {
+        pub fn draw_cursor(vct: VCTransform, frame: &mut Frame, curpos_ssp: SSPoint) {
             let cursor_stroke = || -> Stroke {
                 Stroke {
                     width: 1.0,
@@ -233,7 +230,7 @@ where
             }
             _ => {}
         }
-        draw_cursor(vct, vcscale, frame, self.curpos_ssp);
+        draw_cursor(vct, frame, self.curpos_ssp);
     }
     /// draw onto passive cache
     fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
@@ -475,9 +472,8 @@ where
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         self.curpos_ssp = curpos_ssp;
         self.tentative_by_sspoint(curpos_ssp, &mut 0);
-        let mut skip = self.selskip;
 
-        let mut stcp = self.state.clone();
+        let mut stcp = self.state;
         match &mut stcp {
             SchematicSt::AreaSelect(ssb) => {
                 ssb.max = curpos_ssp;
@@ -502,9 +498,8 @@ where
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
         self.content.clear_tentatives();
-        if let Some(mut e) = self.selectable(ssp, skip) {
+        if let Some(e) = self.selectable(ssp, skip) {
             self.content.set_tentative(e);
-            // e.set_tentative();
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
@@ -524,10 +519,6 @@ where
             })
             .collect();
     }
-    /// returns true if ssp is occupied by an element
-    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.content.occupies_ssp(ssp)
-    }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<T> {
         loop {
@@ -536,22 +527,10 @@ where
                 return Some(e);
             }
             if count == 0 {
-                *skip = count;
+                *skip = 0;
                 return None;
             }
             *skip -= count;
         }
-    }
-    /// delete all elements which appear in the selected array
-    pub fn delete_selected(&mut self) {
-        if let SchematicSt::Idle = self.state {
-            self.content.delete(&self.selected);
-            self.selected.clear();
-        }
-    }
-    /// move all elements in the selected array by sst
-    fn transform_selected(&mut self, sst: SSTransform) {
-        self.content.transform(&self.selected);
-        self.selected.clear();
     }
 }
