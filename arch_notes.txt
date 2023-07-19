@@ -1,0 +1,57 @@
+Page - elements/widget layout which may contain a viewport
+    Viewport - impl iced canvas, grid, panning, fit view etc
+        Schematic - impl schematic functions - selection, cycle, move, copy etc over generic elements
+            Content - concrete types implmenting specialized functions (Circuit, DeviceDesigner)
+        DataGraph - impl plot functions - horz/vert markers, etc.
+            Plot - concrete types containing data
+
+Content <-> Page communication - how to do this?
+Content/Plot is a member of Page
+Viewport gets a reference
+
+add another layer
+viewport <-> schematic/plot <-> content
+viewport: zoom, pan, etc.
+schematic: translate, copy, delete generic selected
+plot: data plots
+content: concrete elements which can be selected or moved
+
+Viewport:
+    CompositeMsg {
+        viewport Msg
+        content Msg (schematic msg)
+    }
+
+schematic:
+    enum EventMsg {
+        Event
+        ContentMsg
+        SchematicMsg
+    }
+    fn update {
+        match eventmsg {
+            EventMsg::Event(event) => {
+                match event {
+                    bla bla => {
+                        bla bla
+                    }
+                    _ => {
+                        schematic_msg = content.update()
+                        self.process_msg(Schematic_msg);
+                    }
+                }
+            }
+            EventMsg::ContentMsg(msg) => {
+                schematic_msg = content.update(msg)
+                self.process_msg(schematic_msg)
+            }
+            EventMsg::SchematicMsg(msg) => {
+                self.process_msg(Schematic_msg);
+            }
+        }
+    }
+
+circuit
+
+schematic lvl: either self msg, or pass to content and process results
+

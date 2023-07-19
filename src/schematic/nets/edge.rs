@@ -47,10 +47,9 @@ impl std::hash::Hash for NetEdge {
 
 impl NetEdge {
     /// creates an interactable based on source and destination points, with settable 'tentative' flag
-    pub fn interactable(src: SSPoint, dst: SSPoint, tentative: bool) -> Interactable {
+    pub fn interactable(src: SSPoint, dst: SSPoint) -> Interactable {
         Interactable {
             bounds: NetEdge::bounds_from_pts(src, dst),
-            tentative,
         }
     }
     /// creates a bound based on source and destination points - return value is guaranteed to have positive area

@@ -1,155 +1,195 @@
 //! Schematic
 //! Space in which devices and nets live in
 
-mod devices;
-mod nets;
+pub(crate) mod devices;
+pub(crate) mod nets;
 
-use self::devices::Devices;
 pub use self::devices::RcRDevice;
+use crate::transforms::CSVec;
 use crate::{interactable, viewport};
 use crate::{
-    interactable::Interactive,
     transforms::{
-        self, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox, ViewportSpace,
+        self, CSPoint, Point, SSBox, SSPoint, SSTransform, VCTransform, VSBox, VSPoint,
+        ViewportSpace,
     },
     viewport::Drawable,
 };
+use iced::keyboard::Modifiers;
+use iced::widget::canvas::{stroke, Path};
 use iced::{
     mouse,
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
     Color, Size,
 };
-use nets::{NetEdge, NetVertex, Nets};
-use std::{cell::RefCell, collections::HashSet, fs, ops::Deref, rc::Rc};
+use nets::Nets;
+use send_wrapper::SendWrapper;
+use std::collections::HashSet;
+use std::hash::Hash;
 
-/// trait for a type of element in schematic. e.g. nets or devices
-pub trait SchematicSet {
-    /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
-    /// count is incremented by 1 for every element skipped over
-    /// skip is updated if an element is returned, equal to count
-    fn selectable(
-        &mut self,
-        curpos_ssp: SSPoint,
-        skip: &mut usize,
-        count: &mut usize,
-    ) -> Option<BaseElement>;
-
-    /// returns the bounding box of all contained elements
-    fn bounding_box(&self) -> VSBox;
+pub trait SchematicElement: Hash + Eq + Drawable + Clone {
+    /// returns true if self contains ssp
+    fn contains_ssp(&self, ssp: SSPoint) -> bool;
 }
 
-/// an enum to unify different types in schematic (nets and devices)
+/// Internal Schematic Message
 #[derive(Debug, Clone)]
-pub enum BaseElement {
-    NetEdge(NetEdge),
-    Device(RcRDevice),
+pub enum SchematicMsg<E>
+where
+    E: SchematicElement,
+{
+    /// do nothing
+    None,
+    /// clear passive cache
+    ClearPassive,
+    /// place new element E
+    NewElement(SendWrapper<E>),
 }
 
-impl PartialEq for BaseElement {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::NetEdge(l0), Self::NetEdge(r0)) => *l0 == *r0,
-            (Self::Device(l0), Self::Device(r0)) => {
-                by_address::ByAddress(l0) == by_address::ByAddress(r0)
-            }
-            _ => false,
-        }
+/// Trait for message type of schematic content
+pub trait ContentMsg {
+    /// Create message to have schematic content process canvas event
+    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self;
+}
+
+/// Message type which is a composite of canvas Event, SchematicMsg, and ContentMsg
+/// This structure allows schematic and its content to process events in parallel
+#[derive(Debug, Clone)]
+pub enum Msg<M, E>
+where
+    M: ContentMsg,
+    E: SchematicElement,
+{
+    /// iced canvas event, along with cursor position inside canvas bounds
+    Event(Event, VSPoint),
+    /// Schematic Message
+    SchematicMsg(SchematicMsg<E>),
+    /// Content Message
+    ContentMsg(M),
+}
+
+/// implements Msg to be ContentMsg of viewport
+impl<M, E> viewport::ContentMsg for Msg<M, E>
+where
+    M: ContentMsg,
+    E: SchematicElement,
+{
+    // create event to handle iced canvas event
+    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
+        Msg::Event(event, curpos_vsp.round().cast().cast_unit())
     }
 }
 
-impl Eq for BaseElement {}
-
-impl std::hash::Hash for BaseElement {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            BaseElement::NetEdge(e) => e.hash(state),
-            BaseElement::Device(d) => by_address::ByAddress(d).hash(state),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SchematicContentMsg {
-    Event(Event),
-    Wire,
-    DcOp,
-}
-
-#[derive(Debug, Clone, Default)]
-pub enum SchematicContentSt {
+/// Schematic States
+#[derive(Debug, Clone, Copy, Default)]
+pub enum SchematicSt {
+    /// idle state
     #[default]
     Idle,
-    Wiring(Option<(Box<Nets>, SSPoint)>),
+    /// left click-drag area selection
     AreaSelect(SSBox),
+    /// selected elements preview follow mouse cursor - move, new device,
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
+    /// identical to `Moving` state but signals content to make copy of elements instead of move
     Copying(Option<(SSPoint, SSPoint, SSTransform)>),
-    // first click, second click, transform for rotation/flip ONLY
 }
 
-impl SchematicContentSt {
+impl SchematicSt {
+    /// this function returns a transform which applies sst about ssp0 and then translates to ssp1
     fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
-        sst.pre_translate(SSVec::new(-ssp0.x, -ssp0.y))
-            .then_translate(SSVec::new(ssp0.x, ssp0.y))
+        sst.pre_translate(SSPoint::origin() - *ssp0)
+            .then_translate(*ssp0 - SSPoint::origin())
             .then_translate(*ssp1 - *ssp0)
     }
 }
 
-/// struct holding schematic state (nets, devices, and their locations)
-#[derive(Debug, Default, Clone)]
-pub struct SchematicContent {
-    pub infobarstr: Option<String>,
-
-    nets: Nets,
-    devices: Devices,
-    state: SchematicContentSt,
-
-    selskip: usize,
-    selected: HashSet<BaseElement>,
+pub trait Content<E, M>: Drawable + Default
+where
+    E: SchematicElement,
+{
+    /// return true if content is in its default/idle state
+    fn is_idle(&self) -> bool;
+    /// apply sst to elements
+    fn move_elements(&mut self, elements: &HashSet<E>, sst: &SSTransform);
+    /// apply sst to a copy of elements
+    fn copy_elements(&mut self, elements: &HashSet<E>, sst: &SSTransform);
+    /// delete elements
+    fn delete_elements(&mut self, elements: &HashSet<E>);
+    /// process message, returns whether or not to clear the passive cache
+    fn update(&mut self, msg: M) -> SchematicMsg<E>;
+    /// return bounds which enclose all elements
+    fn bounds(&self) -> VSBox;
+    /// return whether or not ssp intersects with any schematic element
+    fn occupies_ssp(&self, ssp: SSPoint) -> bool;
+    /// returns a single SchematicElement over which ssp lies. Skips the first skip elements
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<E>;
+    ///  returns hashset of elements which intersects ssb
+    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<E>;
 }
 
-impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
-    fn mouse_interaction(&self) -> mouse::Interaction {
-        match self.state {
-            SchematicContentSt::Idle => mouse::Interaction::default(),
-            SchematicContentSt::Wiring(_) => mouse::Interaction::Crosshair,
-            SchematicContentSt::Moving(_) => mouse::Interaction::Grabbing,
-            SchematicContentSt::Copying(_) => mouse::Interaction::Grabbing,
-            SchematicContentSt::AreaSelect(_) => mouse::Interaction::Crosshair,
+/// struct holding schematic state (nets, devices, and their locations)
+#[derive(Debug, Clone)]
+pub struct Schematic<C, E, M>
+where
+    C: Content<E, M>,
+    E: SchematicElement,
+{
+    /// schematic state
+    state: SchematicSt,
+    /// schematic content - circuit or device designer
+    pub content: C,
+    /// phantom data to mark ContentMsg type
+    content_msg: std::marker::PhantomData<M>,
+    /// single selection cycling watermark
+    selskip: usize,
+    /// Hashset of selected elements
+    selected: HashSet<E>,
+    /// Hashset of tentative elements (mouse hovering over, inside area selection)
+    tentatives: HashSet<E>,
+    /// cursor position in schematic space
+    curpos_ssp: SSPoint,
+}
+
+impl<C, E, M> Default for Schematic<C, E, M>
+where
+    C: Content<E, M>,
+    E: SchematicElement,
+{
+    fn default() -> Self {
+        Self {
+            state: Default::default(),
+            content: Default::default(),
+            selskip: Default::default(),
+            selected: Default::default(),
+            tentatives: Default::default(),
+            content_msg: std::marker::PhantomData,
+            curpos_ssp: Default::default(),
         }
     }
+}
 
-    fn events_handler(&self, event: Event) -> Option<SchematicContentMsg> {
-        match (&self.state, event) {
-            (
-                SchematicContentSt::Idle,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::W,
-                    modifiers: _,
-                }),
-            ) => Some(SchematicContentMsg::Wire),
-            (
-                SchematicContentSt::Idle,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::Space,
-                    modifiers: _,
-                }),
-            ) => Some(SchematicContentMsg::DcOp),
-            (_, _) => Some(SchematicContentMsg::Event(event)),
+/// implement Schematic as viewport content
+impl<C, E, M> viewport::Content<Msg<M, E>> for Schematic<C, E, M>
+where
+    M: ContentMsg,
+    C: Content<E, M>,
+    E: SchematicElement,
+{
+    /// change cursor graphic based on schematic state
+    fn mouse_interaction(&self) -> mouse::Interaction {
+        match self.state {
+            SchematicSt::Idle => mouse::Interaction::default(),
+            SchematicSt::AreaSelect(_) => mouse::Interaction::Crosshair,
+            SchematicSt::Moving(_) => mouse::Interaction::Grabbing,
+            SchematicSt::Copying(_) => mouse::Interaction::Grabbing,
         }
     }
 
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        // draw elements which may need to be redrawn at any event
-        self.nets.draw_preview(vct, vcscale, frame); // this draws tentatives - refactor
-        self.devices.draw_preview(vct, vcscale, frame);
-
         match &self.state {
-            SchematicContentSt::Wiring(Some((net, ..))) => {
-                net.as_ref().draw_preview(vct, vcscale, frame);
-            }
-            SchematicContentSt::Idle => {}
-            SchematicContentSt::AreaSelect(ssb) => {
+            SchematicSt::Idle => {}
+            SchematicSt::AreaSelect(ssb) => {
+                // draw the selection area
                 let color = if ssb.height() > 0 {
                     Color::from_rgba(1., 1., 0., 0.1)
                 } else {
@@ -177,508 +217,340 @@ impl viewport::ViewportContent<SchematicContentMsg> for SchematicContent {
                 };
                 frame.stroke(&path_builder.build(), stroke);
             }
-            SchematicContentSt::Moving(Some((ssp0, ssp1, sst)))
-            | SchematicContentSt::Copying(Some((ssp0, ssp1, sst))) => {
-                let vvt = transforms::sst_to_xxt::<ViewportSpace>(
-                    SchematicContentSt::move_transform(ssp0, ssp1, sst),
-                );
+            SchematicSt::Moving(Some((ssp0, ssp1, sst)))
+            | SchematicSt::Copying(Some((ssp0, ssp1, sst))) => {
+                // draw selected preview with transform applied
+                let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicSt::move_transform(
+                    ssp0, ssp1, sst,
+                ));
 
                 let vct_c = vvt.then(&vct);
                 for be in &self.selected {
-                    match be {
-                        BaseElement::Device(d) => d.0.borrow().draw_preview(vct_c, vcscale, frame),
-                        BaseElement::NetEdge(e) => e.draw_preview(vct_c, vcscale, frame),
-                    }
+                    be.draw_preview(vct_c, vcscale, frame);
                 }
             }
             _ => {}
         }
+
+        // draw preview for tentatives
+        let _: Vec<_> = self
+            .tentatives
+            .iter()
+            .map(|e| e.draw_preview(vct, vcscale, frame))
+            .collect();
+        // draw content preview
+        self.content.draw_preview(vct, vcscale, frame);
+
+        /// draw the cursor onto canvas
+        pub fn draw_cursor(vct: VCTransform, frame: &mut Frame, curpos_ssp: SSPoint) {
+            let cursor_stroke = || -> Stroke {
+                Stroke {
+                    width: 1.0,
+                    style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
+                    line_cap: LineCap::Round,
+                    ..Stroke::default()
+                }
+            };
+            let curdim = 5.0;
+            let csp = vct.transform_point(curpos_ssp.cast().cast_unit());
+            let csp_topleft = csp - CSVec::from([curdim / 2.; 2]);
+            let s = iced::Size::from([curdim, curdim]);
+            let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
+            frame.stroke(&c, cursor_stroke());
+        }
+        draw_cursor(vct, frame, self.curpos_ssp);
     }
     /// draw onto passive cache
     fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        // draw elements which may need to be redrawn at any event
-        self.nets.draw_persistent(vct, vcscale, frame);
-        self.devices.draw_persistent(vct, vcscale, frame);
+        self.content.draw_persistent(vct, vcscale, frame);
         let _: Vec<_> = self
             .selected
             .iter()
-            .map(|e| match e {
-                BaseElement::NetEdge(e) => {
-                    e.draw_selected(vct, vcscale, frame);
-                }
-                BaseElement::Device(d) => {
-                    d.0.borrow().draw_selected(vct, vcscale, frame);
-                }
-            })
+            .map(|e| e.draw_selected(vct, vcscale, frame))
             .collect();
     }
 
-    /// returns the bouding box of all elements on canvas
+    /// returns the bouding box of schematic content
     fn bounds(&self) -> VSBox {
-        let bbn = self.nets.bounding_box();
-        let bbi = self.devices.bounding_box();
-        bbn.union(&bbi)
+        self.content.bounds()
     }
     /// mutate state based on message and cursor position
-    fn update(&mut self, msg: SchematicContentMsg, curpos_ssp: SSPoint) -> bool {
+    fn update(&mut self, msg: Msg<M, E>) -> bool {
         let mut clear_passive = false;
+
         match msg {
-            SchematicContentMsg::Wire => {
-                self.state = SchematicContentSt::Wiring(None);
-            }
-            SchematicContentMsg::Event(event) => {
+            Msg::Event(event, curpos_csp) => {
+                let curpos_ssp = curpos_csp.round().cast().cast_unit();
+
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
                 }
 
-                let mut state = self.state.clone();
-                match (&mut state, event) {
-                    // wiring
-                    (
-                        SchematicContentSt::Wiring(opt_ws),
-                        Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
-                    ) => {
-                        let ssp = curpos_ssp;
-                        let mut new_ws = None;
-                        if let Some((g, prev_ssp)) = opt_ws {
-                            // subsequent click
-                            if ssp == *prev_ssp {
-                            } else if self.occupies_ssp(ssp) {
-                                self.nets.merge(g.as_ref(), self.devices.ports_ssp());
-                                new_ws = None;
-                            } else {
-                                self.nets.merge(g.as_ref(), self.devices.ports_ssp());
-                                new_ws = Some((Box::<Nets>::default(), ssp));
-                            }
-                        } else {
-                            // first click
-                            new_ws = Some((Box::<Nets>::default(), ssp));
-                        }
-                        state = SchematicContentSt::Wiring(new_ws);
-                        clear_passive = true;
-                    }
+                if self.content.is_idle() {
+                    // if content is idle, allow schematic to process event before passing onto content - otherwise pass event to content directly
+                    match (&mut self.state, event) {
+                        // drag/area select - todo move to viewport - content should allow viewport to discern areaselect or drag
+                        (
+                            SchematicSt::Idle,
+                            Event::Mouse(iced::mouse::Event::ButtonPressed(
+                                iced::mouse::Button::Left,
+                            )),
+                        ) => {
+                            let mut click_selected = false;
 
-                    // drag/area select - todo move to viewport - content should allow viewport to discern areaselect or drag
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
-                    ) => {
-                        let mut click_selected = false;
-
-                        for s in &self.selected {
-                            if let BaseElement::Device(rcr) = s {
-                                if rcr.0.borrow().interactable.contains_ssp(curpos_ssp) {
+                            for s in &self.selected {
+                                if s.contains_ssp(curpos_ssp) {
                                     click_selected = true;
                                     break;
                                 }
                             }
+
+                            if click_selected {
+                                self.state = SchematicSt::Moving(Some((
+                                    curpos_ssp,
+                                    curpos_ssp,
+                                    SSTransform::identity(),
+                                )));
+                            } else {
+                                self.state =
+                                    SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
+                            }
                         }
 
-                        if click_selected {
-                            state = SchematicContentSt::Moving(Some((
-                                curpos_ssp,
-                                curpos_ssp,
-                                SSTransform::identity(),
-                            )));
-                        } else {
-                            state =
-                                SchematicContentSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
+                        // area select
+                        (
+                            SchematicSt::AreaSelect(_),
+                            Event::Mouse(iced::mouse::Event::ButtonReleased(
+                                iced::mouse::Button::Left,
+                            )),
+                        ) => {
+                            self.tentatives_to_selected();
+                            self.state = SchematicSt::Idle;
+                            clear_passive = true;
                         }
-                    }
+                        // moving
+                        (
+                            _,
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::M,
+                                modifiers: _,
+                            }),
+                        ) => {
+                            self.state = SchematicSt::Moving(None);
+                        }
+                        (
+                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::R,
+                                modifiers: m,
+                            }),
+                        ) => {
+                            if m.control() {
+                                *sst = sst.then(&transforms::SST_CCWR);
+                            } else {
+                                *sst = sst.then(&transforms::SST_CWR);
+                            }
+                        }
+                        (
+                            SchematicSt::Moving(mut opt_pts),
+                            Event::Mouse(iced::mouse::Event::ButtonReleased(
+                                iced::mouse::Button::Left,
+                            )),
+                        ) => {
+                            if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
+                                self.content.move_elements(
+                                    &self.selected,
+                                    &SchematicSt::move_transform(ssp0, ssp1, sst),
+                                );
+                                clear_passive = true;
+                                self.state = SchematicSt::Idle;
+                            } else {
+                                let sst = SSTransform::identity();
+                                self.state =
+                                    SchematicSt::Moving(Some((curpos_ssp, curpos_ssp, sst)));
+                            }
+                        }
+                        // copying
+                        (
+                            SchematicSt::Idle,
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::C,
+                                modifiers: Modifiers::CTRL,
+                            }),
+                        ) => {
+                            self.state = SchematicSt::Copying(None);
+                        }
+                        (
+                            SchematicSt::Copying(opt_pts),
+                            Event::Mouse(iced::mouse::Event::ButtonReleased(
+                                iced::mouse::Button::Left,
+                            )),
+                        ) => match opt_pts {
+                            Some((ssp0, ssp1, sst)) => {
+                                self.content.copy_elements(
+                                    &self.selected,
+                                    &SchematicSt::move_transform(ssp0, ssp1, sst),
+                                );
+                                clear_passive = true;
+                                self.state = SchematicSt::Idle;
+                            }
+                            None => {
+                                self.state = SchematicSt::Copying(Some((
+                                    curpos_ssp,
+                                    curpos_ssp,
+                                    SSTransform::identity(),
+                                )));
+                            }
+                        },
+                        // delete
+                        (
+                            SchematicSt::Idle,
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::Delete,
+                                modifiers: _,
+                            }),
+                        ) => {
+                            self.content.delete_elements(&self.selected);
+                            self.selected.clear();
+                            clear_passive = true;
+                        }
+                        // tentative selection cycle
+                        (
+                            SchematicSt::Idle,
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::C,
+                                modifiers: _,
+                            }),
+                        ) => {
+                            self.tentative_next_by_ssp(curpos_ssp);
+                            clear_passive = true;
+                        }
 
-                    // area select
-                    (
-                        SchematicContentSt::AreaSelect(_),
-                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
-                    ) => {
-                        self.tentatives_to_selected();
-                        state = SchematicContentSt::Idle;
-                        clear_passive = true;
-                    }
-                    // device placement
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::R,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        self.selected.clear();
-                        let d = self.devices.new_res();
-                        d.0.borrow_mut().set_position(curpos_ssp);
-                        self.selected.insert(BaseElement::Device(d));
-                        state = SchematicContentSt::Moving(Some((
-                            curpos_ssp,
-                            curpos_ssp,
-                            SSTransform::identity(),
-                        )));
-                    }
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::G,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        self.selected.clear();
-                        let d = self.devices.new_gnd();
-                        d.0.borrow_mut().set_position(curpos_ssp);
-                        self.selected.insert(BaseElement::Device(d));
-                        state = SchematicContentSt::Moving(Some((
-                            curpos_ssp,
-                            curpos_ssp,
-                            SSTransform::identity(),
-                        )));
-                    }
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::V,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        self.selected.clear();
-                        let d = self.devices.new_vs();
-                        d.0.borrow_mut().set_position(curpos_ssp);
-                        self.selected.insert(BaseElement::Device(d));
-                        state = SchematicContentSt::Moving(Some((
-                            curpos_ssp,
-                            curpos_ssp,
-                            SSTransform::identity(),
-                        )));
-                    }
-                    // copying
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::X,
-                            modifiers: m,
-                        }),
-                    ) => {
-                        if m.control() {
-                            self.copy_selected();
-                            state = SchematicContentSt::Copying(Some((
-                                curpos_ssp,
-                                curpos_ssp,
-                                SSTransform::identity(),
-                            )));
+                        // rst
+                        (
+                            st,
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::Escape,
+                                modifiers: _,
+                            }),
+                        ) => match st {
+                            SchematicSt::Idle => {
+                                self.selected.clear();
+                                clear_passive = true;
+                            }
+                            _ => {
+                                self.state = SchematicSt::Idle;
+                            }
+                        },
+                        // something else - pass to content
+                        _ => {
+                            let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
+                            clear_passive = self.update(Msg::SchematicMsg(m));
                         }
                     }
-                    // moving
-                    (
-                        _,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::M,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        state = SchematicContentSt::Moving(None);
-                    }
-                    (
-                        SchematicContentSt::Moving(Some((_ssp0, _ssp1, sst))),
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::R,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        *sst = sst.then(&transforms::SST_CWR);
-                    }
-                    (
-                        SchematicContentSt::Moving(mut opt_pts),
-                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
-                    ) => {
-                        if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
-                            self.move_selected(SchematicContentSt::move_transform(ssp0, ssp1, vvt));
-                            self.prune_nets();
-                            state = SchematicContentSt::Idle;
-                            clear_passive = true;
-                        } else {
-                            let ssp: euclid::Point2D<_, _> = curpos_ssp;
-                            let sst = SSTransform::identity();
-                            state = SchematicContentSt::Moving(Some((ssp, ssp, sst)));
-                        }
-                    }
-                    (
-                        SchematicContentSt::Copying(mut opt_pts),
-                        Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)),
-                    ) => {
-                        if let Some((ssp0, ssp1, vvt)) = &mut opt_pts {
-                            self.move_copied(SchematicContentSt::move_transform(ssp0, ssp1, vvt));
-                            self.prune_nets();
-                            state = SchematicContentSt::Idle;
-                            clear_passive = true;
-                        }
-                    }
-                    // delete - todo move to viewport - send a message down
-                    (
-                        SchematicContentSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::Delete,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        self.delete_selected();
-                        clear_passive = true;
-                    }
-                    _ => {}
+                } else {
+                    // if content is not idling, pass event directly to content
+                    let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
+                    clear_passive = self.update(Msg::SchematicMsg(m));
                 }
-                self.state = state;
             }
-            SchematicContentMsg::DcOp => {
-                clear_passive = true;
+            Msg::ContentMsg(content_msg) => {
+                let m = self.content.update(content_msg);
+                clear_passive = self.update(Msg::SchematicMsg(m));
+            }
+            Msg::SchematicMsg(schematic_msg) => {
+                match schematic_msg {
+                    SchematicMsg::None => {}
+                    SchematicMsg::ClearPassive => {
+                        clear_passive = true;
+                    }
+                    SchematicMsg::NewElement(e) => {
+                        // place into selected
+                        self.selected.clear();
+                        self.selected.insert(e.take());
+                        self.state = SchematicSt::Moving(Some((
+                            SSPoint::origin(),
+                            self.curpos_ssp,
+                            SSTransform::identity(),
+                        )));
+                    }
+                }
             }
         }
         clear_passive
     }
-    fn rst(&mut self) -> bool {
-        match self.state {
-            SchematicContentSt::Idle => {
-                self.selected.clear();
-                true
-            }
-            _ => {
-                self.state = SchematicContentSt::Idle;
-                false
-            }
-        }
-    }
-    fn cycle(&mut self, curpos_ssp: SSPoint) -> bool {
-        if let SchematicContentSt::Idle = self.state {
-            self.infobarstr = self.tentative_next_by_ssp(curpos_ssp);
-            true
-        } else {
-            false
-        }
-    }
 }
 
-impl SchematicContent {
-    /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
-    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
-        self.devices.op(pkvecvaluesall);
-    }
-    /// update schematic cursor position
-    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
-        let mut skip = self.selskip;
-        self.infobarstr = self.tentative_by_sspoint(curpos_ssp, &mut skip);
-
-        let mut stcp = self.state.clone();
-        match &mut stcp {
-            SchematicContentSt::Wiring(Some((g, prev_ssp))) => {
-                g.as_mut().clear();
-                g.route(*prev_ssp, curpos_ssp);
-            }
-            SchematicContentSt::AreaSelect(ssb) => {
-                ssb.max = curpos_ssp;
-                self.tentatives_by_ssbox(ssb);
-            }
-            SchematicContentSt::Moving(Some((_ssp0, ssp1, _sst)))
-            | SchematicContentSt::Copying(Some((_ssp0, ssp1, _sst))) => {
-                *ssp1 = curpos_ssp;
-            }
-            _ => {}
-        }
-        self.state = stcp;
-    }
+impl<C, E, M> Schematic<C, E, M>
+where
+    C: Content<E, M>,
+    E: SchematicElement,
+{
     /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
-    pub fn active_device(&self) -> Option<RcRDevice> {
-        let mut v: Vec<_> = self
-            .selected
-            .iter()
-            .filter_map(|x| match x {
-                BaseElement::Device(d) => Some(d.clone()),
-                _ => None,
-            })
-            .collect();
+    pub fn active_device(&self) -> Option<&E> {
+        let mut v: Vec<_> = self.selected.iter().collect();
         if v.len() == 1 {
             v.pop()
         } else {
             None
         }
     }
-    /// clear tentative selections (cursor hover highlight)
-    fn clear_tentatives(&mut self) {
-        self.devices.clear_tentatives();
-        self.nets.clear_tentatives();
+    /// update schematic cursor position
+    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+        self.curpos_ssp = curpos_ssp;
+        self.tentative_by_sspoint(curpos_ssp, &mut 0);
+
+        let mut stcp = self.state;
+        match &mut stcp {
+            SchematicSt::AreaSelect(ssb) => {
+                ssb.max = curpos_ssp;
+                self.tentatives_by_ssbox(ssb);
+            }
+            SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
+                *ssp1 = curpos_ssp;
+            }
+            SchematicSt::Copying(Some((_ssp0, ssp1, _sst))) => {
+                *ssp1 = curpos_ssp;
+            }
+            _ => {}
+        }
+        self.state = stcp;
     }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        self.clear_tentatives();
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-        self.devices.tentatives_by_ssbox(&ssb_p);
-        self.nets.tentatives_by_ssbox(&ssb_p);
+        self.tentatives = self.content.intersects_ssb(ssb_p)
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
-    pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<String> {
-        self.clear_tentatives();
-        if let Some(be) = self.selectable(ssp, skip) {
-            match be {
-                BaseElement::NetEdge(e) => {
-                    let mut netedge = e.clone();
-                    let netname = e.label.map(|x| x.as_ref().clone());
-                    netedge.interactable.tentative = true;
-                    self.nets
-                        .graph
-                        .add_edge(NetVertex(e.src), NetVertex(e.dst), netedge);
-                    netname
-                }
-                BaseElement::Device(d) => {
-                    d.0.borrow_mut().interactable.tentative = true;
-                    None
-                }
-            }
-        } else {
-            None
+    pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
+        self.tentatives.clear();
+        if let Some(e) = self.selectable(ssp, skip) {
+            self.tentatives.insert(e);
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
-    pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) -> Option<String> {
+    pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) {
         let mut skip = self.selskip.wrapping_add(1);
-        let s = self.tentative_by_sspoint(ssp, &mut skip);
+        self.tentative_by_sspoint(ssp, &mut skip);
         self.selskip = skip;
-        s
     }
     /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
-        let _: Vec<_> = self
-            .devices
-            .tentatives()
-            .map(|d| {
-                self.selected.insert(BaseElement::Device(d));
-            })
-            .collect();
-        let _: Vec<_> = self
-            .nets
-            .tentatives()
-            .map(|e| {
-                self.selected.insert(BaseElement::NetEdge(e));
-            })
-            .collect();
-    }
-    /// returns true if ssp is occupied by an element
-    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
+        self.selected = self.tentatives.clone();
+        self.tentatives.clear();
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<BaseElement> {
+    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<E> {
         loop {
             let mut count = 0; // tracks the number of skipped elements
-            if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
+            if let Some(e) = self.content.selectable(ssp, skip, &mut count) {
                 return Some(e);
             }
-            if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
-                return Some(d);
-            }
             if count == 0 {
-                *skip = count;
+                *skip = 0;
                 return None;
             }
             *skip -= count;
-        }
-    }
-    /// delete all elements which appear in the selected array
-    pub fn delete_selected(&mut self) {
-        if let SchematicContentSt::Idle = self.state {
-            for be in &self.selected {
-                match be {
-                    BaseElement::NetEdge(e) => {
-                        self.nets.delete_edge(e);
-                    }
-                    BaseElement::Device(d) => {
-                        self.devices.delete_device(d);
-                    }
-                }
-            }
-            self.selected.clear();
-            self.prune_nets();
-        }
-    }
-
-    fn copy_selected(&mut self) {
-        let mut copy_hs: HashSet<BaseElement> = HashSet::new();
-        for be in self.selected.iter() {
-            match be {
-                BaseElement::NetEdge(n) => {
-                    let src = n.deref().src;
-                    let dst = n.deref().dst;
-                    let mut net = Box::<Nets>::default();
-
-                    let interactable = NetEdge::interactable(src, dst, false);
-                    let net_edge = NetEdge {
-                        src,
-                        dst,
-                        interactable,
-                        ..NetEdge::default()
-                    };
-
-                    net.graph
-                        .add_edge(NetVertex(src), NetVertex(dst), net_edge.clone());
-                    let base_element = BaseElement::NetEdge(net_edge);
-
-                    copy_hs.insert(base_element);
-                }
-                BaseElement::Device(rcr) => {
-                    //unwrap refcell
-                    let refcell_d = rcr.0.borrow();
-                    let device = refcell_d.deref().clone();
-
-                    //build BaseElement
-                    let d_refcell = RefCell::new(device);
-                    let d_refcnt = Rc::new(d_refcell);
-                    let rcr_device = RcRDevice(d_refcnt);
-
-                    let base_element = BaseElement::Device(rcr_device);
-
-                    copy_hs.insert(base_element);
-                }
-            }
-        }
-        self.selected = copy_hs;
-    }
-
-    /// create netlist for the current schematic and save it.
-    pub fn netlist(&mut self) {
-        self.nets.pre_netlist();
-        let mut netlist = String::from("Netlist Created by Circe\n");
-        for d in self.devices.get_set() {
-            netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
-        }
-        netlist.push('\n');
-        fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
-    }
-    /// clear up nets graph: merging segments, cleaning up segment net names, etc.
-    fn prune_nets(&mut self) {
-        self.nets.prune(self.devices.ports_ssp());
-    }
-    /// move all elements in the selected array by sst
-    fn move_selected(&mut self, sst: SSTransform) {
-        let selected = self.selected.clone();
-        self.selected.clear();
-        for be in selected {
-            match be {
-                BaseElement::NetEdge(e) => {
-                    self.nets.transform(e, sst); // how to handle copying? e.g. adds new nets
-                }
-                BaseElement::Device(d) => {
-                    d.0.borrow_mut().transform(sst);
-                    // if moving an existing device, does nothing
-                    // inserts the device if placing a new device
-                    self.devices.insert(d);
-                }
-            }
-        }
-    }
-    fn move_copied(&mut self, sst: SSTransform) {
-        let selected = self.selected.clone();
-        self.selected.clear();
-        for be in selected {
-            match be {
-                BaseElement::NetEdge(mut e) => self.nets.copy_transform(e, sst),
-                BaseElement::Device(d) => {
-                    d.0.borrow_mut().transform(sst);
-                    self.devices.insert(d);
-                }
-            }
         }
     }
 }

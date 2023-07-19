@@ -12,8 +12,7 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 Alternatively, clone the repository with the following:
 > `git clone --recurse-submodules https://github.com/ua-kxie/circe.git`
 
-followed by 
-> `cargo run`
+followed by `cargo run`
 
 ### Controls: 
 * click wires or device to select  
@@ -21,7 +20,7 @@ followed by
 * right click drag to zoom to area  
 * left click drag to select area
 * left click drag on selected device to drag selected
-* select single device to edit parameter (wonky)  
+* select single device to edit parameter (wonky) - if you have ideas for implementing a properties editor, get in touch ~
   
 #### Hotkeys:
 
@@ -33,7 +32,7 @@ C - cycle tentative selection
 
 Del - delete selected
 
-R - resistor, rotate selected during move, placement
+R - resistor (during move/copy, rotates selected, ctrl-R to counter rotate)
 
 G - ground
 

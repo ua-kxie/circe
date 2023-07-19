@@ -7,9 +7,10 @@ mod transforms;
 // use designer::DeviceDesigner;
 mod viewport;
 
+mod circuit;
+mod circuit_gui;
 mod schematic;
-mod schematic_gui;
-use schematic_gui::Schematic;
+use circuit_gui::CircuitPage;
 
 // mod designer;
 mod interactable;
@@ -32,7 +33,7 @@ pub fn main() -> iced::Result {
 /// main program
 pub struct Circe {
     /// schematic
-    schematic: Schematic,
+    schematic: CircuitPage,
     /// intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
     // designer: DeviceDesigner,
 
@@ -43,7 +44,7 @@ pub struct Circe {
 #[derive(Debug, Clone)]
 pub enum Msg {
     // DeviceDesignerMsg(designer::DeviceDesignerMsg),
-    SchematicMsg(schematic_gui::SchematicMsg),
+    SchematicMsg(circuit_gui::CircuitPageMsg),
 
     TabSel(usize),
 }
@@ -57,7 +58,7 @@ impl Application for Circe {
     fn new(_flags: ()) -> (Self, Command<Msg>) {
         (
             Circe {
-                schematic: Schematic::default(),
+                schematic: CircuitPage::default(),
                 // designer: DeviceDesigner::default(),
                 active_tab: 0,
             },
