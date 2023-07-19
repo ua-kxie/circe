@@ -16,7 +16,7 @@ use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
 use by_address::ByAddress;
 use iced::widget::canvas::Frame;
 
-/// newtype wrapper for Rc<RefCell<Device>>. Hashes by memory address.
+/// newtype wrapper for `Rc<RefCell<Device>>`. Hashes by memory address.
 #[derive(Debug, Clone)]
 pub struct RcRDevice(pub Rc<RefCell<Device>>);
 

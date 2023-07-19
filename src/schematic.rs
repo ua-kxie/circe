@@ -27,57 +27,70 @@ use std::collections::HashSet;
 use std::hash::Hash;
 
 pub trait SchematicElement: Hash + Eq + Drawable + Clone {
-    // device designer: line, arc
-    // circuit: wire, device
     /// returns true if self contains ssp
     fn contains_ssp(&self, ssp: SSPoint) -> bool;
-    // /// returns true if self intersects ssb
-    // fn intersects_ssb(&self, ssb: SSBox) -> bool;
 }
 
+/// Internal Schematic Message
 #[derive(Debug, Clone)]
 pub enum SchematicMsg<E>
 where
     E: SchematicElement,
 {
+    /// do nothing
     None,
+    /// clear passive cache
     ClearPassive,
+    /// place new element E
     NewElement(SendWrapper<E>),
 }
 
+/// Trait for message type of schematic content
 pub trait ContentMsg {
+    /// Create message to have schematic content process canvas event
     fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self;
 }
 
+/// Message type which is a composite of canvas Event, SchematicMsg, and ContentMsg
+/// This structure allows schematic and its content to process events in parallel
 #[derive(Debug, Clone)]
 pub enum Msg<M, E>
 where
     M: ContentMsg,
     E: SchematicElement,
 {
+    /// iced canvas event, along with cursor position inside canvas bounds
     Event(Event, VSPoint),
+    /// Schematic Message
     SchematicMsg(SchematicMsg<E>),
+    /// Content Message
     ContentMsg(M),
 }
 
+/// implements Msg to be ContentMsg of viewport
 impl<M, E> viewport::ContentMsg for Msg<M, E>
 where
     M: ContentMsg,
     E: SchematicElement,
 {
+    // create event to handle iced canvas event
     fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
         Msg::Event(event, curpos_vsp.round().cast().cast_unit())
     }
 }
 
+/// Schematic States
 #[derive(Debug, Clone, Copy, Default)]
 pub enum SchematicSt {
+    /// idle state
     #[default]
     Idle,
+    /// left click-drag area selection
     AreaSelect(SSBox),
+    /// selected elements preview follow mouse cursor - move, new device,
     Moving(Option<(SSPoint, SSPoint, SSTransform)>),
+    /// identical to `Moving` state but signals content to make copy of elements instead of move
     Copying(Option<(SSPoint, SSPoint, SSTransform)>),
-    // first click, second click, transform for rotation/flip ONLY
 }
 
 impl SchematicSt {
@@ -120,15 +133,19 @@ where
     C: Content<E, M>,
     E: SchematicElement,
 {
+    /// schematic state
     state: SchematicSt,
+    /// schematic content - circuit or device designer
     pub content: C,
     /// phantom data to mark ContentMsg type
     content_msg: std::marker::PhantomData<M>,
+    /// single selection cycling watermark
     selskip: usize,
-
+    /// Hashset of selected elements
     selected: HashSet<E>,
+    /// Hashset of tentative elements (mouse hovering over, inside area selection)
     tentatives: HashSet<E>,
-
+    /// cursor position in schematic space
     curpos_ssp: SSPoint,
 }
 
@@ -150,12 +167,14 @@ where
     }
 }
 
+/// implement Schematic as viewport content
 impl<C, E, M> viewport::Content<Msg<M, E>> for Schematic<C, E, M>
 where
     M: ContentMsg,
     C: Content<E, M>,
     E: SchematicElement,
 {
+    /// change cursor graphic based on schematic state
     fn mouse_interaction(&self) -> mouse::Interaction {
         match self.state {
             SchematicSt::Idle => mouse::Interaction::default(),
@@ -167,31 +186,6 @@ where
 
     /// draw onto active cache
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        /// draw the cursor onto canvas
-        pub fn draw_cursor(vct: VCTransform, frame: &mut Frame, curpos_ssp: SSPoint) {
-            let cursor_stroke = || -> Stroke {
-                Stroke {
-                    width: 1.0,
-                    style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
-                    line_cap: LineCap::Round,
-                    ..Stroke::default()
-                }
-            };
-            let curdim = 5.0;
-            let csp = vct.transform_point(curpos_ssp.cast().cast_unit());
-            let csp_topleft = csp - CSVec::from([curdim / 2.; 2]);
-            let s = iced::Size::from([curdim, curdim]);
-            let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
-            frame.stroke(&c, cursor_stroke());
-        }
-
-        let _: Vec<_> = self
-            .tentatives
-            .iter()
-            .map(|e| e.draw_preview(vct, vcscale, frame))
-            .collect();
-        self.content.draw_preview(vct, vcscale, frame);
-
         match &self.state {
             SchematicSt::Idle => {}
             SchematicSt::AreaSelect(ssb) => {
@@ -237,6 +231,33 @@ where
             }
             _ => {}
         }
+
+        // draw preview for tentatives
+        let _: Vec<_> = self
+            .tentatives
+            .iter()
+            .map(|e| e.draw_preview(vct, vcscale, frame))
+            .collect();
+        // draw content preview
+        self.content.draw_preview(vct, vcscale, frame);
+
+        /// draw the cursor onto canvas
+        pub fn draw_cursor(vct: VCTransform, frame: &mut Frame, curpos_ssp: SSPoint) {
+            let cursor_stroke = || -> Stroke {
+                Stroke {
+                    width: 1.0,
+                    style: stroke::Style::Solid(Color::from_rgb(1.0, 0.9, 0.0)),
+                    line_cap: LineCap::Round,
+                    ..Stroke::default()
+                }
+            };
+            let curdim = 5.0;
+            let csp = vct.transform_point(curpos_ssp.cast().cast_unit());
+            let csp_topleft = csp - CSVec::from([curdim / 2.; 2]);
+            let s = iced::Size::from([curdim, curdim]);
+            let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
+            frame.stroke(&c, cursor_stroke());
+        }
         draw_cursor(vct, frame, self.curpos_ssp);
     }
     /// draw onto passive cache
@@ -256,7 +277,6 @@ where
     /// mutate state based on message and cursor position
     fn update(&mut self, msg: Msg<M, E>) -> bool {
         let mut clear_passive = false;
-        // process iced::canvas event
 
         match msg {
             Msg::Event(event, curpos_csp) => {
@@ -498,19 +518,11 @@ where
     }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        // self.content.clear_tentatives();
-        // let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-        // self.content.tentatives_by_ssbox(ssb_p);
-
         let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
         self.tentatives = self.content.intersects_ssb(ssb_p)
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
-        // self.content.clear_tentatives();
-        // if let Some(e) = self.selectable(ssp, skip) {
-        //     self.content.set_tentative(e);
-        // }
         self.tentatives.clear();
         if let Some(e) = self.selectable(ssp, skip) {
             self.tentatives.insert(e);
@@ -524,14 +536,6 @@ where
     }
     /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
-        // let _: Vec<_> = self
-        //     .content
-        //     .tentatives()
-        //     .iter()
-        //     .map(|e| {
-        //         self.selected.insert(e.clone());
-        //     })
-        //     .collect();
         self.selected = self.tentatives.clone();
         self.tentatives.clear();
     }

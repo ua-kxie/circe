@@ -25,18 +25,26 @@ pub trait Drawable {
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
 }
 
+/// viewport state
 #[derive(Clone, Debug, Default)]
 pub enum State {
+    /// default viewport state
     #[default]
-    None,
+    Idle,
+    /// viewport panning
     Panning(CSPoint),
+    /// viewport newview (right click-drag fit view to area)
     NewView(VSPoint, VSPoint),
 }
 
+/// viewport message
 #[derive(Clone, Copy, Debug)]
 pub enum Msg {
+    /// do nothing
     None,
+    /// change viewport-canvas transform
     NewView(VCTransform, f32, CSPoint),
+    /// cursor moved
     CursorMoved(CSPoint),
 }
 
@@ -65,10 +73,13 @@ pub trait Content<Msg>: Default {
     fn bounds(&self) -> VSBox;
 }
 
+/// trait for message type of viewport content
 pub trait ContentMsg {
+    /// function to generate message to handle iced canvas event
     fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self;
 }
 
+/// The viewport handles canvas to content transforms, zooming, panning, etc.
 pub struct Viewport<C, M>
 where
     C: Content<M>,
@@ -196,7 +207,7 @@ where
         if cursor.is_over(&bounds) {
             match &viewport_st {
                 State::Panning(_) => mouse::Interaction::Grabbing,
-                State::None => self.content.mouse_interaction(),
+                State::Idle => self.content.mouse_interaction(),
                 _ => mouse::Interaction::default(),
             }
         } else {
@@ -270,7 +281,7 @@ where
         let mut stcp = state.clone();
         match (&mut stcp, event) {
             // cursor move
-            (State::None, Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
+            (State::Idle, Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
                 viewport_msg = Msg::CursorMoved(curpos_csp);
             }
             // zooming
@@ -283,7 +294,7 @@ where
             },
             // panning
             (
-                State::None,
+                State::Idle,
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle)),
             ) => {
                 stcp = State::Panning(curpos_csp);
@@ -296,11 +307,11 @@ where
                 State::Panning(_),
                 Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle)),
             ) => {
-                stcp = State::None;
+                stcp = State::Idle;
             }
             // newview
             (
-                State::None,
+                State::Idle,
                 Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right)),
             ) => {
                 let vsp = self.cv_transform().transform_point(curpos_csp);
@@ -323,7 +334,7 @@ where
                 }),
             ) => {
                 if let (iced::keyboard::KeyCode::Escape, 0) = (key_code, modifiers.bits()) {
-                    stcp = State::None;
+                    stcp = State::Idle;
                 }
             }
             (
@@ -337,11 +348,11 @@ where
                         curpos_csp,
                     );
                 }
-                stcp = State::None;
+                stcp = State::Idle;
             }
             // fit view to content
             (
-                State::None,
+                State::Idle,
                 Event::Keyboard(iced::keyboard::Event::KeyPressed {
                     key_code: iced::keyboard::KeyCode::F,
                     modifiers: _,
