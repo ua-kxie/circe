@@ -198,26 +198,21 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
     }
 
+    /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
+    /// count is updated to track the number of elements skipped over
     fn selectable(
         &mut self,
         ssp: SSPoint,
-        skip: &mut usize,
+        skip: usize,
         count: &mut usize,
     ) -> Option<CircuitElement> {
-        loop {
-            let mut count = 0; // tracks the number of skipped elements
-            if let Some(e) = self.nets.selectable(ssp, skip, &mut count) {
-                return Some(CircuitElement::NetEdge(e));
-            }
-            if let Some(d) = self.devices.selectable(ssp, skip, &mut count) {
-                return Some(CircuitElement::Device(d));
-            }
-            if count == 0 {
-                *skip = count;
-                return None;
-            }
-            *skip -= count;
+        if let Some(e) = self.nets.selectable(ssp, skip, count) {
+            return Some(CircuitElement::NetEdge(e));
         }
+        if let Some(d) = self.devices.selectable(ssp, skip, count) {
+            return Some(CircuitElement::Device(d));
+        }
+        return None;
     }
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
@@ -245,7 +240,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
                         let ssp = curpos_ssp;
-                        let mut new_ws = None;
+                        let new_ws;
                         if let Some((g, prev_ssp)) = opt_ws {
                             // subsequent click
                             if ssp == *prev_ssp {
@@ -392,10 +387,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 }
 
 impl Circuit {
-    /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
-    pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
-        self.devices.op(pkvecvaluesall);
-    }
     /// create netlist for the current schematic and save it.
     pub fn netlist(&mut self) {
         self.nets.pre_netlist();

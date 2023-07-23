@@ -91,13 +91,12 @@ impl Nets {
     pub fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
-        skip: &mut usize,
+        skip: usize,
         count: &mut usize,
     ) -> Option<NetEdge> {
         for e in self.graph.all_edges_mut() {
             if e.2.interactable.contains_ssp(curpos_ssp) {
-                if *count >= *skip {
-                    *skip = *count;
+                if *count == skip {  // has skipped enough elements
                     return Some(e.2.clone());
                 } else {
                     *count += 1;

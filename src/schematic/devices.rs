@@ -96,13 +96,12 @@ impl Devices {
     pub fn selectable(
         &mut self,
         curpos_ssp: SSPoint,
-        skip: &mut usize,
+        skip: usize,
         count: &mut usize,
     ) -> Option<RcRDevice> {
         for d in &self.set {
             if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
-                if *count >= *skip {
-                    *skip = *count;
+                if *count == skip {  // skipped just enough
                     return Some(d.clone());
                 } else {
                     *count += 1;

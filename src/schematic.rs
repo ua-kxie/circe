@@ -121,7 +121,7 @@ where
     /// return whether or not ssp intersects with any schematic element
     fn occupies_ssp(&self, ssp: SSPoint) -> bool;
     /// returns a single SchematicElement over which ssp lies. Skips the first skip elements
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize, count: &mut usize) -> Option<E>;
+    fn selectable(&mut self, ssp: SSPoint, skip: usize, count: &mut usize) -> Option<E>;
     ///  returns hashset of elements which intersects ssb
     fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<E>;
 }
@@ -498,7 +498,7 @@ where
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         self.curpos_ssp = curpos_ssp;
-        self.tentative_by_sspoint(curpos_ssp, &mut 0);
+        self.tentative_by_sspoint(curpos_ssp, &mut self.selskip.clone());
 
         let mut stcp = self.state;
         match &mut stcp {
@@ -543,7 +543,7 @@ where
     fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<E> {
         loop {
             let mut count = 0; // tracks the number of skipped elements
-            if let Some(e) = self.content.selectable(ssp, skip, &mut count) {
+            if let Some(e) = self.content.selectable(ssp, *skip, &mut count) {
                 return Some(e);
             }
             if count == 0 {
