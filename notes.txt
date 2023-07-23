@@ -1,10 +1,8 @@
 todo:
 
 - schematic: 
-    reversible rotation direction
     vertical/horizontal mirroring
     area selection - contains and intersects by selection area is positive/negative
-    device/wire copy/paste
     connect devices with wire if ports overlap
     wire snapping to ports and visual indicator
     ctrl-z/undo/redo
@@ -18,13 +16,8 @@ todo:
     serde save graphics
     place ports, device saving/loading, device libraries
 
-- architectural:
-    rework viewport integration
-    viewport: 
-        common functionality between device designer/schematic
-        viewport controls should not intefer with schematic controls. e.g. panning should not reset device placement
-
-    modules which will be used by both device designer and schematic (e.g. ports) need to be reorganized
+- circuit:
+    circuit add device submenu - d to bring up menu, r/v/g to place respective device
 
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?
