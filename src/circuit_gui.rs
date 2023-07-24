@@ -8,13 +8,15 @@ use crate::{circuit_gui, schematic};
 use crate::schematic::{RcRDevice, Schematic};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
+use iced::alignment::Horizontal;
 use iced::widget::canvas::Event;
-use iced::widget::{button, row};
-use iced::Length;
+use iced::widget::{button, row, Text, Row, Button};
+use iced::{Length, Element};
 use std::sync::Arc;
 
 use colored::Colorize;
 use paprika::*;
+use iced_aw::{Modal, Card};
 
 /// Spice Manager to facillitate interaction with NgSpice
 struct SpManager {
@@ -58,6 +60,8 @@ pub enum CircuitPageMsg {
     ViewportEvt(viewport::CompositeMsg<schematic::Msg<Msg, CircuitElement>>),
     TextInputChanged(String),
     TextInputSubmit,
+    CloseModal,
+    Event(iced::Event),
 }
 
 /// schematic
@@ -77,6 +81,9 @@ pub struct CircuitPage {
     spmanager: Arc<SpManager>,
     /// ngspice library
     lib: PkSpice<SpManager>,
+
+    /// show new device
+    show_modal: bool,
 }
 impl Default for CircuitPage {
     fn default() -> Self {
@@ -127,6 +134,7 @@ impl Default for CircuitPage {
             text: Default::default(),
             spmanager,
             lib,
+            show_modal: false,
         }
     }
 }
@@ -143,15 +151,38 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                     self.viewport.passive_cache.clear();
                 }
             }
-            CircuitPageMsg::ViewportEvt(msgs) => {
-                if let schematic::Msg::Event(
+            CircuitPageMsg::Event(event) => { match event {
+                iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::R,
+                    modifiers: _,
+                }) => {
+                    self.show_modal = false;
+                }
+                iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    key_code: iced::keyboard::KeyCode::V,
+                    modifiers: _,
+                }) => {
+                    self.show_modal = false;
+                }
+                _ => {}
+            }}
+            CircuitPageMsg::ViewportEvt(msgs) => { match msgs.content_msg {
+                schematic::Msg::Event(
+                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                        key_code: iced::keyboard::KeyCode::D,
+                        modifiers: _,
+                    }),
+                    _,
+                ) => {
+                    self.show_modal = !self.show_modal;
+                }
+                schematic::Msg::Event(
                     Event::Keyboard(iced::keyboard::Event::KeyPressed {
                         key_code: iced::keyboard::KeyCode::Space,
                         modifiers: _,
                     }),
                     _,
-                ) = msgs.content_msg
-                {
+                ) => {
                     self.viewport.update(CompositeMsg {
                         content_msg: schematic::Msg::ContentMsg(Msg::NetList),
                         viewport_msg: viewport::Msg::None,
@@ -166,9 +197,10 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                             viewport_msg: viewport::Msg::None,
                         });
                     }
-                } else {
-                    self.viewport.update(msgs);
                 }
+                _ => {
+                    self.viewport.update(msgs);
+                }}
 
                 match self.viewport.content.active_device() {
                     Some(CircuitElement::Device(rcrd)) => {
@@ -183,6 +215,19 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
 
                 self.net_name = self.viewport.content.content.infobarstr.take();
             }
+            CircuitPageMsg::CloseModal => {
+                self.show_modal = false;
+            },
+            // CircuitPageMsg::Event(event) => { match event {
+            //     iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+            //         key_code: iced::keyboard::KeyCode::D,
+            //         modifiers: _,
+            //     }) => {
+            //         self.show_modal = true;
+            //     }
+            //     _ => {
+            //     }
+            // }},
         }
     }
 
@@ -197,10 +242,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             param_editor::param_editor(self.text.clone(), CircuitPageMsg::TextInputChanged, || {
                 CircuitPageMsg::TextInputSubmit
             });
-        // let mut pe = text("");
-        // if let Some(active_device) = &self.active_device {
-        //     active_device.0.borrow().class().
-        // }
         let infobar = row![
             iced::widget::text(str_ssp)
                 .size(16)
@@ -229,8 +270,32 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             toolbar,
             iced::widget::row![pe, iced::widget::column![canvas, infobar,]]
         ];
-
-        schematic.into()
+        
+        // schematic.into()
+        
+        Modal::new(self.show_modal, schematic, || {
+            Card::new(
+                Text::new("New Device"),
+                Text::new("
+                R: Resistor
+                V: Voltage Source
+                G: Ground
+                "), //Text::new("Zombie ipsum reversus ab viral inferno, nam rick grimes malum cerebro. De carne lumbering animata corpora quaeritis. Summus brains sit​​, morbo vel maleficia? De apocalypsi gorger omero undead survivor dictum mauris. Hi mindless mortuis soulless creaturas, imo evil stalking monstra adventus resi dentevil vultus comedat cerebella viventium. Qui animated corpse, cricket bat max brucks terribilem incessu zomby. The voodoo sacerdos flesh eater, suscitat mortuos comedere carnem virus. Zonbi tattered for solum oculi eorum defunctis go lum cerebro. Nescio brains an Undead zombies. Sicut malus putrid voodoo horror. Nigh tofth eliv ingdead.")
+            )
+            .foot(
+                Row::new()
+                    .spacing(10)
+                    .padding(5)
+                    .width(Length::Fill)
+            )
+            .max_width(300.0)
+            //.width(Length::Shrink)
+            .on_close(CircuitPageMsg::CloseModal)
+            .into()
+        })
+        .backdrop(CircuitPageMsg::CloseModal)
+        .on_esc(CircuitPageMsg::CloseModal)
+        .into()
     }
 }
 

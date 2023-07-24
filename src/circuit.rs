@@ -103,7 +103,7 @@ impl SchematicElement for CircuitElement {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    Event(Event, SSPoint),
+    CanvasEvent(Event, SSPoint),
     Wire,
     NetList,
     DcOp(PkVecvaluesall),
@@ -111,7 +111,7 @@ pub enum Msg {
 
 impl schematic::ContentMsg for Msg {
     fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self {
-        Msg::Event(event, curpos_ssp)
+        Msg::CanvasEvent(event, curpos_ssp)
     }
 }
 
@@ -212,12 +212,12 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         if let Some(d) = self.devices.selectable(ssp, skip, count) {
             return Some(CircuitElement::Device(d));
         }
-        return None;
+        None
     }
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
         let ret_msg = match msg {
-            Msg::Event(event, curpos_ssp) => {
+            Msg::CanvasEvent(event, curpos_ssp) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
                 }

@@ -18,6 +18,7 @@ todo:
 
 - circuit:
     circuit add device submenu - d to bring up menu, r/v/g to place respective device
+    improved parameters editor
 
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?

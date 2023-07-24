@@ -38,6 +38,8 @@ G - ground
 
 V - voltage source
 
+D - new devices hotkeys
+
 M - move selected
 
 Space - run dc op simulation  

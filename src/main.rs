@@ -10,12 +10,12 @@ mod viewport;
 mod circuit;
 mod circuit_gui;
 mod schematic;
-use circuit_gui::CircuitPage;
+use circuit_gui::{CircuitPage, CircuitPageMsg};
 
 // mod designer;
 mod interactable;
 
-use iced::{executor, Application, Command, Element, Settings, Theme};
+use iced::{executor, Application, Command, Element, Settings, Theme, Subscription, subscription, Event};
 
 use iced_aw::{TabLabel, Tabs};
 
@@ -45,7 +45,7 @@ pub struct Circe {
 pub enum Msg {
     // DeviceDesignerMsg(designer::DeviceDesignerMsg),
     SchematicMsg(circuit_gui::CircuitPageMsg),
-
+    // Event(Event),
     TabSel(usize),
 }
 
@@ -54,6 +54,10 @@ impl Application for Circe {
     type Message = Msg;
     type Theme = Theme;
     type Flags = ();
+
+    // fn subscription(&self) -> Subscription<Self::Message> {
+    //     subscription::events().map(Msg::Event)
+    // }
 
     fn new(_flags: ()) -> (Self, Command<Msg>) {
         (
@@ -81,6 +85,20 @@ impl Application for Circe {
             Msg::SchematicMsg(schematic_msg) => {
                 self.schematic.update(schematic_msg);
             }
+            // Msg::Event(event) => {
+            //     dbg!("he");
+            //     match self.active_tab {
+            //         0 => {
+            //             self.schematic.update(CircuitPageMsg::Event(event));
+            //         }
+            //         1 => {
+            //             //
+            //         }
+            //         _ => {
+                        
+            //         }
+            //     }
+            // }
         }
         Command::none()
     }

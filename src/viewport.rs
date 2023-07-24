@@ -134,12 +134,9 @@ where
             CSPoint::new(bounds.width, bounds.height),
         ]);
 
-        let mut msgs = None;
         self.active_cache.clear();
 
-        if let Some(curpos) = opt_curpos {
-            msgs = Some(self.events_handler(state, event, bounds_csb, curpos));
-        }
+        let msgs = Some(self.events_handler(state, event, bounds_csb, opt_curpos));
 
         (event::Status::Captured, msgs)
     }
@@ -275,96 +272,98 @@ where
         state: &mut State,
         event: iced::widget::canvas::Event,
         bounds_csb: CSBox,
-        curpos_csp: CSPoint,
+        opt_curpos_csp: Option<CSPoint>,
     ) -> CompositeMsg<M> {
         let mut viewport_msg = Msg::None;
         let mut stcp = state.clone();
-        match (&mut stcp, event) {
-            // cursor move
-            (State::Idle, Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
-                viewport_msg = Msg::CursorMoved(curpos_csp);
-            }
-            // zooming
-            (_, Event::Mouse(iced::mouse::Event::WheelScrolled { delta })) => match delta {
-                iced::mouse::ScrollDelta::Lines { y, .. }
-                | iced::mouse::ScrollDelta::Pixels { y, .. } => {
-                    let zoom_scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                    viewport_msg = self.zoom(zoom_scale, curpos_csp);
+        if let Some(curpos_csp) = opt_curpos_csp {
+            match (&mut stcp, event) {
+                // cursor move
+                (State::Idle, Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
+                    viewport_msg = Msg::CursorMoved(curpos_csp);
                 }
-            },
-            // panning
-            (
-                State::Idle,
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle)),
-            ) => {
-                stcp = State::Panning(curpos_csp);
-            }
-            (State::Panning(csp_prev), Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
-                viewport_msg = self.pan(curpos_csp, *csp_prev);
-                *csp_prev = curpos_csp;
-            }
-            (
-                State::Panning(_),
-                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle)),
-            ) => {
-                stcp = State::Idle;
-            }
-            // newview
-            (
-                State::Idle,
-                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right)),
-            ) => {
-                let vsp = self.cv_transform().transform_point(curpos_csp);
-                stcp = State::NewView(vsp, vsp);
-            }
-            (State::NewView(vsp0, vsp1), Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
-                let vsp_now = self.cv_transform().transform_point(curpos_csp);
-                if (vsp_now - *vsp0).length() > 10. {
-                    *vsp1 = vsp_now;
-                } else {
-                    *vsp1 = *vsp0;
+                // zooming
+                (_, Event::Mouse(iced::mouse::Event::WheelScrolled { delta })) => match delta {
+                    iced::mouse::ScrollDelta::Lines { y, .. }
+                    | iced::mouse::ScrollDelta::Pixels { y, .. } => {
+                        let zoom_scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
+                        viewport_msg = self.zoom(zoom_scale, curpos_csp);
+                    }
+                },
+                // panning
+                (
+                    State::Idle,
+                    Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Middle)),
+                ) => {
+                    stcp = State::Panning(curpos_csp);
                 }
-                viewport_msg = Msg::CursorMoved(curpos_csp);
-            }
-            (
-                State::NewView(_vsp0, _vsp1),
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code,
-                    modifiers,
-                }),
-            ) => {
-                if let (iced::keyboard::KeyCode::Escape, 0) = (key_code, modifiers.bits()) {
+                (State::Panning(csp_prev), Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
+                    viewport_msg = self.pan(curpos_csp, *csp_prev);
+                    *csp_prev = curpos_csp;
+                }
+                (
+                    State::Panning(_),
+                    Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Middle)),
+                ) => {
                     stcp = State::Idle;
                 }
-            }
-            (
-                State::NewView(vsp0, vsp1),
-                Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Right)),
-            ) => {
-                if vsp1 != vsp0 {
-                    viewport_msg = self.display_bounds(
-                        bounds_csb,
-                        VSBox::from_points([vsp0, vsp1]),
-                        curpos_csp,
-                    );
+                // newview
+                (
+                    State::Idle,
+                    Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Right)),
+                ) => {
+                    let vsp = self.cv_transform().transform_point(curpos_csp);
+                    stcp = State::NewView(vsp, vsp);
                 }
-                stcp = State::Idle;
+                (State::NewView(vsp0, vsp1), Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
+                    let vsp_now = self.cv_transform().transform_point(curpos_csp);
+                    if (vsp_now - *vsp0).length() > 10. {
+                        *vsp1 = vsp_now;
+                    } else {
+                        *vsp1 = *vsp0;
+                    }
+                    viewport_msg = Msg::CursorMoved(curpos_csp);
+                }
+                (
+                    State::NewView(_vsp0, _vsp1),
+                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                        key_code,
+                        modifiers,
+                    }),
+                ) => {
+                    if let (iced::keyboard::KeyCode::Escape, 0) = (key_code, modifiers.bits()) {
+                        stcp = State::Idle;
+                    }
+                }
+                (
+                    State::NewView(vsp0, vsp1),
+                    Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Right)),
+                ) => {
+                    if vsp1 != vsp0 {
+                        viewport_msg = self.display_bounds(
+                            bounds_csb,
+                            VSBox::from_points([vsp0, vsp1]),
+                            curpos_csp,
+                        );
+                    }
+                    stcp = State::Idle;
+                }
+                // fit view to content
+                (
+                    State::Idle,
+                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                        key_code: iced::keyboard::KeyCode::F,
+                        modifiers: _,
+                    }),
+                ) => {
+                    let vsb = self.content.bounds().inflate(5.0, 5.0);
+                    let csp = self.curpos_csp();
+                    viewport_msg = self.display_bounds(bounds_csb, vsb, csp);
+                }
+                _ => {}
             }
-            // fit view to content
-            (
-                State::Idle,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::F,
-                    modifiers: _,
-                }),
-            ) => {
-                let vsb = self.content.bounds().inflate(5.0, 5.0);
-                let csp = self.curpos_csp();
-                viewport_msg = self.display_bounds(bounds_csb, vsb, csp);
-            }
-            _ => {}
+            *state = stcp;
         }
-        *state = stcp;
 
         let content_msg = M::canvas_event_msg(event, self.curpos_vsp());
         CompositeMsg {
