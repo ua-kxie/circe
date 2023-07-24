@@ -394,6 +394,9 @@ impl Circuit {
         for d in self.devices.get_set() {
             netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
         }
+        if netlist == "Netlist Created by Circe\n" {  // empty netlist
+            netlist.push_str("V_0 0 n1 0");  // give it something so spice doesnt hang
+        }
         netlist.push('\n');
         fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
     }
