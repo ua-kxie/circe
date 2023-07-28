@@ -60,6 +60,7 @@ impl LabelManager {
         self.float_wm = 0;
     }
     /// register a new label
+    #[allow(dead_code)]
     fn register(&mut self, label: Rc<String>) {
         self.labels.insert(label);
     }

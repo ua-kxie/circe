@@ -10,12 +10,12 @@ mod viewport;
 mod circuit;
 mod circuit_gui;
 mod schematic;
-use circuit_gui::{CircuitPage, CircuitPageMsg};
+use circuit_gui::CircuitPage;
 
 // mod designer;
 mod interactable;
 
-use iced::{executor, Application, Command, Element, Settings, Theme, Subscription, subscription, Event};
+use iced::{executor, Application, Command, Element, Settings, Theme};
 
 use iced_aw::{TabLabel, Tabs};
 

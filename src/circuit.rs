@@ -4,19 +4,14 @@
 use crate::schematic::devices::Devices;
 use crate::schematic::nets::{NetEdge, NetVertex, Nets};
 use crate::schematic::{self, RcRDevice, SchematicElement, SchematicMsg};
-use crate::{interactable, viewport};
 use crate::{
     interactable::Interactive,
     transforms::{
-        self, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox, ViewportSpace,
+        SSBox, SSPoint, SSTransform, VCTransform, VSBox,
     },
     viewport::Drawable,
 };
-use iced::{
-    mouse,
-    widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
-    Color, Size,
-};
+use iced::widget::canvas::{event::Event, Frame};
 use paprika::PkVecvaluesall;
 use send_wrapper::SendWrapper;
 use std::cell::RefCell;
@@ -122,14 +117,6 @@ pub enum CircuitSt {
     Wiring(Option<(Box<Nets>, SSPoint)>),
 }
 
-impl CircuitSt {
-    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
-        sst.pre_translate(SSVec::new(-ssp0.x, -ssp0.y))
-            .then_translate(SSVec::new(ssp0.x, ssp0.y))
-            .then_translate(*ssp1 - *ssp0)
-    }
-}
-
 /// struct holding schematic state (nets, devices, and their locations)
 #[derive(Debug, Default, Clone)]
 pub struct Circuit {
@@ -162,7 +149,7 @@ impl Drawable for Circuit {
         self.devices.draw_persistent(vct, vcscale, frame);
     }
 
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
         panic!("not intended for use");
     }
 

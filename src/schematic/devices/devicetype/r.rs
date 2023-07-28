@@ -1,3 +1,5 @@
+//! device definition for resistors (RXXXX)
+
 use super::super::params;
 use super::{Graphics, Port};
 use crate::transforms::{SSBox, SSPoint, VSPoint};

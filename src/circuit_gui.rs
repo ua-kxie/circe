@@ -1,17 +1,16 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::circuit::{Circuit, CircuitElement, CircuitSt, Msg};
+use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::viewport::CompositeMsg;
-use crate::{circuit_gui, schematic};
+use crate::schematic;
 
 use crate::schematic::{RcRDevice, Schematic};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
-use iced::alignment::Horizontal;
 use iced::widget::canvas::Event;
-use iced::widget::{button, row, Text, Row, Button};
-use iced::{Length, Element};
+use iced::widget::{button, row, Text, Row};
+use iced::Length;
 use std::sync::Arc;
 
 use colored::Colorize;
@@ -296,6 +295,31 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
         .backdrop(CircuitPageMsg::CloseModal)
         .on_esc(CircuitPageMsg::CloseModal)
         .into()
+    }
+}
+
+struct NgModels {
+    models: Vec<NgModel>
+}
+
+impl NgModels {
+    fn model_definitions(&self) -> String {
+        let mut ret = String::new();
+        for m in &self.models {
+            ret.push_str(&m.model_line())
+        }
+        ret
+    }
+}
+
+struct NgModel {
+    name: String,
+    definition: String,
+}
+
+impl NgModel {
+    fn model_line(&self) -> String {
+        format!(".model {} {}\n", self.name, self.definition)
     }
 }
 

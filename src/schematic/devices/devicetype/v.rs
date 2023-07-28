@@ -1,3 +1,5 @@
+//! device definition for voltage source (VXXXX)
+
 use super::super::params;
 use super::Graphics;
 use lazy_static::lazy_static;

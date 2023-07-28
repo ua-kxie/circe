@@ -388,6 +388,7 @@ where
     }
 
     /// returns the cursor position in schematic space
+    #[allow(dead_code)]
     pub fn curpos_vsp_scaled(&self) -> VSPoint {
         self.curpos.1 * self.scale
     }
@@ -438,6 +439,7 @@ where
 
     /// returns the scale factor in the viewwport to canvas transform
     /// this value is stored to avoid calling sqrt() each time
+    #[allow(dead_code)]
     pub fn cv_scale(&self) -> f32 {
         1. / self.zoom_scale
     }
@@ -447,13 +449,6 @@ where
         let vsp1 = self.cv_transform().transform_point(csp1);
         let ssp1: SSPoint = vsp1.round().cast().cast_unit();
         self.curpos = (csp1, vsp1, ssp1);
-    }
-
-    /// update the cursor position
-    pub fn curpos(&mut self, csp1: CSPoint) -> (VSPoint, SSPoint) {
-        let vsp1 = self.cv_transform().transform_point(csp1);
-        let ssp1: SSPoint = vsp1.round().cast().cast_unit();
-        (vsp1, ssp1)
     }
 
     /// change the viewport zoom by scale

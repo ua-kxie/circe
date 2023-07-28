@@ -85,7 +85,7 @@ impl Drawable for Devices {
     fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
         panic!("not intended for use");
     }
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    fn draw_preview(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
         panic!("not intended for use");
     }
 }
