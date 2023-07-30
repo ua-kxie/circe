@@ -231,6 +231,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
     }
 
     fn view(&self) -> iced::Element<CircuitPageMsg> {
+        let a = self.viewport.content.content.infobarstr.clone();
         let str_ssp = format!(
             "x: {}; y: {}",
             self.viewport.curpos_ssp().x,

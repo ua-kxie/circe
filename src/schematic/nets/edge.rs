@@ -2,7 +2,6 @@
 
 use std::rc::Rc;
 
-use super::SchematicNetLabel;
 use crate::{
     interactable::{Interactable, Interactive},
     schematic::nets::Drawable,
@@ -26,8 +25,6 @@ pub struct NetEdge {
     pub interactable: Interactable,
     /// auto generated net name associated with this edge segment
     pub label: Option<Rc<String>>,
-    /// user defined net name assigned to this edge segment
-    pub schematic_net_label: Option<SchematicNetLabel>,
 }
 
 /// two edges are equal if their source and destination pts are equal

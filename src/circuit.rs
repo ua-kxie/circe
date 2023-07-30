@@ -132,6 +132,7 @@ pub struct Circuit {
 impl Circuit {
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         self.curpos_ssp = curpos_ssp;
+        self.infobarstr = self.nets.net_name_at(curpos_ssp);
         match &mut self.state {
             CircuitSt::Wiring(Some((nets, ssp_prev))) => {
                 nets.clear();

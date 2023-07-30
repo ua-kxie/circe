@@ -82,7 +82,7 @@ pub struct Device {
     class: DeviceClass,
 
     /// vector of the connected net names in order of device ports
-    nets: Vec<String>,
+    connected_nets: Vec<String>,
     /// vector of the connect net voltages in order of device ports
     op: Vec<f32>,
 }
@@ -110,7 +110,7 @@ impl Device {
             interactable: Interactable::new(),
             transform: SSTransform::identity(),
             class,
-            nets: vec![],
+            connected_nets: vec![],
             op: vec![],
         }
     }
@@ -146,15 +146,20 @@ impl Device {
     }
     /// returns the device's spice netlist line
     pub fn spice_line(&mut self, nets: &mut Nets) -> String {
-        self.nets.clear();
+        self.connected_nets.clear();
         let mut sline = self.id.ng_id();
         sline.push(' ');
         for p in self.class.graphics().ports() {
             let pt = self.transform.transform_point(p.offset);
-            let net = nets.net_at(pt);
-            sline.push_str(&net);
+            let net_name;
+            if let Some(nn) = nets.net_name_at(pt) {
+                net_name = nn;
+            } else {
+                net_name = nets.new_floating_label();
+            }
+            sline.push_str(&net_name);
             sline.push(' ');
-            self.nets.push(net);
+            self.connected_nets.push(net_name);
         }
         sline.push_str(&self.class.param_summary());
         sline.push('\n');
@@ -163,7 +168,7 @@ impl Device {
     /// fill in the operating point for the device
     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
         self.op.clear();
-        for n in &self.nets {
+        for n in &self.connected_nets {
             for v in &pkvecvaluesall.vecsa {
                 if &v.name == n {
                     self.op.push(v.creal as f32);

@@ -17,6 +17,7 @@ todo:
     place ports, device saving/loading, device libraries
 
 - circuit:
+    custom net labels
     circuit add device submenu - d to bring up menu, r/v/g to place respective device
     improved parameters editor
 

@@ -16,6 +16,8 @@ pub use vertex::NetVertex;
 mod edge;
 pub use edge::NetEdge;
 
+mod label;
+
 use crate::viewport::Drawable;
 
 /// This struct facillitates the creation of unique net names
@@ -66,11 +68,6 @@ impl LabelManager {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct SchematicNetLabel {
-    label: String,
-    // other stuff for drawing on schematic, being edited from schematic
-}
 #[derive(Debug, Clone)]
 pub struct Nets {
     pub graph: Box<GraphMap<NetVertex, NetEdge, petgraph::Undirected>>,
@@ -87,6 +84,9 @@ impl Default for Nets {
 }
 
 impl Nets {
+    pub fn new_floating_label(&mut self) -> String {
+        self.label_manager.new_floating_label()
+    }
     /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
     /// count is updated to track the number of elements skipped over
     pub fn selectable(
@@ -115,13 +115,14 @@ impl Nets {
         self.label_manager.rst_floating_nets();
     }
     /// returns the netname at coordinate ssp. If no net at ssp, returns a unique net name not used anywhere else (floating net)
-    pub fn net_at(&mut self, ssp: SSPoint) -> String {
+    pub fn net_name_at(&mut self, ssp: SSPoint) -> Option<String> {
         for e in self.graph.all_edges() {
             if e.2.interactable.contains_ssp(ssp) {
-                return e.2.label.as_ref().unwrap().to_string();
+                return Some(e.2.label.as_ref().unwrap().to_string());
             }
         }
-        self.label_manager.new_floating_label()
+        None
+        // self.label_manager.new_floating_label()
     }
     /// return unique NetEdges bound within ssb
     pub fn intersects_ssbox(&mut self, ssb: &SSBox) -> Vec<NetEdge> {
