@@ -17,6 +17,8 @@ mod edge;
 pub use edge::NetEdge;
 
 mod label;
+pub use label::NetLabels;
+pub use label::RcRLabel;
 
 use crate::viewport::Drawable;
 
@@ -97,7 +99,8 @@ impl Nets {
     ) -> Option<NetEdge> {
         for e in self.graph.all_edges_mut() {
             if e.2.interactable.contains_ssp(curpos_ssp) {
-                if *count == skip {  // has skipped enough elements
+                if *count == skip {
+                    // has skipped enough elements
                     return Some(e.2.clone());
                 } else {
                     *count += 1;
@@ -208,7 +211,6 @@ impl Nets {
                             dst: v.0,
                             label: e.2.clone(),
                             interactable: NetEdge::interactable(e.0 .0, v.0),
-                            ..Default::default()
                         },
                     );
                     self.graph.add_edge(
@@ -219,7 +221,6 @@ impl Nets {
                             dst: v.0,
                             label: e.2,
                             interactable: NetEdge::interactable(e.1 .0, v.0),
-                            ..Default::default()
                         },
                     );
                 }
@@ -248,7 +249,6 @@ impl Nets {
                         dst: dst.0,
                         label: first_e.2.label.clone(),
                         interactable: NetEdge::interactable(src.0, dst.0),
-                        ..Default::default()
                     };
                     if ew.intersects_ssp(v.0) {
                         self.graph.remove_node(v);
@@ -277,7 +277,6 @@ impl Nets {
                             dst: v,
                             label: e.2.clone(),
                             interactable: NetEdge::interactable(e.0 .0, v),
-                            ..Default::default()
                         },
                     );
                     self.graph.add_edge(
@@ -288,7 +287,6 @@ impl Nets {
                             dst: v,
                             label: e.2,
                             interactable: NetEdge::interactable(e.1 .0, v),
-                            ..Default::default()
                         },
                     );
                 }
@@ -394,10 +392,6 @@ impl Nets {
     }
 }
 
-// impl SchematicSet for Nets {
-
-// }
-
 impl Drawable for Nets {
     fn draw_persistent(
         &self,
@@ -428,10 +422,7 @@ impl Drawable for Nets {
         vcscale: f32,
         frame: &mut iced::widget::canvas::Frame,
     ) {
-        for (_, _, edge) in self
-            .graph
-            .all_edges()
-        {
+        for (_, _, edge) in self.graph.all_edges() {
             edge.draw_preview(vct, vcscale, frame);
         }
     }

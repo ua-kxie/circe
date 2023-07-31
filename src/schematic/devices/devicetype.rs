@@ -220,7 +220,7 @@ impl DeviceClass {
         }
     }
     /// sets the raw parameter of the device
-    pub fn set(&mut self, new: String) {
+    pub fn set_raw_param(&mut self, new: String) {
         match self {
             DeviceClass::R(x) => match &mut x.params {
                 r::ParamR::Raw(y) => y.set(new),

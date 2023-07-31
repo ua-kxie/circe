@@ -101,7 +101,8 @@ impl Devices {
     ) -> Option<RcRDevice> {
         for d in &self.set {
             if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
-                if *count == skip {  // skipped just enough
+                if *count == skip {
+                    // skipped just enough
                     return Some(d.clone());
                 } else {
                     *count += 1;
@@ -127,7 +128,7 @@ impl Devices {
             d.0.borrow_mut().op(pkvecvaluesall);
         }
     }
-    /// inserts device d into self. Replaces existing if the device already exists.
+    /// inserts device d into self.
     pub fn insert(&mut self, d: RcRDevice) {
         if !self.set.contains(&d) {
             let ord = match d.0.borrow().class() {
@@ -176,7 +177,7 @@ impl Devices {
             .flat_map(|d| d.0.borrow().ports_ssp())
             .collect()
     }
-    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+    pub fn any_port_occupy_ssp(&self, ssp: SSPoint) -> bool {
         for d in &self.set {
             if d.0.borrow().ports_occupy_ssp(ssp) {
                 return true;
@@ -184,7 +185,7 @@ impl Devices {
         }
         false
     }
-    pub fn delete_device(&mut self, d: &RcRDevice) {
+    pub fn delete_item(&mut self, d: &RcRDevice) {
         self.set.remove(d);
     }
     pub fn get_set(&self) -> &HashSet<RcRDevice> {

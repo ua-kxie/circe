@@ -30,7 +30,8 @@ lazy_static! {
 // }
 
 /// shared definition for independent voltage and current sources
-struct VIDef { // implment trait for definitions
+struct VIDef {
+    // implment trait for definitions
     dc: f32,
     ac: f32,
     acphase: f32,
@@ -52,26 +53,26 @@ struct VITranPulse {
     tr: f32,  // rise time, ngspice defaults to transient simulation step size
     tf: f32,  // fall time, ngspice defaults to transient simulation step size
     pw: f32,  // pulse width, ngspice defaults to transient simulation stop time
-    per: f32,  // period, ngspice defaults to transient simulation stop time
-    np: Option<usize>,  // number of pulses, ngspice defaults to unlimited
-    // how to leave parameter unspecified for ngspice while specifying a parameter after?
+    per: f32, // period, ngspice defaults to transient simulation stop time
+    np: Option<usize>, // number of pulses, ngspice defaults to unlimited
+              // how to leave parameter unspecified for ngspice while specifying a parameter after?
 }
 
 /// ngspice manual 4.1.2 Voltage/Current Sources - indenpendent - Sinusoidal
 struct VITranSine {
-    vo: f32,  // offset volt/amp
-    va: f32,  // amplitude volt/amp
+    vo: f32,    // offset volt/amp
+    va: f32,    // amplitude volt/amp
     freq: f32,  // frequency hz, ngspice defaults to 1/simulation stop time
-    td: f32,  // delay time s, ngspice defaults to 0
-    theta: f32,  // damping factor 1/s, ngspice defaults to 0
-    phase: f32,  // phase deg, ngspice defaults to 0
+    td: f32,    // delay time s, ngspice defaults to 0
+    theta: f32, // damping factor 1/s, ngspice defaults to 0
+    phase: f32, // phase deg, ngspice defaults to 0
 }
 
 /// ngspice manual 4.1.4 Voltage/Current Sources - independent - piecewise linear
 struct VITranPwl {
-    vec: Vec<(f32, f32)>  // time, value tuple
-    // r: usize - available only with voltage source for now (ngspice)
-    // td: f32 - available only with voltage source for now (ngspice)
+    vec: Vec<(f32, f32)>, // time, value tuple
+                          // r: usize - available only with voltage source for now (ngspice)
+                          // td: f32 - available only with voltage source for now (ngspice)
 }
 
 #[derive(Debug, Clone)]

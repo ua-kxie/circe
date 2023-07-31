@@ -60,7 +60,7 @@ where
     E: SchematicElement,
 {
     /// iced canvas event, along with cursor position inside canvas bounds
-    Event(Event, VSPoint),
+    Event(Event, Option<VSPoint>),
     /// Schematic Message
     SchematicMsg(SchematicMsg<E>),
     /// Content Message
@@ -74,8 +74,8 @@ where
     E: SchematicElement,
 {
     // create event to handle iced canvas event
-    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
-        Msg::Event(event, curpos_vsp.round().cast().cast_unit())
+    fn canvas_event_msg(event: Event, curpos_vsp: Option<VSPoint>) -> Self {
+        Msg::Event(event, curpos_vsp.map(|vsp| vsp.round().cast().cast_unit()))
     }
 }
 
@@ -133,6 +133,8 @@ where
     C: Content<E, M>,
     E: SchematicElement,
 {
+    /// active element
+    pub active_element: Option<E>,
     /// schematic state
     state: SchematicSt,
     /// schematic content - circuit or device designer
@@ -156,6 +158,7 @@ where
 {
     fn default() -> Self {
         Self {
+            active_element: None,
             state: Default::default(),
             content: Default::default(),
             selskip: Default::default(),
@@ -279,8 +282,11 @@ where
         let mut clear_passive = false;
 
         match msg {
-            Msg::Event(event, curpos_csp) => {
-                let curpos_ssp = curpos_csp.round().cast().cast_unit();
+            Msg::Event(event, curpos_vsp) => {
+                if curpos_vsp.is_none() {
+                    return false;
+                }
+                let curpos_ssp = curpos_vsp.unwrap().round().cast().cast_unit();
 
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
                     self.update_cursor_ssp(curpos_ssp);
@@ -486,15 +492,15 @@ where
     C: Content<E, M>,
     E: SchematicElement,
 {
-    /// returns `Some<RcRDevice>` if there is exactly 1 device in selected, otherwise returns none
-    pub fn active_device(&self) -> Option<&E> {
-        let mut v: Vec<_> = self.selected.iter().collect();
-        if v.len() == 1 {
-            v.pop()
-        } else {
-            None
-        }
-    }
+    // /// returns `Some<E>` if there is exactly 1 element in selected, otherwise returns none
+    // pub fn active_element(&self) -> Option<&E> {
+    //     let mut v: Vec<_> = self.selected.iter().collect();
+    //     if v.len() == 1 {
+    //         v.pop()
+    //     } else {
+    //         None
+    //     }
+    // }
     /// update schematic cursor position
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         self.curpos_ssp = curpos_ssp;
@@ -537,6 +543,10 @@ where
     /// put every element with tentative flag set into selected vector
     fn tentatives_to_selected(&mut self) {
         self.selected = self.tentatives.clone();
+        if self.tentatives.len() == 1 {
+            let mut v: Vec<_> = self.tentatives.iter().collect();
+            self.active_element = v.pop().cloned();
+        }
         self.tentatives.clear();
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.

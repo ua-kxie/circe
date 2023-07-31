@@ -2,20 +2,20 @@
 //! includes paramter editor, toolbar, and the canvas itself
 
 use crate::circuit::{Circuit, CircuitElement, Msg};
-use crate::viewport::CompositeMsg;
 use crate::schematic;
+use crate::viewport::CompositeMsg;
 
 use crate::schematic::{RcRDevice, Schematic};
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::canvas::Event;
-use iced::widget::{button, row, Text, Row};
+use iced::widget::{button, row, Row, Text};
 use iced::Length;
 use std::sync::Arc;
 
 use colored::Colorize;
+use iced_aw::{Card, Modal};
 use paprika::*;
-use iced_aw::{Modal, Card};
 
 /// Spice Manager to facillitate interaction with NgSpice
 struct SpManager {
@@ -60,7 +60,6 @@ pub enum CircuitPageMsg {
     TextInputChanged(String),
     TextInputSubmit,
     CloseModal,
-    Event(iced::Event),
 }
 
 /// schematic
@@ -72,7 +71,7 @@ pub struct CircuitPage {
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
     /// active device - some if only 1 device selected, otherwise is none
-    active_device: Option<RcRDevice>,
+    active_element: Option<CircuitElement>,
     /// parameter editor text
     text: String,
 
@@ -129,7 +128,7 @@ impl Default for CircuitPage {
         CircuitPage {
             viewport: viewport::Viewport::new(1.0, 1.0, 100.0, vct),
             net_name: Default::default(),
-            active_device: Default::default(),
+            active_element: Default::default(),
             text: Default::default(),
             spmanager,
             lib,
@@ -145,93 +144,85 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 self.text = s;
             }
             CircuitPageMsg::TextInputSubmit => {
-                if let Some(ad) = &self.active_device {
-                    ad.0.borrow_mut().class_mut().set(self.text.clone());
+                if let Some(ad) = &self.active_element {
+                    match ad {
+                        CircuitElement::NetEdge(_) => {}
+                        CircuitElement::Device(d) => {
+                            d.0.borrow_mut()
+                                .class_mut()
+                                .set_raw_param(self.text.clone());
+                        }
+                        CircuitElement::Label(l) => {
+                            l.0.borrow_mut().set_name(self.text.clone());
+                        }
+                    }
                     self.viewport.passive_cache.clear();
                 }
             }
-            CircuitPageMsg::Event(event) => { match event {
-                iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::R,
-                    modifiers: _,
-                }) => {
-                    self.show_modal = false;
-                }
-                iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::V,
-                    modifiers: _,
-                }) => {
-                    self.show_modal = false;
-                }
-                _ => {}
-            }}
-            CircuitPageMsg::ViewportEvt(msgs) => { match msgs.content_msg {
-                schematic::Msg::Event(
-                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                        key_code: iced::keyboard::KeyCode::D,
-                        modifiers: _,
-                    }),
-                    _,
-                ) => {
-                    self.show_modal = !self.show_modal;
-                }
-                schematic::Msg::Event(
-                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                        key_code: iced::keyboard::KeyCode::Space,
-                        modifiers: _,
-                    }),
-                    _,
-                ) => {
-                    self.viewport.update(CompositeMsg {
-                        content_msg: schematic::Msg::ContentMsg(Msg::NetList),
-                        viewport_msg: viewport::Msg::None,
-                    });
-                    self.lib.command("source netlist.cir"); // results pointer array starts at same address
-                    self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
-                    if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
+            CircuitPageMsg::ViewportEvt(msgs) => {
+                match msgs.content_msg {
+                    schematic::Msg::Event(
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::D,
+                            modifiers: _,
+                        }),
+                        _,
+                    ) => {
+                        self.show_modal = !self.show_modal;
+                    }
+                    schematic::Msg::Event(
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::Space,
+                            modifiers: _,
+                        }),
+                        _,
+                    ) => {
                         self.viewport.update(CompositeMsg {
-                            content_msg: schematic::Msg::ContentMsg(Msg::DcOp(
-                                pkvecvaluesall.clone(),
-                            )),
+                            content_msg: schematic::Msg::ContentMsg(Msg::NetList),
                             viewport_msg: viewport::Msg::None,
                         });
-                    }
-                }
-                _ => {
-                    self.viewport.update(msgs);
-                }}
-
-                match self.viewport.content.active_device() {
-                    Some(CircuitElement::Device(rcrd)) => {
-                        self.text = rcrd.0.borrow().class().param_summary();
-                        self.active_device = Some(rcrd.clone());
+                        self.lib.command("source netlist.cir"); // results pointer array starts at same address
+                        self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
+                        if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
+                            self.viewport.update(CompositeMsg {
+                                content_msg: schematic::Msg::ContentMsg(Msg::DcOp(
+                                    pkvecvaluesall.clone(),
+                                )),
+                                viewport_msg: viewport::Msg::None,
+                            });
+                        }
                     }
                     _ => {
-                        self.text = String::from("");
-                        self.active_device = None;
+                        self.viewport.update(msgs);
                     }
-                };
+                }
+
+                // self.active_element = self.viewport.content.active_element().cloned();
+                match &self.viewport.content.active_element {
+                    Some(ae) => {
+                        self.active_element = Some(ae.clone());
+                        match ae {
+                            CircuitElement::NetEdge(_) => {}
+                            CircuitElement::Device(d) => {
+                                self.text = d.0.borrow().class().param_summary();
+                            }
+                            CircuitElement::Label(l) => {
+                                self.text = l.0.borrow().read().to_string();
+                            }
+                        }
+                    }
+                    None => self.text = String::from(""),
+                }
 
                 self.net_name = self.viewport.content.content.infobarstr.take();
             }
             CircuitPageMsg::CloseModal => {
                 self.show_modal = false;
-            },
-            // CircuitPageMsg::Event(event) => { match event {
-            //     iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
-            //         key_code: iced::keyboard::KeyCode::D,
-            //         modifiers: _,
-            //     }) => {
-            //         self.show_modal = true;
-            //     }
-            //     _ => {
-            //     }
-            // }},
+            }
         }
     }
 
     fn view(&self) -> iced::Element<CircuitPageMsg> {
-        let a = self.viewport.content.content.infobarstr.clone();
         let str_ssp = format!(
             "x: {}; y: {}",
             self.viewport.curpos_ssp().x,
@@ -270,24 +261,21 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             toolbar,
             iced::widget::row![pe, iced::widget::column![canvas, infobar,]]
         ];
-        
+
         // schematic.into()
-        
+
         Modal::new(self.show_modal, schematic, || {
             Card::new(
                 Text::new("New Device"),
-                Text::new("
+                Text::new(
+                    "
                 R: Resistor
                 V: Voltage Source
                 G: Ground
-                "), //Text::new("Zombie ipsum reversus ab viral inferno, nam rick grimes malum cerebro. De carne lumbering animata corpora quaeritis. Summus brains sit​​, morbo vel maleficia? De apocalypsi gorger omero undead survivor dictum mauris. Hi mindless mortuis soulless creaturas, imo evil stalking monstra adventus resi dentevil vultus comedat cerebella viventium. Qui animated corpse, cricket bat max brucks terribilem incessu zomby. The voodoo sacerdos flesh eater, suscitat mortuos comedere carnem virus. Zonbi tattered for solum oculi eorum defunctis go lum cerebro. Nescio brains an Undead zombies. Sicut malus putrid voodoo horror. Nigh tofth eliv ingdead.")
+                ",
+                ), //Text::new("Zombie ipsum reversus ab viral inferno, nam rick grimes malum cerebro. De carne lumbering animata corpora quaeritis. Summus brains sit​​, morbo vel maleficia? De apocalypsi gorger omero undead survivor dictum mauris. Hi mindless mortuis soulless creaturas, imo evil stalking monstra adventus resi dentevil vultus comedat cerebella viventium. Qui animated corpse, cricket bat max brucks terribilem incessu zomby. The voodoo sacerdos flesh eater, suscitat mortuos comedere carnem virus. Zonbi tattered for solum oculi eorum defunctis go lum cerebro. Nescio brains an Undead zombies. Sicut malus putrid voodoo horror. Nigh tofth eliv ingdead.")
             )
-            .foot(
-                Row::new()
-                    .spacing(10)
-                    .padding(5)
-                    .width(Length::Fill)
-            )
+            .foot(Row::new().spacing(10).padding(5).width(Length::Fill))
             .max_width(300.0)
             //.width(Length::Shrink)
             .on_close(CircuitPageMsg::CloseModal)
@@ -300,7 +288,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
 }
 
 struct NgModels {
-    models: Vec<NgModel>
+    models: Vec<NgModel>,
 }
 
 impl NgModels {

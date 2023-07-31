@@ -76,7 +76,7 @@ pub trait Content<Msg>: Default {
 /// trait for message type of viewport content
 pub trait ContentMsg {
     /// function to generate message to handle iced canvas event
-    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self;
+    fn canvas_event_msg(event: Event, curpos_vsp: Option<VSPoint>) -> Self;
 }
 
 /// The viewport handles canvas to content transforms, zooming, panning, etc.
@@ -136,9 +136,12 @@ where
 
         self.active_cache.clear();
 
-        let msgs = Some(self.events_handler(state, event, bounds_csb, opt_curpos));
-
-        (event::Status::Captured, msgs)
+        if opt_curpos.is_some() {
+            let msgs = Some(self.events_handler(state, event, bounds_csb, opt_curpos));
+            (event::Status::Captured, msgs)
+        } else {
+            (event::Status::Ignored, None)
+        }
     }
 
     fn draw(
@@ -297,7 +300,10 @@ where
                 ) => {
                     stcp = State::Panning(curpos_csp);
                 }
-                (State::Panning(csp_prev), Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
+                (
+                    State::Panning(csp_prev),
+                    Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
+                ) => {
                     viewport_msg = self.pan(curpos_csp, *csp_prev);
                     *csp_prev = curpos_csp;
                 }
@@ -315,7 +321,10 @@ where
                     let vsp = self.cv_transform().transform_point(curpos_csp);
                     stcp = State::NewView(vsp, vsp);
                 }
-                (State::NewView(vsp0, vsp1), Event::Mouse(iced::mouse::Event::CursorMoved { .. })) => {
+                (
+                    State::NewView(vsp0, vsp1),
+                    Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
+                ) => {
                     let vsp_now = self.cv_transform().transform_point(curpos_csp);
                     if (vsp_now - *vsp0).length() > 10. {
                         *vsp1 = vsp_now;
@@ -365,7 +374,10 @@ where
             *state = stcp;
         }
 
-        let content_msg = M::canvas_event_msg(event, self.curpos_vsp());
+        let content_msg = M::canvas_event_msg(
+            event,
+            opt_curpos_csp.map(|csp| self.cv_transform().transform_point(csp)),
+        );
         CompositeMsg {
             content_msg,
             viewport_msg,

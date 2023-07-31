@@ -23,6 +23,7 @@ followed by `cargo run`
 * select single device to edit parameter (wonky) - if you have ideas for implementing a properties editor, get in touch ~
   
 #### Hotkeys:
+L - net label (does no thing for now)
 
 W - draw wire
 

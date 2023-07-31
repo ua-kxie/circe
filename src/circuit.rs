@@ -2,13 +2,12 @@
 //! Concrete types for schematic content
 
 use crate::schematic::devices::Devices;
-use crate::schematic::nets::{NetEdge, NetVertex, Nets};
+use crate::schematic::nets::NetLabels;
+use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
 use crate::schematic::{self, RcRDevice, SchematicElement, SchematicMsg};
 use crate::{
     interactable::Interactive,
-    transforms::{
-        SSBox, SSPoint, SSTransform, VCTransform, VSBox,
-    },
+    transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
     viewport::Drawable,
 };
 use iced::widget::canvas::{event::Event, Frame};
@@ -39,6 +38,7 @@ pub trait SchematicSet {
 pub enum CircuitElement {
     NetEdge(NetEdge),
     Device(RcRDevice),
+    Label(RcRLabel),
 }
 
 impl PartialEq for CircuitElement {
@@ -60,6 +60,7 @@ impl std::hash::Hash for CircuitElement {
         match self {
             CircuitElement::NetEdge(e) => e.hash(state),
             CircuitElement::Device(d) => by_address::ByAddress(d).hash(state),
+            CircuitElement::Label(l) => by_address::ByAddress(l).hash(state),
         }
     }
 }
@@ -69,6 +70,7 @@ impl Drawable for CircuitElement {
         match self {
             CircuitElement::NetEdge(e) => e.draw_persistent(vct, vcscale, frame),
             CircuitElement::Device(d) => d.draw_persistent(vct, vcscale, frame),
+            CircuitElement::Label(l) => l.draw_persistent(vct, vcscale, frame),
         }
     }
 
@@ -76,6 +78,7 @@ impl Drawable for CircuitElement {
         match self {
             CircuitElement::NetEdge(e) => e.draw_selected(vct, vcscale, frame),
             CircuitElement::Device(d) => d.draw_selected(vct, vcscale, frame),
+            CircuitElement::Label(l) => l.draw_selected(vct, vcscale, frame),
         }
     }
 
@@ -83,6 +86,7 @@ impl Drawable for CircuitElement {
         match self {
             CircuitElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
             CircuitElement::Device(d) => d.draw_preview(vct, vcscale, frame),
+            CircuitElement::Label(l) => l.draw_preview(vct, vcscale, frame),
         }
     }
 }
@@ -92,6 +96,7 @@ impl SchematicElement for CircuitElement {
         match self {
             CircuitElement::NetEdge(e) => e.interactable.contains_ssp(ssp),
             CircuitElement::Device(d) => d.0.borrow().interactable.contains_ssp(ssp),
+            CircuitElement::Label(l) => l.0.borrow().interactable.contains_ssp(ssp),
         }
     }
 }
@@ -126,6 +131,7 @@ pub struct Circuit {
 
     nets: Nets,
     devices: Devices,
+    labels: NetLabels,
     curpos_ssp: SSPoint,
 }
 
@@ -148,6 +154,7 @@ impl Drawable for Circuit {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.nets.draw_persistent(vct, vcscale, frame);
         self.devices.draw_persistent(vct, vcscale, frame);
+        self.labels.draw_persistent(vct, vcscale, frame);
     }
 
     fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
@@ -169,7 +176,8 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
     fn bounds(&self) -> VSBox {
         let bbn = self.nets.bounding_box();
         let bbi = self.devices.bounding_box();
-        bbn.union(&bbi)
+        let bbl = self.labels.bounding_box();
+        bbn.union(&bbi).union(&bbl)
     }
     fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<CircuitElement> {
         let mut ret = HashSet::new();
@@ -179,11 +187,14 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         for rcrd in self.devices.intersects_ssb(&ssb) {
             ret.insert(CircuitElement::Device(rcrd));
         }
+        for rcrl in self.labels.intersects_ssb(&ssb) {
+            ret.insert(CircuitElement::Label(rcrl));
+        }
         ret
     }
 
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.nets.occupies_ssp(ssp) || self.devices.occupies_ssp(ssp)
+        self.nets.occupies_ssp(ssp) || self.devices.any_port_occupy_ssp(ssp)
     }
 
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
@@ -194,6 +205,9 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         skip: usize,
         count: &mut usize,
     ) -> Option<CircuitElement> {
+        if let Some(l) = self.labels.selectable(ssp, skip, count) {
+            return Some(CircuitElement::Label(l));
+        }
         if let Some(e) = self.nets.selectable(ssp, skip, count) {
             return Some(CircuitElement::NetEdge(e));
         }
@@ -281,6 +295,18 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
+                    // label
+                    (
+                        CircuitSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::L,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        let l = NetLabels::new_label();
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Label(l)));
+                    }
                     // state reset
                     (
                         _,
@@ -324,6 +350,12 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     // inserts the device if placing a new device
                     self.devices.insert(d.clone());
                 }
+                CircuitElement::Label(l) => {
+                    l.0.borrow_mut().transform(*sst);
+                    // if moving an existing label, does nothing
+                    // inserts the label if placing a new label
+                    self.labels.insert(l.clone());
+                }
             }
         }
         self.prune();
@@ -347,9 +379,21 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 
                     //build BaseElement
                     let d_refcell = RefCell::new(device);
-                    let d_refcnt = Rc::new(d_refcell);
-                    let rcr_device = RcRDevice(d_refcnt);
+                    let d_rc = Rc::new(d_refcell);
+                    let rcr_device = RcRDevice(d_rc);
                     self.devices.insert(rcr_device);
+                }
+                CircuitElement::Label(rcl) => {
+                    //unwrap refcell
+                    let refcell_d = rcl.0.borrow();
+                    let mut label = (*refcell_d).clone();
+                    label.transform(*sst);
+
+                    //build BaseElement
+                    let l_refcell = RefCell::new(label);
+                    let l_rc = Rc::new(l_refcell);
+                    let rcr_label = RcRLabel(l_rc);
+                    self.labels.insert(rcr_label);
                 }
             }
         }
@@ -362,7 +406,10 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     self.nets.delete_edge(e);
                 }
                 CircuitElement::Device(d) => {
-                    self.devices.delete_device(d);
+                    self.devices.delete_item(d);
+                }
+                CircuitElement::Label(l) => {
+                    self.labels.delete_item(l);
                 }
             }
         }
@@ -382,8 +429,9 @@ impl Circuit {
         for d in self.devices.get_set() {
             netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
         }
-        if netlist == "Netlist Created by Circe\n" {  // empty netlist
-            netlist.push_str("V_0 0 n1 0");  // give it something so spice doesnt hang
+        if netlist == "Netlist Created by Circe\n" {
+            // empty netlist
+            netlist.push_str("V_0 0 n1 0"); // give it something so spice doesnt hang
         }
         netlist.push('\n');
         fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");

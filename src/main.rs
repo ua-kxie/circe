@@ -55,10 +55,6 @@ impl Application for Circe {
     type Theme = Theme;
     type Flags = ();
 
-    // fn subscription(&self) -> Subscription<Self::Message> {
-    //     subscription::events().map(Msg::Event)
-    // }
-
     fn new(_flags: ()) -> (Self, Command<Msg>) {
         (
             Circe {
@@ -85,20 +81,6 @@ impl Application for Circe {
             Msg::SchematicMsg(schematic_msg) => {
                 self.schematic.update(schematic_msg);
             }
-            // Msg::Event(event) => {
-            //     dbg!("he");
-            //     match self.active_tab {
-            //         0 => {
-            //             self.schematic.update(CircuitPageMsg::Event(event));
-            //         }
-            //         1 => {
-            //             //
-            //         }
-            //         _ => {
-                        
-            //         }
-            //     }
-            // }
         }
         Command::none()
     }
