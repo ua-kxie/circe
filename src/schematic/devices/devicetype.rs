@@ -2,15 +2,13 @@
 
 use iced::{
     widget::canvas::{self, path::Builder, stroke, Frame, LineCap, LineDash, Stroke},
-    Color, Element, Size,
+    Color, Size,
 };
 
 use crate::{
     transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
     viewport::Drawable,
 };
-
-use self::r::ParamEditor;
 
 pub mod gnd;
 pub mod r;
@@ -211,14 +209,6 @@ pub enum DeviceClass {
     V(v::V),
 }
 impl DeviceClass {
-    /// todo wip concept
-    pub fn param_editor(&mut self) -> Option<impl ParamEditor + Into<Element<()>>> {
-        match self {
-            DeviceClass::Gnd(_) => None,
-            DeviceClass::R(r) => r.params.param_editor(),
-            DeviceClass::V(v) => None,
-        }
-    }
     /// sets the raw parameter of the device
     pub fn set_raw_param(&mut self, new: String) {
         match self {

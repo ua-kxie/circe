@@ -90,10 +90,10 @@ impl Application for Circe {
         // let device_designer = self.designer.view().map(Msg::DeviceDesignerMsg);
 
         let tabs = Tabs::with_tabs(
-            self.active_tab,
             vec![
-                (TabLabel::Text("Schematic".to_string()), schematic),
+                (0, TabLabel::Text("Schematic".to_string()), schematic),
                 (
+                    1,
                     TabLabel::Text("Device Creator".to_string()),
                     // device_designer,
                     iced::widget::text("placeholder").into(),

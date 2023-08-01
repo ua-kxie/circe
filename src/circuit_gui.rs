@@ -5,16 +5,15 @@ use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::schematic;
 use crate::viewport::CompositeMsg;
 
-use crate::schematic::{RcRDevice, Schematic};
+use crate::schematic::Schematic;
 use crate::{transforms::VCTransform, viewport::Viewport};
 use crate::{viewport, IcedStruct};
 use iced::widget::canvas::Event;
 use iced::widget::{button, row, Row, Text};
-use iced::Length;
+use iced::{Length, Element};
 use std::sync::Arc;
 
 use colored::Colorize;
-use iced_aw::{Card, Modal};
 use paprika::*;
 
 /// Spice Manager to facillitate interaction with NgSpice
@@ -222,7 +221,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
         }
     }
 
-    fn view(&self) -> iced::Element<CircuitPageMsg> {
+    fn view(&self) -> Element<CircuitPageMsg> {
         let str_ssp = format!(
             "x: {}; y: {}",
             self.viewport.curpos_ssp().x,
@@ -264,8 +263,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
 
         // schematic.into()
 
-        Modal::new(self.show_modal, schematic, || {
-            Card::new(
+        iced_aw::Modal::new(self.show_modal, schematic, 
+            iced_aw::Card::new(
                 Text::new("New Device"),
                 Text::new(
                     "
@@ -273,14 +272,13 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 V: Voltage Source
                 G: Ground
                 ",
-                ), //Text::new("Zombie ipsum reversus ab viral inferno, nam rick grimes malum cerebro. De carne lumbering animata corpora quaeritis. Summus brains sit​​, morbo vel maleficia? De apocalypsi gorger omero undead survivor dictum mauris. Hi mindless mortuis soulless creaturas, imo evil stalking monstra adventus resi dentevil vultus comedat cerebella viventium. Qui animated corpse, cricket bat max brucks terribilem incessu zomby. The voodoo sacerdos flesh eater, suscitat mortuos comedere carnem virus. Zonbi tattered for solum oculi eorum defunctis go lum cerebro. Nescio brains an Undead zombies. Sicut malus putrid voodoo horror. Nigh tofth eliv ingdead.")
+                ),
             )
             .foot(Row::new().spacing(10).padding(5).width(Length::Fill))
             .max_width(300.0)
             //.width(Length::Shrink)
             .on_close(CircuitPageMsg::CloseModal)
-            .into()
-        })
+        )
         .backdrop(CircuitPageMsg::CloseModal)
         .on_esc(CircuitPageMsg::CloseModal)
         .into()
@@ -313,9 +311,8 @@ impl NgModel {
 }
 
 mod param_editor {
-    use iced::widget::{button, column, text_input};
-    use iced::{Element, Length, Renderer};
-    use iced_lazy::{component, Component};
+    use iced::widget::{button, column, text_input, component, Component};
+    use iced::{Length, Renderer, Element};
 
     #[derive(Debug, Clone)]
     pub enum Evt {

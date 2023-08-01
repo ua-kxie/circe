@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = {version="0.9", features = ["canvas"]}
+iced = {version="0.10", features = ["canvas", "lazy"]}
 iced_lazy = "0.6.1"
-iced_aw = {version="0.5", features = ["tabs"]}
+iced_aw = {version="0.6", features = ["tabs", "card", "modal"]}
 euclid = {version="0.22.9", features = ["serde"]}
 lyon = "1.0"
 petgraph = "0.6.3"

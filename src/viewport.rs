@@ -9,10 +9,11 @@ use crate::transforms::{
     CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VSBox, VSPoint, VSVec,
 };
 use crate::IcedStruct;
+use iced::Renderer;
 use iced::{
     mouse,
     widget::canvas::{
-        self, event, path::Builder, stroke, Cache, Cursor, Event, Frame, Geometry, LineCap,
+        self, event, path::Builder, stroke, Cache, Event, Frame, Geometry, LineCap,
         LineDash, Path, Stroke, Text,
     },
     Color, Length, Rectangle, Size, Theme,
@@ -125,10 +126,10 @@ where
         state: &mut State,
         event: Event,
         bounds: Rectangle,
-        cursor: Cursor,
+        cursor: mouse::Cursor,
     ) -> (event::Status, Option<CompositeMsg<M>>) {
         let opt_curpos: Option<CSPoint> =
-            cursor.position_in(&bounds).map(|p| Point::from(p).into());
+            cursor.position_in(bounds).map(|p| Point::from(p).into());
         let bounds_csb = CSBox::from_points([
             CSPoint::new(bounds.x, bounds.y),
             CSPoint::new(bounds.width, bounds.height),
@@ -147,11 +148,12 @@ where
     fn draw(
         &self,
         state: &State,
+        renderer: &Renderer,
         _theme: &Theme,
         bounds: Rectangle,
-        _cursor: Cursor,
+        _cursor: mouse::Cursor,
     ) -> Vec<Geometry> {
-        let active = self.active_cache.draw(bounds.size(), |frame| {
+        let active = self.active_cache.draw(renderer, bounds.size(), |frame| {
             self.content
                 .draw_active(self.vc_transform(), self.vc_scale(), frame);
 
@@ -174,7 +176,7 @@ where
             }
         });
 
-        let passive = self.passive_cache.draw(bounds.size(), |frame| {
+        let passive = self.passive_cache.draw(renderer, bounds.size(), |frame| {
             self.draw_grid(
                 frame,
                 CSBox::new(
@@ -187,7 +189,7 @@ where
                 .draw_passive(self.vc_transform(), self.vc_scale(), frame);
         });
 
-        let background = self.background_cache.draw(bounds.size(), |frame| {
+        let background = self.background_cache.draw(renderer, bounds.size(), |frame| {
             let f = canvas::Fill {
                 style: canvas::Style::Solid(Color::from_rgb(0.2, 0.2, 0.2)),
                 ..canvas::Fill::default()
@@ -202,9 +204,9 @@ where
         &self,
         viewport_st: &State,
         bounds: Rectangle,
-        cursor: Cursor,
+        cursor: mouse::Cursor,
     ) -> mouse::Interaction {
-        if cursor.is_over(&bounds) {
+        if cursor.is_over(bounds) {
             match &viewport_st {
                 State::Panning(_) => mouse::Interaction::Grabbing,
                 State::Idle => self.content.mouse_interaction(),
