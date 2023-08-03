@@ -89,12 +89,12 @@ impl VCTransformLockedAspect {
         let s = (csb.height() / vsb.height())
             .min(csb.width() / vsb.width())
             .clamp(min_zoom, max_zoom);
-        vct = vct.then_scale(s, -s);
+        vct = vct.then_scale(s, s);
         // vector from vsb center to csb center
         let v = csb.center() - vct.transform_point(vsb.center());
         vct = vct.then_translate(v);
 
-        Self(vct)
+        Self(vct).pre_flip_y()
     }
     /// return the underlying transform
     pub fn transform(&self) -> VCTransform {
@@ -146,15 +146,17 @@ impl VCTransformFreeAspect {
     pub fn fit_bounds(csb: CSBox, vsb: VSBox, min_zoom: f32, max_zoom: f32) -> Self {
         let mut vct = VCTransform::identity();
 
-        let s = (csb.height() / vsb.height())
-            .min(csb.width() / vsb.width())
-            .clamp(min_zoom, max_zoom);
-        vct = vct.then_scale(s, -s);
+        let x_scale = csb.width() / vsb.width();
+        let y_scale = csb.height() / vsb.height();
+        vct = vct.then_scale(
+            x_scale.clamp(min_zoom, max_zoom),
+            y_scale.clamp(min_zoom, max_zoom),
+        );
         // vector from vsb center to csb center
         let v = csb.center() - vct.transform_point(vsb.center());
         vct = vct.then_translate(v);
 
-        Self(vct)
+        Self(vct).pre_flip_y()
     }
     /// return the underlying transform
     pub fn transform(&self) -> VCTransform {

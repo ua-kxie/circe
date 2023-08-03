@@ -390,6 +390,7 @@ where
     }
 
     /// returns the cursor position in viewport space
+    #[allow(dead_code)]
     pub fn curpos_vsp(&self) -> VSPoint {
         self.curpos.1
     }

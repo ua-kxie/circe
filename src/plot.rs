@@ -2,16 +2,11 @@
 //! Space in which math values form plots
 
 use crate::transforms::CSVec;
+use crate::viewport_free_aspect;
 use crate::{
-    transforms::{
-        self, CSPoint, Point, SSBox, SSPoint, SSTransform, VCTransform, VSBox, VSPoint,
-        ViewportSpace,
-    },
+    transforms::{CSPoint, Point, SSPoint, SSTransform, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
-use crate::{viewport, viewport_free_aspect};
-use euclid::default;
-use iced::keyboard::Modifiers;
 use iced::widget::canvas::{stroke, Path};
 use iced::{
     mouse,
@@ -47,7 +42,6 @@ impl PartialEq for ChartElement {
             (Self::PlotTrace(l0), Self::PlotTrace(r0)) => {
                 by_address::ByAddress(l0) == by_address::ByAddress(r0)
             }
-            _ => false,
         }
     }
 }
@@ -63,7 +57,7 @@ impl std::hash::Hash for ChartElement {
 }
 
 impl Drawable for ChartElement {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    fn draw_persistent(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {
         match self {
             ChartElement::PlotTrace(trace) => {
                 let stroke = Stroke {
@@ -81,7 +75,7 @@ impl Drawable for ChartElement {
         }
     }
 
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    fn draw_selected(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {
         match self {
             ChartElement::PlotTrace(trace) => {
                 let stroke = Stroke {
@@ -99,7 +93,7 @@ impl Drawable for ChartElement {
         }
     }
 
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+    fn draw_preview(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {
         match self {
             ChartElement::PlotTrace(trace) => {
                 let stroke = Stroke {
@@ -292,7 +286,7 @@ where
     }
     /// mutate state based on message and cursor position
     fn update(&mut self, msg: Msg) -> bool {
-        let mut clear_passive = false;
+        let clear_passive = false;
 
         match msg {
             Msg::Event(event, curpos_vsp) => {
@@ -330,7 +324,7 @@ where
     }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
-        let ssb_p = VSBox::from_points([vsb.min, vsb.max]);
+        let _ssb_p = VSBox::from_points([vsb.min, vsb.max]);
         // self.tentatives = self.content.intersects_vsb(ssb_p)
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
@@ -356,9 +350,9 @@ where
         self.tentatives.clear();
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-    fn selectable(&mut self, vsp: VSPoint, skip: &mut usize) -> Option<E> {
+    fn selectable(&mut self, _vsp: VSPoint, skip: &mut usize) -> Option<E> {
         loop {
-            let mut count = 0; // tracks the number of skipped elements
+            let count = 0; // tracks the number of skipped elements
                                // if let Some(e) = self.content.selectable(vsp, *skip, &mut count) {
                                //     return Some(e);
                                // }

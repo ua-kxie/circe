@@ -6,16 +6,14 @@
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
 use crate::transforms::{
-    CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox,
-    VSPoint, VSVec,
+    CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
 };
 use crate::IcedStruct;
 use iced::Renderer;
 use iced::{
     mouse,
     widget::canvas::{
-        self, event, path::Builder, stroke, Cache, Event, Frame, Geometry, LineCap, LineDash, Path,
-        Stroke, Text,
+        self, event, path::Builder, stroke, Cache, Event, Frame, Geometry, LineCap, Stroke, Text,
     },
     Color, Length, Rectangle, Size, Theme,
 };
@@ -274,9 +272,35 @@ where
                     iced::mouse::ScrollDelta::Lines { y, .. }
                     | iced::mouse::ScrollDelta::Pixels { y, .. } => {
                         let zoom_scale = 1.0 + y.clamp(-5.0, 5.0) / 5.;
-                        viewport_msg = self.zoom(zoom_scale, curpos_csp);
+                        viewport_msg = self.zoom(zoom_scale, zoom_scale, curpos_csp);
                     }
                 },
+                (
+                    _,
+                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                        key_code: iced::keyboard::KeyCode::X,
+                        modifiers,
+                    }),
+                ) => {
+                    if modifiers.control() {
+                        viewport_msg = self.zoom(1.1, 1.0, curpos_csp);
+                    } else {
+                        viewport_msg = self.zoom(1.0 / 1.1, 1.0, curpos_csp);
+                    }
+                }
+                (
+                    _,
+                    Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                        key_code: iced::keyboard::KeyCode::Y,
+                        modifiers,
+                    }),
+                ) => {
+                    if modifiers.control() {
+                        viewport_msg = self.zoom(1.0, 1.1, curpos_csp);
+                    } else {
+                        viewport_msg = self.zoom(1.0, 1.0 / 1.1, curpos_csp);
+                    }
+                }
                 // panning
                 (
                     State::Idle,
@@ -374,6 +398,7 @@ where
     }
 
     /// returns the cursor position in viewport space
+    #[allow(dead_code)]
     pub fn curpos_vsp(&self) -> VSPoint {
         self.curpos.1
     }
@@ -387,21 +412,6 @@ where
     #[allow(dead_code)]
     pub fn curpos_vsp_scaled(&self) -> VSPoint {
         self.curpos.1 * self.scale
-    }
-
-    /// returns transform and scale such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
-    fn bounds_transform(&self, csb: CSBox, vsb: VSBox) -> (VCTransform, f32) {
-        let mut vct = VCTransform::identity();
-
-        let s = (csb.height() / vsb.height())
-            .min(csb.width() / vsb.width())
-            .clamp(self.min_zoom, self.max_zoom); // scale from vsb to fit inside csb
-        vct = vct.then_scale(s, -s);
-        // vector from vsb center to csb center
-        let v = csb.center() - vct.transform_point(vsb.center());
-        vct = vct.then_translate(v);
-
-        (vct, s)
     }
 
     /// change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
@@ -427,6 +437,11 @@ where
         self.vct.transform()
     }
 
+    /// return the viewport to canvas space free aspect transform
+    pub fn vct(&self) -> VCTransformFreeAspect {
+        self.vct
+    }
+
     /// update the cursor position
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
@@ -435,14 +450,14 @@ where
     }
 
     /// change the viewport zoom by scale
-    pub fn zoom(&self, zoom_scale: f32, curpos_csp: CSPoint) -> Msg {
+    pub fn zoom(&self, x_scale: f32, y_scale: f32, curpos_csp: CSPoint) -> Msg {
         let (csp, vsp, _) = self.curpos;
 
-        let mut xy_scale = vec![self.vct.x_scale(), self.vct.y_scale()];
-        for scale in &mut xy_scale {
-            *scale = (zoom_scale * *scale).clamp(self.min_zoom, self.max_zoom) / (*scale);
-        }
-        let scaled_transform = self.vct.then_scale(xy_scale[0], xy_scale[1]);
+        let x_scale =
+            (x_scale * self.vct.x_scale()).clamp(self.min_zoom, self.max_zoom) / self.vct.x_scale();
+        let y_scale =
+            (y_scale * self.vct.y_scale()).clamp(self.min_zoom, self.max_zoom) / self.vct.y_scale();
+        let scaled_transform = self.vct.then_scale(x_scale, y_scale);
 
         let csp1 = scaled_transform.transform_point(vsp); // translate based on cursor location
         let translation = csp - csp1;

@@ -121,6 +121,6 @@ mod tests {
 
     fn parse() {
         let a = std::fs::read("src/schematic/devices/devicetype/v.json").unwrap();
-        let b: super::Graphics = serde_json::from_slice(&a).unwrap();
+        let _b: super::Graphics = serde_json::from_slice(&a).unwrap();
     }
 }

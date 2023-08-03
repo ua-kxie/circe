@@ -45,86 +45,27 @@ impl IcedStruct<PlotPageMsg> for PlotPage {
             self.viewport.curpos_ssp().x,
             self.viewport.curpos_ssp().y
         );
+        let str_xyscales = format!(
+            "x: {:04.1}; y: {:04.1}",
+            self.viewport.vct().x_scale(),
+            self.viewport.vct().y_scale(),
+        );
+
         let canvas = self.viewport.view().map(PlotPageMsg::ViewportEvt);
-        let infobar = row![iced::widget::text(str_ssp)
-            .size(16)
-            .height(16)
-            .vertical_alignment(iced::alignment::Vertical::Center),]
+        let infobar = row![
+            iced::widget::text(str_ssp)
+                .size(16)
+                .height(16)
+                .vertical_alignment(iced::alignment::Vertical::Center),
+            iced::widget::text(str_xyscales)
+                .size(16)
+                .height(16)
+                .vertical_alignment(iced::alignment::Vertical::Center),
+        ]
         .spacing(10);
 
         let schematic = iced::widget::column![canvas, infobar,];
 
         schematic.into()
-    }
-}
-
-mod param_editor {
-    use iced::widget::{button, column, component, text_input, Component};
-    use iced::{Element, Length, Renderer};
-
-    #[derive(Debug, Clone)]
-    pub enum Evt {
-        InputChanged(String),
-        InputSubmit,
-    }
-
-    pub struct ParamEditor<Message> {
-        value: String,
-        on_change: Box<dyn Fn(String) -> Message>,
-        on_submit: Box<dyn Fn() -> Message>,
-    }
-
-    impl<Message> ParamEditor<Message> {
-        pub fn new(
-            value: String,
-            on_change: impl Fn(String) -> Message + 'static,
-            on_submit: impl Fn() -> Message + 'static,
-        ) -> Self {
-            Self {
-                value,
-                on_change: Box::new(on_change),
-                on_submit: Box::new(on_submit),
-            }
-        }
-    }
-
-    pub fn param_editor<Message>(
-        value: String,
-        on_change: impl Fn(String) -> Message + 'static,
-        on_submit: impl Fn() -> Message + 'static,
-    ) -> ParamEditor<Message> {
-        ParamEditor::new(value, on_change, on_submit)
-    }
-
-    impl<Message> Component<Message, Renderer> for ParamEditor<Message> {
-        type State = ();
-        type Event = Evt;
-
-        fn update(&mut self, _state: &mut Self::State, event: Evt) -> Option<Message> {
-            match event {
-                Evt::InputChanged(s) => Some((self.on_change)(s)),
-                Evt::InputSubmit => Some((self.on_submit)()),
-            }
-        }
-        fn view(&self, _state: &Self::State) -> Element<Evt, Renderer> {
-            column![
-                text_input("", &self.value)
-                    .width(50)
-                    .on_input(Evt::InputChanged)
-                    .on_submit(Evt::InputSubmit),
-                button("enter").on_press(Evt::InputSubmit),
-            ]
-            .width(Length::Shrink)
-            .into()
-        }
-    }
-
-    impl<'a, Message> From<ParamEditor<Message>> for Element<'a, Message, Renderer>
-    where
-        Message: 'a,
-    {
-        fn from(parameditor: ParamEditor<Message>) -> Self {
-            component(parameditor)
-        }
     }
 }
