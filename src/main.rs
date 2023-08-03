@@ -6,14 +6,18 @@ use std::fmt::Debug;
 mod transforms;
 // use designer::DeviceDesigner;
 mod viewport;
+mod viewport_free_aspect;
 
 mod circuit;
 mod circuit_gui;
+mod plot;
+mod plot_page;
 mod schematic;
+
 use circuit_gui::CircuitPage;
+use plot_page::PlotPage;
 
 // mod designer;
-mod interactable;
 
 use iced::{executor, Application, Command, Element, Settings, Theme};
 
@@ -36,6 +40,7 @@ pub struct Circe {
     schematic: CircuitPage,
     /// intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
     // designer: DeviceDesigner,
+    plot_view: PlotPage,
 
     /// active tab index
     active_tab: usize,
@@ -45,6 +50,7 @@ pub struct Circe {
 pub enum Msg {
     // DeviceDesignerMsg(designer::DeviceDesignerMsg),
     SchematicMsg(circuit_gui::CircuitPageMsg),
+    PlotViewMsg(plot_page::PlotPageMsg),
     // Event(Event),
     TabSel(usize),
 }
@@ -60,7 +66,8 @@ impl Application for Circe {
             Circe {
                 schematic: CircuitPage::default(),
                 // designer: DeviceDesigner::default(),
-                active_tab: 0,
+                plot_view: PlotPage::default(),
+                active_tab: 1,
             },
             Command::none(),
         )
@@ -78,6 +85,9 @@ impl Application for Circe {
             // Msg::DeviceDesignerMsg(device_designer_msg) => {
             //     self.designer.update(device_designer_msg);
             // }
+            Msg::PlotViewMsg(plot_msg) => {
+                self.plot_view.update(plot_msg);
+            }
             Msg::SchematicMsg(schematic_msg) => {
                 self.schematic.update(schematic_msg);
             }
@@ -87,13 +97,15 @@ impl Application for Circe {
 
     fn view(&self) -> Element<Msg> {
         let schematic = self.schematic.view().map(Msg::SchematicMsg);
+        let plot = self.plot_view.view().map(Msg::PlotViewMsg);
         // let device_designer = self.designer.view().map(Msg::DeviceDesignerMsg);
 
         let tabs = Tabs::with_tabs(
             vec![
-                (0, TabLabel::Text("Schematic".to_string()), schematic),
+                (0, TabLabel::Text("Graphs".to_string()), plot),
+                (1, TabLabel::Text("Schematic".to_string()), schematic),
                 (
-                    1,
+                    2,
                     TabLabel::Text("Device Creator".to_string()),
                     // device_designer,
                     iced::widget::text("placeholder").into(),
@@ -102,7 +114,7 @@ impl Application for Circe {
             Msg::TabSel,
         );
 
-        tabs.into()
+        tabs.set_active_tab(&self.active_tab).into()
     }
 }
 

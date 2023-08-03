@@ -3,8 +3,10 @@
 use std::rc::Rc;
 
 use crate::{
-    interactable::{Interactable, Interactive},
-    schematic::nets::Drawable,
+    schematic::{
+        interactable::{Interactable, Interactive},
+        nets::Drawable,
+    },
     transforms::{SSBox, SSPoint, SSTransform, VCTransform},
 };
 

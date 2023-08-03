@@ -2,11 +2,12 @@
 //! Space in which devices and nets live in
 
 pub(crate) mod devices;
+pub mod interactable;
 pub(crate) mod nets;
 
 pub use self::devices::RcRDevice;
 use crate::transforms::CSVec;
-use crate::{interactable, viewport};
+use crate::viewport;
 use crate::{
     transforms::{
         self, CSPoint, Point, SSBox, SSPoint, SSTransform, VCTransform, VSBox, VSPoint,

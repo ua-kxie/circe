@@ -3,14 +3,15 @@
 
 use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::schematic;
+use crate::transforms::VCTransformLockedAspect;
 use crate::viewport::CompositeMsg;
 
 use crate::schematic::Schematic;
-use crate::{transforms::VCTransform, viewport::Viewport};
+use crate::viewport::Viewport;
 use crate::{viewport, IcedStruct};
 use iced::widget::canvas::Event;
 use iced::widget::{button, row, Row, Text};
-use iced::{Length, Element};
+use iced::{Element, Length};
 use std::sync::Arc;
 
 use colored::Colorize;
@@ -123,7 +124,9 @@ impl Default for CircuitPage {
             lib = PkSpice::<SpManager>::new(&std::ffi::OsString::from(path.trim())).unwrap();
         }
         lib.init(Some(spmanager.clone()));
-        let vct = VCTransform::identity().then_scale(10.0, -10.0);
+        let vct = VCTransformLockedAspect::identity()
+            .pre_flip_y()
+            .then_scale(10.0);
         CircuitPage {
             viewport: viewport::Viewport::new(1.0, 1.0, 100.0, vct),
             net_name: Default::default(),
@@ -263,7 +266,9 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
 
         // schematic.into()
 
-        iced_aw::Modal::new(self.show_modal, schematic, 
+        iced_aw::Modal::new(
+            self.show_modal,
+            schematic,
             iced_aw::Card::new(
                 Text::new("New Device"),
                 Text::new(
@@ -277,7 +282,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             .foot(Row::new().spacing(10).padding(5).width(Length::Fill))
             .max_width(300.0)
             //.width(Length::Shrink)
-            .on_close(CircuitPageMsg::CloseModal)
+            .on_close(CircuitPageMsg::CloseModal),
         )
         .backdrop(CircuitPageMsg::CloseModal)
         .on_esc(CircuitPageMsg::CloseModal)
@@ -285,34 +290,9 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
     }
 }
 
-struct NgModels {
-    models: Vec<NgModel>,
-}
-
-impl NgModels {
-    fn model_definitions(&self) -> String {
-        let mut ret = String::new();
-        for m in &self.models {
-            ret.push_str(&m.model_line())
-        }
-        ret
-    }
-}
-
-struct NgModel {
-    name: String,
-    definition: String,
-}
-
-impl NgModel {
-    fn model_line(&self) -> String {
-        format!(".model {} {}\n", self.name, self.definition)
-    }
-}
-
 mod param_editor {
-    use iced::widget::{button, column, text_input, component, Component};
-    use iced::{Length, Renderer, Element};
+    use iced::widget::{button, column, component, text_input, Component};
+    use iced::{Element, Length, Renderer};
 
     #[derive(Debug, Clone)]
     pub enum Evt {

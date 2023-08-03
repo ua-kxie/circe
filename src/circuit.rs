@@ -4,9 +4,10 @@
 use crate::schematic::devices::Devices;
 use crate::schematic::nets::NetLabels;
 use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
-use crate::schematic::{self, RcRDevice, SchematicElement, SchematicMsg};
+use crate::schematic::{
+    self, interactable::Interactive, RcRDevice, SchematicElement, SchematicMsg,
+};
 use crate::{
-    interactable::Interactive,
     transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
     viewport::Drawable,
 };
