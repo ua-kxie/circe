@@ -18,13 +18,15 @@ use colored::Colorize;
 use paprika::*;
 
 /// Spice Manager to facillitate interaction with NgSpice
+#[derive(Debug, Default)]
 struct SpManager {
-    tmp: Option<PkVecvaluesall>,
+    vecvals: Option<PkVecvaluesall>,
+    vecinfo: Option<PkVecinfoall>,
 }
 
 impl SpManager {
     fn new() -> Self {
-        SpManager { tmp: None }
+        SpManager::default()
     }
 }
 
@@ -47,9 +49,11 @@ impl paprika::PkSpiceManager for SpManager {
         println!("{}", msg.blue());
     }
     fn cb_ctrldexit(&mut self, status: i32, is_immediate: bool, is_quit: bool, id: i32) {}
-    fn cb_send_init(&mut self, pkvecinfoall: PkVecinfoall, id: i32) {}
+    fn cb_send_init(&mut self, pkvecinfoall: PkVecinfoall, id: i32) {
+        self.vecinfo = Some(pkvecinfoall);
+    }
     fn cb_send_data(&mut self, pkvecvaluesall: PkVecvaluesall, count: i32, id: i32) {
-        self.tmp = Some(pkvecvaluesall);
+        self.vecvals = Some(pkvecvaluesall);
     }
     fn cb_bgt_state(&mut self, is_fin: bool, id: i32) {}
 }
@@ -79,6 +83,8 @@ pub struct CircuitPage {
     spmanager: Arc<SpManager>,
     /// ngspice library
     lib: PkSpice<SpManager>,
+    /// traces from certain simulations e.g. transient
+    pub traces: Option<Vec<PkVectorinfo>>,
 
     /// show new device
     show_modal: bool,
@@ -134,6 +140,7 @@ impl Default for CircuitPage {
             text: Default::default(),
             spmanager,
             lib,
+            traces: None,
             show_modal: false,
         }
     }
@@ -185,7 +192,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                         });
                         self.lib.command("source netlist.cir"); // results pointer array starts at same address
                         self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
-                        if let Some(pkvecvaluesall) = self.spmanager.tmp.as_ref() {
+                        if let Some(pkvecvaluesall) = self.spmanager.vecvals.as_ref() {
                             self.viewport.update(CompositeMsg {
                                 content_msg: schematic::Msg::ContentMsg(Msg::DcOp(
                                     pkvecvaluesall.clone(),
@@ -193,6 +200,28 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                                 viewport_msg: viewport::Msg::None,
                             });
                         }
+                    }
+                    schematic::Msg::Event(
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::T,
+                            modifiers: iced::keyboard::Modifiers::SHIFT,
+                        }),
+                        _,
+                    ) => {
+                        self.viewport.update(CompositeMsg {
+                            content_msg: schematic::Msg::ContentMsg(Msg::NetList),
+                            viewport_msg: viewport::Msg::None,
+                        });
+                        self.lib.command("source netlist.cir"); // results pointer array starts at same address
+                        self.lib.command("tran 10u 10m"); // ngspice recommends sending in control statements separately, not as part of netlist
+
+                        let pltname = self.lib.get_cur_plot();
+                        let vecs = self.lib.get_all_vecs(&pltname);
+                        let mut vecvals = Vec::with_capacity(vecs.len());
+                        for s in vecs {
+                            vecvals.push(self.lib.get_vec_info(&s));
+                        }
+                        self.traces = Some(vecvals);
                     }
                     _ => {
                         self.viewport.update(msgs);

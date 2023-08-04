@@ -25,7 +25,7 @@ impl Default for PlotPage {
             .pre_flip_y()
             .then_scale(10.0, 10.0);
         PlotPage {
-            viewport: viewport_free_aspect::Viewport::new(1.0, 1.0, 100.0, vct),
+            viewport: viewport_free_aspect::Viewport::new(1.0, f32::EPSILON, f32::MAX, vct),
         }
     }
 }
@@ -46,7 +46,7 @@ impl IcedStruct<PlotPageMsg> for PlotPage {
             self.viewport.curpos_ssp().y
         );
         let str_xyscales = format!(
-            "x: {:04.1}; y: {:04.1}",
+            "x: {:.2e}; y: {:.2e}",
             self.viewport.vct().x_scale(),
             self.viewport.vct().y_scale(),
         );

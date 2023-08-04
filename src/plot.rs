@@ -353,9 +353,9 @@ where
     fn selectable(&mut self, _vsp: VSPoint, skip: &mut usize) -> Option<E> {
         loop {
             let count = 0; // tracks the number of skipped elements
-                               // if let Some(e) = self.content.selectable(vsp, *skip, &mut count) {
-                               //     return Some(e);
-                               // }
+                           // if let Some(e) = self.content.selectable(vsp, *skip, &mut count) {
+                           //     return Some(e);
+                           // }
             if count == 0 {
                 *skip = 0;
                 return None;
