@@ -22,7 +22,7 @@ pub trait PlotElement: Hash + Eq + Drawable + Clone {
     fn bounding_box(&self) -> VSBox;
 }
 
-pub type PlotTrace = Rc<[VSPoint]>;
+pub type PlotTrace = Vec<VSPoint>;
 
 /// an enum to unify different types in schematic (nets and devices)
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ pub enum ChartElement {
 
 impl Default for ChartElement {
     fn default() -> Self {
-        ChartElement::PlotTrace(Rc::new([VSPoint::origin(), VSPoint::new(1.0, 1.0)]))
+        ChartElement::PlotTrace(Vec::from([VSPoint::origin(), VSPoint::new(1.0, 1.0)]))
     }
 }
 
@@ -67,7 +67,7 @@ impl Drawable for ChartElement {
                     ..Stroke::default()
                 };
                 let mut path_builder = Builder::new();
-                for vsp in trace.as_ref() {
+                for vsp in trace {
                     path_builder.line_to(Point::from(vct.transform_point(*vsp)).into());
                 }
                 frame.stroke(&path_builder.build(), stroke.clone());
@@ -85,7 +85,7 @@ impl Drawable for ChartElement {
                     ..Stroke::default()
                 };
                 let mut path_builder = Builder::new();
-                for vsp in trace.as_ref() {
+                for vsp in trace {
                     path_builder.line_to(Point::from(vct.transform_point(*vsp)).into());
                 }
                 frame.stroke(&path_builder.build(), stroke.clone());
@@ -103,7 +103,7 @@ impl Drawable for ChartElement {
                     ..Stroke::default()
                 };
                 let mut path_builder = Builder::new();
-                for vsp in trace.as_ref() {
+                for vsp in trace {
                     path_builder.line_to(Point::from(vct.transform_point(*vsp)).into());
                 }
                 frame.stroke(&path_builder.build(), stroke.clone());
@@ -115,18 +115,9 @@ impl Drawable for ChartElement {
 impl PlotElement for ChartElement {
     fn bounding_box(&self) -> VSBox {
         match self {
-            ChartElement::PlotTrace(trace) => VSBox::from_points(trace.as_ref()),
+            ChartElement::PlotTrace(trace) => VSBox::from_points(trace),
         }
     }
-}
-
-/// Internal Schematic Message
-#[derive(Debug, Clone)]
-pub enum PlotMsg {
-    /// do nothing
-    None,
-    /// clear passive cache
-    ClearPassive,
 }
 
 /// Trait for message type of schematic content
@@ -139,15 +130,23 @@ pub trait ContentMsg {
 /// This structure allows schematic and its content to process events in parallel
 #[derive(Debug, Clone)]
 pub enum Msg {
+    /// do nothing
+    None,
+    /// new trace data
+    Traces(Vec<Vec<VSPoint>>),
     /// iced canvas event, along with cursor position inside canvas bounds
-    Event(Event, Option<VSPoint>),
+    Event(Event, VSPoint),
 }
 
 /// implements Msg to be ContentMsg of viewport
 impl viewport_free_aspect::ContentMsg for Msg {
     // create event to handle iced canvas event
     fn canvas_event_msg(event: Event, curpos_vsp: Option<VSPoint>) -> Self {
-        Msg::Event(event, curpos_vsp.map(|vsp| vsp.round().cast().cast_unit()))
+        if let Some(vsp) = curpos_vsp {
+            Msg::Event(event, vsp)
+        } else {
+            Msg::None
+        }
     }
 }
 
@@ -193,10 +192,7 @@ where
 }
 
 /// implement Schematic as viewport content
-impl<E> viewport_free_aspect::Content<Msg> for Plot<E>
-where
-    E: PlotElement + Default,
-{
+impl viewport_free_aspect::Content<Msg> for Plot<ChartElement> {
     /// change cursor graphic based on schematic state
     fn mouse_interaction(&self) -> mouse::Interaction {
         match self.state {
@@ -274,6 +270,11 @@ where
             .iter()
             .map(|e| e.draw_selected(vct, 1.0, frame))
             .collect();
+        let _: Vec<_> = self
+            .content
+            .iter()
+            .map(|e| e.draw_selected(vct, 1.0, frame))
+            .collect();
     }
 
     /// returns the bouding box of schematic content
@@ -286,18 +287,25 @@ where
     }
     /// mutate state based on message and cursor position
     fn update(&mut self, msg: Msg) -> bool {
-        let clear_passive = false;
+        let mut clear_passive = false;
 
         match msg {
             Msg::Event(event, curpos_vsp) => {
-                if curpos_vsp.is_none() {
-                    return false;
-                }
-                let curpos_ssp = curpos_vsp.unwrap().round().cast().cast_unit();
-
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_ssp(curpos_ssp);
+                    self.update_cursor_vsp(curpos_vsp);
                 }
+            }
+            Msg::None => {}
+            Msg::Traces(traces) => {
+                self.selected.clear();
+                self.tentatives.clear();
+                self.content.clear();
+
+                for trace in traces {
+                    self.content.insert(ChartElement::PlotTrace(trace));
+                }
+
+                clear_passive = true;
             }
         }
         clear_passive
@@ -308,7 +316,7 @@ impl<E> Plot<E>
 where
     E: PlotElement,
 {
-    fn update_cursor_ssp(&mut self, curpos_vsp: VSPoint) {
+    fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
         self.curpos_vsp = curpos_vsp;
         self.tentative_by_vspoint(curpos_vsp, &mut self.selskip.clone());
 

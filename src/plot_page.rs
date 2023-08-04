@@ -1,8 +1,11 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::plot::{ChartElement, Plot};
-use crate::transforms::VCTransformFreeAspect;
+use std::rc::Rc;
+
+use crate::plot::{ChartElement, Msg as PlotMsg, Plot};
+use crate::transforms::{VCTransformFreeAspect, VSPoint};
+use crate::viewport_free_aspect::{CompositeMsg, Content, Msg};
 use crate::{plot, viewport_free_aspect};
 
 use crate::IcedStruct;
@@ -12,6 +15,7 @@ use iced::Element;
 #[derive(Debug, Clone)]
 pub enum PlotPageMsg {
     ViewportEvt(viewport_free_aspect::CompositeMsg<plot::Msg>),
+    Traces(Vec<Vec<VSPoint>>),
 }
 
 /// schematic
@@ -36,17 +40,21 @@ impl IcedStruct<PlotPageMsg> for PlotPage {
             PlotPageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
             }
+            PlotPageMsg::Traces(traces) => {
+                let content_msg = PlotMsg::Traces(traces);
+                self.viewport.content.update(content_msg);
+            }
         }
     }
 
     fn view(&self) -> Element<PlotPageMsg> {
         let str_ssp = format!(
-            "x: {}; y: {}",
-            self.viewport.curpos_ssp().x,
-            self.viewport.curpos_ssp().y
+            "curpos: x: {:.2e}; y: {:.2e}",
+            self.viewport.curpos_vsp().x,
+            self.viewport.curpos_vsp().y
         );
         let str_xyscales = format!(
-            "x: {:.2e}; y: {:.2e}",
+            "scale: x: {:.2e}; y: {:.2e}",
             self.viewport.vct().x_scale(),
             self.viewport.vct().y_scale(),
         );

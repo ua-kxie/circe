@@ -3,7 +3,7 @@
 
 use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::schematic;
-use crate::transforms::VCTransformLockedAspect;
+use crate::transforms::{VCTransformLockedAspect, VSPoint};
 use crate::viewport::CompositeMsg;
 
 use crate::schematic::Schematic;
@@ -12,7 +12,7 @@ use crate::{viewport, IcedStruct};
 use iced::widget::canvas::Event;
 use iced::widget::{button, row, Row, Text};
 use iced::{Element, Length};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use colored::Colorize;
 use paprika::*;
@@ -20,7 +20,7 @@ use paprika::*;
 /// Spice Manager to facillitate interaction with NgSpice
 #[derive(Debug, Default)]
 struct SpManager {
-    vecvals: Option<PkVecvaluesall>,
+    vecvals: Mutex<Vec<PkVecvaluesall>>,
     vecinfo: Option<PkVecinfoall>,
 }
 
@@ -53,7 +53,8 @@ impl paprika::PkSpiceManager for SpManager {
         self.vecinfo = Some(pkvecinfoall);
     }
     fn cb_send_data(&mut self, pkvecvaluesall: PkVecvaluesall, count: i32, id: i32) {
-        self.vecvals = Some(pkvecvaluesall);
+        // this is called every simulation step when running tran
+        self.vecvals.try_lock().unwrap().push(pkvecvaluesall);
     }
     fn cb_bgt_state(&mut self, is_fin: bool, id: i32) {}
 }
@@ -84,7 +85,7 @@ pub struct CircuitPage {
     /// ngspice library
     lib: PkSpice<SpManager>,
     /// traces from certain simulations e.g. transient
-    pub traces: Option<Vec<PkVectorinfo>>,
+    pub traces: Option<Vec<Vec<VSPoint>>>,
 
     /// show new device
     show_modal: bool,
@@ -192,7 +193,9 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                         });
                         self.lib.command("source netlist.cir"); // results pointer array starts at same address
                         self.lib.command("op"); // ngspice recommends sending in control statements separately, not as part of netlist
-                        if let Some(pkvecvaluesall) = self.spmanager.vecvals.as_ref() {
+                        if let Some(pkvecvaluesall) =
+                            self.spmanager.vecvals.try_lock().unwrap().pop()
+                        {
                             self.viewport.update(CompositeMsg {
                                 content_msg: schematic::Msg::ContentMsg(Msg::DcOp(
                                     pkvecvaluesall.clone(),
@@ -213,15 +216,50 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                             viewport_msg: viewport::Msg::None,
                         });
                         self.lib.command("source netlist.cir"); // results pointer array starts at same address
-                        self.lib.command("tran 10u 10m"); // ngspice recommends sending in control statements separately, not as part of netlist
+                        self.spmanager.vecvals.try_lock().unwrap().clear();
+                        self.lib.command("tran 10u 1m"); // ngspice recommends sending in control statements separately, not as part of netlist
 
-                        let pltname = self.lib.get_cur_plot();
-                        let vecs = self.lib.get_all_vecs(&pltname);
-                        let mut vecvals = Vec::with_capacity(vecs.len());
-                        for s in vecs {
-                            vecvals.push(self.lib.get_vec_info(&s));
+                        // let pltname = self.lib.get_cur_plot();
+                        // let vecs = self.lib.get_all_vecs(&pltname);
+                        // let mut vecvals = Vec::with_capacity(vecs.len());
+                        // let mut time = None;
+                        // for s in vecs {
+                        //     if s == "time" {
+                        //         time = Some(self.lib.get_vec_info(&s));
+                        //     } else {
+                        //         vecvals.push(self.lib.get_vec_info(&s));
+                        //     }
+                        // }
+                        // if let Some(x) = time {
+                        //     self.traces = Some((x, vecvals));
+                        // }
+
+                        let pk_results = self.spmanager.vecvals.try_lock().unwrap();
+
+                        let trace_count = pk_results.first().unwrap().count as usize;
+                        let mut results: Vec<Vec<VSPoint>> = Vec::with_capacity(trace_count);
+                        for _ in 0..trace_count {
+                            results.push(Vec::with_capacity(pk_results.len()));
                         }
-                        self.traces = Some(vecvals);
+
+                        let x_i = pk_results
+                            .first()
+                            .unwrap()
+                            .vecsa
+                            .iter()
+                            .position(|x| x.name == "time")
+                            .unwrap();
+                        for step_val in pk_results.iter() {
+                            for (trace_i, trace_val) in step_val.vecsa.iter().enumerate() {
+                                results[trace_i].push(VSPoint::new(
+                                    step_val.vecsa[x_i].creal as f32,
+                                    trace_val.creal as f32,
+                                ));
+                            }
+                        }
+                        results.remove(x_i);
+
+                        self.traces = Some(results);
                     }
                     _ => {
                         self.viewport.update(msgs);

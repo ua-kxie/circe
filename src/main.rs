@@ -1,7 +1,7 @@
 //! Circe
 //! Schematic Capture for EDA with ngspice integration
 
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 mod transforms;
 // use designer::DeviceDesigner;
@@ -15,13 +15,14 @@ mod plot_page;
 mod schematic;
 
 use circuit_gui::CircuitPage;
-use plot_page::PlotPage;
+use plot_page::{PlotPage, PlotPageMsg};
 
 // mod designer;
 
 use iced::{executor, Application, Command, Element, Settings, Theme};
 
 use iced_aw::{TabLabel, Tabs};
+use transforms::{Point, VSPoint};
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -81,6 +82,11 @@ impl Application for Circe {
         match message {
             Msg::TabSel(i) => {
                 self.active_tab = i;
+
+                if let Some(traces) = self.schematic.traces.take() {
+                    let msg = PlotPageMsg::Traces(traces);
+                    self.plot_view.update(msg);
+                }
             }
             // Msg::DeviceDesignerMsg(device_designer_msg) => {
             //     self.designer.update(device_designer_msg);
