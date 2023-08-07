@@ -365,7 +365,7 @@ where
                         modifiers: _,
                     }),
                 ) => {
-                    let vsb = self.content.bounds().inflate(5.0, 5.0);
+                    let vsb = self.content.bounds();
                     let csp = self.curpos_csp();
                     viewport_msg = self.display_bounds(bounds_csb, vsb, csp);
                 }

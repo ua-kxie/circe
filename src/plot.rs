@@ -279,11 +279,16 @@ impl viewport_free_aspect::Content<Msg> for Plot<ChartElement> {
 
     /// returns the bouding box of schematic content
     fn bounds(&self) -> VSBox {
-        let mut vsb = VSBox::default();
-        for ce in self.content.iter() {
-            vsb = vsb.union(&ce.bounding_box());
+        if !self.content.is_empty() {
+            let vec_vsp: Vec<_> = self
+                .content
+                .iter()
+                .flat_map(|f| [f.bounding_box().min, f.bounding_box().max])
+                .collect();
+            VSBox::from_points(vec_vsp)
+        } else {
+            VSBox::default()
         }
-        vsb
     }
     /// mutate state based on message and cursor position
     fn update(&mut self, msg: Msg) -> bool {

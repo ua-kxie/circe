@@ -373,7 +373,7 @@ where
                         modifiers: _,
                     }),
                 ) => {
-                    let vsb = self.content.bounds().inflate(5.0, 5.0);
+                    let vsb = self.content.bounds();
                     let csp = self.curpos_csp();
                     viewport_msg = self.display_bounds(bounds_csb, vsb, csp);
                 }
@@ -471,14 +471,14 @@ where
         let a = Text {
             content: String::from("origin"),
             position: Point::from(self.vc_transform().transform_point(VSPoint::origin())).into(),
-            color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
+            color: Color::from_rgba(1.0, 0.0, 0.0, 0.2),
             size: self.scale,
             ..Default::default()
         };
         frame.fill_text(a);
         let ref_stroke = Stroke {
             width: (0.5 * self.scale).clamp(0.1, 3.0),
-            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 0.0, 0.0, 0.2)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
