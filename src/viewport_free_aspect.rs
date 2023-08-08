@@ -404,11 +404,6 @@ where
     }
 
     /// returns the cursor position in schematic space
-    pub fn curpos_ssp(&self) -> SSPoint {
-        self.curpos.2
-    }
-
-    /// returns the cursor position in schematic space
     #[allow(dead_code)]
     pub fn curpos_vsp_scaled(&self) -> VSPoint {
         self.curpos.1 * self.scale

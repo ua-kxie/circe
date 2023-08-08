@@ -49,6 +49,9 @@ impl PartialEq for CircuitElement {
             (Self::Device(l0), Self::Device(r0)) => {
                 by_address::ByAddress(l0) == by_address::ByAddress(r0)
             }
+            (Self::Label(l0), Self::Label(r0)) => {
+                by_address::ByAddress(l0) == by_address::ByAddress(r0)
+            }
             _ => false,
         }
     }

@@ -4,7 +4,7 @@
 use crate::transforms::CSVec;
 use crate::viewport_free_aspect;
 use crate::{
-    transforms::{CSPoint, Point, SSPoint, SSTransform, VCTransform, VSBox, VSPoint},
+    transforms::{CSPoint, Point, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
 use iced::widget::canvas::{stroke, Path};
@@ -16,7 +16,6 @@ use iced::{
 use std::collections::HashSet;
 use std::default::Default;
 use std::hash::Hash;
-use std::rc::Rc;
 
 pub trait PlotElement: Hash + Eq + Drawable + Clone {
     fn bounding_box(&self) -> VSBox;
@@ -158,15 +157,6 @@ pub enum PlotSt {
     Idle,
     /// left click-drag area selection
     AreaSelect(VSBox),
-}
-
-impl PlotSt {
-    /// this function returns a transform which applies sst about ssp0 and then translates to ssp1
-    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
-        sst.pre_translate(SSPoint::origin() - *ssp0)
-            .then_translate(*ssp0 - SSPoint::origin())
-            .then_translate(*ssp1 - *ssp0)
-    }
 }
 
 /// struct holding schematic state (nets, devices, and their locations)

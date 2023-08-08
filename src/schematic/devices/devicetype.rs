@@ -214,7 +214,6 @@ impl DeviceClass {
         match self {
             DeviceClass::R(x) => match &mut x.params {
                 r::ParamR::Raw(y) => y.set(new),
-                r::ParamR::Value(_) => {}
             },
             DeviceClass::Gnd(_) => {}
             DeviceClass::V(x) => match &mut x.params {

@@ -240,9 +240,6 @@ impl NetLabels {
     pub fn delete_item(&mut self, d: &RcRLabel) {
         self.set.remove(d);
     }
-    pub fn get_set(&self) -> &HashSet<RcRLabel> {
-        &self.set
-    }
     pub fn new_label() -> RcRLabel {
         let l = NetLabel::default();
         RcRLabel(Rc::new(RefCell::new(l)))

@@ -10,6 +10,7 @@ use crate::transforms::{
     VSPoint, VSVec,
 };
 use crate::IcedStruct;
+use iced::widget::canvas::path::Arc;
 use iced::Renderer;
 use iced::{
     mouse,
@@ -523,6 +524,20 @@ where
         let p = self.vc_transform().transform_point(VSPoint::origin());
         let r = self.vc_scale() * self.scale * 0.5;
         path_builder.circle(Point::from(p).into(), r);
+
+        path_builder.arc(Arc {
+            center: Point::from(p).into(),
+            radius: r * 2.0,
+            start_angle: 1.0,
+            end_angle: 3.0,
+        });
+        path_builder.ellipse(canvas::path::arc::Elliptical {
+            center: Point::from(p).into(),
+            radii: iced::Vector::new(r * 3.0, r * 1.0),
+            rotation: 1.0,
+            start_angle: 6.3,
+            end_angle: 0.0,
+        });
         frame.stroke(&path_builder.build(), ref_stroke);
     }
 

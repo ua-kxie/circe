@@ -219,21 +219,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                         self.spmanager.vecvals.try_lock().unwrap().clear();
                         self.lib.command("tran 10u 1m"); // ngspice recommends sending in control statements separately, not as part of netlist
 
-                        // let pltname = self.lib.get_cur_plot();
-                        // let vecs = self.lib.get_all_vecs(&pltname);
-                        // let mut vecvals = Vec::with_capacity(vecs.len());
-                        // let mut time = None;
-                        // for s in vecs {
-                        //     if s == "time" {
-                        //         time = Some(self.lib.get_vec_info(&s));
-                        //     } else {
-                        //         vecvals.push(self.lib.get_vec_info(&s));
-                        //     }
-                        // }
-                        // if let Some(x) = time {
-                        //     self.traces = Some((x, vecvals));
-                        // }
-
                         let pk_results = self.spmanager.vecvals.try_lock().unwrap();
 
                         let trace_count = pk_results.first().unwrap().count as usize;
@@ -266,7 +251,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                     }
                 }
 
-                // self.active_element = self.viewport.content.active_element().cloned();
                 match &self.viewport.content.active_element {
                     Some(ae) => {
                         self.active_element = Some(ae.clone());

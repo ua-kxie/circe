@@ -39,8 +39,6 @@ lazy_static! {
 pub enum ParamR {
     /// specify the spice line directly (after id and port connections)
     Raw(params::Raw),
-    /// specify the spice line by a single value
-    Value(params::SingleValue),
 }
 impl Default for ParamR {
     fn default() -> Self {
@@ -50,9 +48,6 @@ impl Default for ParamR {
 impl ParamR {
     pub fn summary(&self) -> String {
         match self {
-            ParamR::Value(v) => {
-                std::format!("{}", v.value)
-            }
             ParamR::Raw(s) => s.raw.clone(),
         }
     }

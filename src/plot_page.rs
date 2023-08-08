@@ -1,11 +1,9 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use std::rc::Rc;
-
 use crate::plot::{ChartElement, Msg as PlotMsg, Plot};
 use crate::transforms::{VCTransformFreeAspect, VSPoint};
-use crate::viewport_free_aspect::{CompositeMsg, Content, Msg};
+use crate::viewport_free_aspect::Content;
 use crate::{plot, viewport_free_aspect};
 
 use crate::IcedStruct;

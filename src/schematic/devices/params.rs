@@ -51,14 +51,3 @@ impl Raw {
         self.raw = new;
     }
 }
-
-/// this struct to edit device paramters by specying a single characteristic value (resistance, capacitance, inductance)
-#[derive(Debug, Clone)]
-pub struct SingleValue {
-    pub value: f32,
-}
-impl SingleValue {
-    fn new(value: f32) -> Self {
-        SingleValue { value }
-    }
-}

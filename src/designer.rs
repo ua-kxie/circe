@@ -1,412 +1,340 @@
-//! device designer
-//! editor for designing devices - draw the appearance and place ports
-//! intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
+//! Circuit
+//! Concrete types for schematic content
 
-use crate::viewport::{self, Drawable};
-use crate::IcedStruct;
+use crate::schematic::nets::NetLabels;
+use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
+use crate::schematic::{
+    self, interactable::Interactive, SchematicElement, SchematicMsg,
+};
 use crate::{
-    transforms::{
-        self, CSBox, CSPoint, Point, SSBox, SSPoint, SSTransform, SSVec, VCTransform, VSBox,
-    },
-    viewport::{Viewport, ViewportState},
+    transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
+    viewport::Drawable,
 };
-use iced::widget::{canvas, text};
-use iced::{alignment, Length};
-use iced::{
-    mouse,
-    widget::canvas::{
-        event::{self, Event},
-        Cursor, Frame, Geometry,
-    },
-    Color, Rectangle, Size, Theme,
-};
-use iced_lazy::component::view;
+use iced::widget::canvas::{event::Event, Frame};
 
-use self::graphics::line::LineSeg;
+use send_wrapper::SendWrapper;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::collections::HashSet;
 
-mod graphics;
+/// trait for a type of element in schematic. e.g. nets or devices
+pub trait SchematicSet {
+    /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
+    /// count is incremented by 1 for every element skipped over
+    /// skip is updated if an element is returned, equal to count
+    fn selectable(
+        &mut self,
+        curpos_ssp: SSPoint,
+        skip: &mut usize,
+        count: &mut usize,
+    ) -> Option<DesignerElement>;
 
-#[derive(Clone)]
-pub enum DesignerState {
+    /// returns the bounding box of all contained elements
+    fn bounding_box(&self) -> VSBox;
+}
+
+/// an enum to unify different types in schematic (nets and devices)
+#[derive(Debug, Clone)]
+pub enum DesignerElement {
+    NetEdge(NetEdge),
+    Label(RcRLabel),
+}
+
+impl PartialEq for DesignerElement {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::NetEdge(l0), Self::NetEdge(r0)) => *l0 == *r0,
+            (Self::Label(l0), Self::Label(r0)) => {
+                by_address::ByAddress(l0) == by_address::ByAddress(r0)
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Eq for DesignerElement {}
+
+impl std::hash::Hash for DesignerElement {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            DesignerElement::NetEdge(e) => e.hash(state),
+            DesignerElement::Label(l) => by_address::ByAddress(l).hash(state),
+        }
+    }
+}
+
+impl Drawable for DesignerElement {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        match self {
+            DesignerElement::NetEdge(e) => e.draw_persistent(vct, vcscale, frame),
+            DesignerElement::Label(l) => l.draw_persistent(vct, vcscale, frame),
+        }
+    }
+
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        match self {
+            DesignerElement::NetEdge(e) => e.draw_selected(vct, vcscale, frame),
+            DesignerElement::Label(l) => l.draw_selected(vct, vcscale, frame),
+        }
+    }
+
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        match self {
+            DesignerElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
+            DesignerElement::Label(l) => l.draw_preview(vct, vcscale, frame),
+        }
+    }
+}
+
+impl SchematicElement for DesignerElement {
+    fn contains_ssp(&self, ssp: SSPoint) -> bool {
+        match self {
+            DesignerElement::NetEdge(e) => e.interactable.contains_ssp(ssp),
+            DesignerElement::Label(l) => l.0.borrow().interactable.contains_ssp(ssp),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Msg {
+    CanvasEvent(Event, SSPoint),
+    Wire,
+}
+
+impl schematic::ContentMsg for Msg {
+    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self {
+        Msg::CanvasEvent(event, curpos_ssp)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum DesignerSt {
+    #[default]
     Idle,
-    Selecting(SSBox),
-    Moving(Option<(SSPoint, SSPoint, SSTransform)>),
-    DrawLine(Option<(SSPoint, SSPoint)>), // first click, second click, transform for rotation/flip ONLY
+    Wiring(Option<(Box<Nets>, SSPoint)>),
 }
 
-impl Default for DesignerState {
-    fn default() -> Self {
-        DesignerState::Idle
-    }
+/// struct holding schematic state (nets, devices, and their locations)
+#[derive(Debug, Default, Clone)]
+pub struct Designer {
+    pub infobarstr: Option<String>,
+
+    state: DesignerSt,
+
+    nets: Nets,
+    labels: NetLabels,
+    curpos_ssp: SSPoint,
 }
 
-impl DesignerState {
-    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
-        sst.pre_translate(SSVec::new(-ssp0.x, -ssp0.y))
-            .then_translate(SSVec::new(ssp0.x, ssp0.y))
-            .then_translate(*ssp1 - *ssp0)
-    }
-}
-
-/// schematic
-pub struct DeviceDesigner {
-    /// Viewport
-    viewport: Viewport,
-
-    state: DesignerState,
-
-    selskip: usize,
-    selected: Vec<()>, // todo
-
-    dev: Vec<LineSeg>,
-}
-
-impl Default for DeviceDesigner {
-    fn default() -> Self {
-        let vct = VCTransform::identity().then_scale(1.5, 1.5);
-        let viewport = Viewport::new(
-            8.0,
-            0.1,
-            10.0,
-            1.5,
-            vct,
-        );
-        Self { viewport, state: Default::default(), selskip: Default::default(), selected: Default::default(), dev: Default::default() }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum DeviceDesignerMsg {
-    Fit(CSBox),
-    ViewportMsg(viewport::ViewportMsg),
-}
-
-impl canvas::Program<DeviceDesignerMsg> for DeviceDesigner {
-    type State = ViewportState;
-
-    fn update(
-        &self,
-        viewport_st: &mut ViewportState,
-        event: Event,
-        bounds: Rectangle,
-        cursor: Cursor,
-    ) -> (event::Status, Option<DeviceDesignerMsg>) {
-        let curpos = cursor.position_in(&bounds);
-        let vstate = viewport_st.clone();
-        let mut msg = None;
-        let csb = CSBox::from_points([CSPoint::origin(), CSPoint::new(bounds.x, bounds.y)]);
-
-        self.viewport.active_cache.clear();
-        if let Some(p) = curpos {
-            if let Some(msg) =
-                self.viewport
-                    .events_handler(viewport_st, event, csb, Point::from(p).into())
-            {
-                return (
-                    event::Status::Captured,
-                    Some(DeviceDesignerMsg::ViewportMsg(msg)),
-                );
+impl Designer {
+    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+        self.curpos_ssp = curpos_ssp;
+        self.infobarstr = self.nets.net_name_at(curpos_ssp);
+        match &mut self.state {
+            DesignerSt::Wiring(Some((nets, ssp_prev))) => {
+                nets.clear();
+                nets.route(*ssp_prev, curpos_ssp);
             }
-        }
-
-        // if let Some(p) = curpos {
-        //     self.viewport.curpos_update(Point::from(p).into());
-        //     let curpos_ssp = self.viewport.curpos_ssp();
-
-        //     if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-        //         let mut skip = self.selskip.saturating_sub(1);
-        //         self.tentative_by_vspoint(curpos_ssp, &mut skip);
-        //         self.selskip = skip;
-        //     }
-        // }
-
-        let mut state = self.state.clone();
-        match (&mut state, event) {
-            // drawing line
-            // (
-            //     _,
-            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
-            //         key_code: iced::keyboard::KeyCode::W,
-            //         modifiers: _,
-            //     }),
-            // ) => {
-            //     state = DesignerState::DrawLine(None);
-            // }
-            // (
-            //     DesignerState::DrawLine(opt_pts),
-            //     Event::Mouse(iced::mouse::Event::ButtonPressed(mouse::Button::Left)),
-            // ) => match opt_pts {
-            //     Some(pts) => {
-            //         let l = LineSeg {
-            //             src: pts.0,
-            //             dst: pts.1,
-            //             interactable: LineSeg::interactable(pts.0, pts.1, false),
-            //         };
-            //         self.dev.push(l);
-            //         self.passive_cache.clear();
-            //         *opt_pts = None;
-            //     }
-            //     None => {
-            //         if let Some(p) = curpos {
-            //             let (_, curpos_ssp) = self.viewport.curpos(Point::from(p).into());
-            //             *opt_pts = Some((curpos_ssp, curpos_ssp));
-            //         }
-            //     }
-            // },
-            // (
-            //     DesignerState::DrawLine(opt_pts),
-            //     Event::Mouse(iced::mouse::Event::CursorMoved { position: _ }),
-            // ) => match opt_pts {
-            //     Some(pts) => {
-            //         if let Some(p) = curpos {
-            //             let (_, curpos_ssp) = self.viewport.curpos(Point::from(p).into());
-            //             pts.1 = curpos_ssp;
-            //         }
-            //     }
-            //     None => {}
-            // },
-
-            // // esc
-            // (
-            //     st,
-            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
-            //         key_code: iced::keyboard::KeyCode::Escape,
-            //         modifiers: _,
-            //     }),
-            // ) => match st {
-            //     DesignerState::Idle => {
-            //         self.clear_selected();
-            //     }
-            //     _ => {
-            //         state = DesignerState::Idle;
-            //     }
-            // },
-            // // delete
-            // (
-            //     DesignerState::Idle,
-            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
-            //         key_code: iced::keyboard::KeyCode::Delete,
-            //         modifiers: _,
-            //     }),
-            // ) => {
-            //     self.delete_selected();
-            // }
-            // // cycle
-            // (
-            //     DesignerState::Idle,
-            //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
-            //         key_code: iced::keyboard::KeyCode::C,
-            //         modifiers: _,
-            //     }),
-            // ) => {
-            //     if let Some(p) = curpos {
-            //         let (_, curpos_ssp) = self.viewport.curpos(Point::from(p).into());
-            //         self.tentative_next_by_vsp(curpos_ssp);
-            //     }
-            // }
-            // fit msg
-            (
-                DesignerState::Idle,
-                Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key_code: iced::keyboard::KeyCode::F,
-                    modifiers: _,
-                }),
-            ) => {
-                msg = Some(DeviceDesignerMsg::Fit(CSBox::from_points([
-                    CSPoint::origin(),
-                    CSPoint::new(bounds.x, bounds.y),
-                ])));
-            }
+            DesignerSt::Idle => {}
             _ => {}
         }
-
-        if msg.is_some() {
-            (event::Status::Captured, msg)
-        } else {
-            (event::Status::Ignored, msg)
-        }
-    }
-
-    fn draw(
-        &self,
-        viewport_st: &ViewportState,
-        _theme: &Theme,
-        bounds: Rectangle,
-        _cursor: Cursor,
-    ) -> Vec<Geometry> {
-        let active = self.viewport.active_cache.draw(bounds.size(), |frame| {
-            self.draw_active(
-                self.viewport.vc_transform(),
-                self.viewport.vc_scale(),
-                frame,
-            );
-            self.viewport.draw_cursor(frame);
-
-            if let ViewportState::NewView(vsp0, vsp1) = viewport_st {
-                let csp0 = self.viewport.vc_transform().transform_point(*vsp0);
-                let csp1 = self.viewport.vc_transform().transform_point(*vsp1);
-                let selsize = Size {
-                    width: csp1.x - csp0.x,
-                    height: csp1.y - csp0.y,
-                };
-                let f = canvas::Fill {
-                    style: canvas::Style::Solid(if selsize.height > 0. {
-                        Color::from_rgba(1., 0., 0., 0.1)
-                    } else {
-                        Color::from_rgba(0., 0., 1., 0.1)
-                    }),
-                    ..canvas::Fill::default()
-                };
-                frame.fill_rectangle(Point::from(csp0).into(), selsize, f);
-            }
-        });
-
-        let passive = self.viewport.passive_cache.draw(bounds.size(), |frame| {
-            self.viewport.draw_grid(
-                frame,
-                CSBox::new(
-                    CSPoint::origin(),
-                    CSPoint::from([bounds.width, bounds.height]),
-                ),
-            );
-            self.draw_passive(
-                self.viewport.vc_transform(),
-                self.viewport.vc_scale(),
-                frame,
-            );
-        });
-
-        let background = self.viewport.background_cache.draw(bounds.size(), |frame| {
-            let f = canvas::Fill {
-                style: canvas::Style::Solid(Color::from_rgb(0.2, 0.2, 0.2)),
-                ..canvas::Fill::default()
-            };
-            frame.fill_rectangle(iced::Point::ORIGIN, bounds.size(), f);
-        });
-
-        vec![background, passive, active]
-    }
-
-    fn mouse_interaction(
-        &self,
-        viewport_st: &ViewportState,
-        bounds: Rectangle,
-        cursor: Cursor,
-    ) -> mouse::Interaction {
-        if cursor.is_over(&bounds) {
-            match (&viewport_st, &self.state) {
-                (ViewportState::Panning(_), _) => mouse::Interaction::Grabbing,
-                (ViewportState::None, DesignerState::Idle) => mouse::Interaction::default(),
-                (ViewportState::None, DesignerState::Moving(_)) => {
-                    mouse::Interaction::ResizingVertically
-                }
-                _ => mouse::Interaction::default(),
-            }
-        } else {
-            mouse::Interaction::default()
-        }
     }
 }
 
-impl IcedStruct<DeviceDesignerMsg> for DeviceDesigner {
-    fn update(&mut self, msg: DeviceDesignerMsg) {
-        match msg {
-            DeviceDesignerMsg::Fit(csb) => {
-                let vsb = self.bounding_box().inflate(5.0, 5.0);
-                let csp = self.viewport.curpos_csp();
-                let msg = self.viewport.display_bounds(csb, vsb, csp);
-                self.viewport.update(msg);
-                self.viewport.passive_cache.clear();
-            }
-            DeviceDesignerMsg::ViewportMsg(vp_msg) => {
-                self.viewport.update(vp_msg);
-                self.viewport.passive_cache.clear();
-            }
-        }
+impl Drawable for Designer {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.nets.draw_persistent(vct, vcscale, frame);
+        self.labels.draw_persistent(vct, vcscale, frame);
     }
 
-    fn view(&self) -> iced::Element<DeviceDesignerMsg> {
-        let vsp = self.viewport.curpos_vsp_scaled();
-        let str_vsp = format!("x: {}; y: {}", vsp.x, vsp.y);
+    fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
+        panic!("not intended for use");
+    }
 
-        let canvas = canvas(self).width(Length::Fill).height(Length::Fill);
-        let dd = iced::widget::column![
-            canvas,
-            iced::widget::row![
-                text(str_vsp)
-                    .size(16)
-                    .height(16)
-                    .vertical_alignment(alignment::Vertical::Center),
-                text(&format!("{:04.1}", self.viewport.vc_scale()))
-                    .size(16)
-                    .height(16)
-                    .vertical_alignment(alignment::Vertical::Center),
-            ]
-            .spacing(10)
-        ]
-        .width(Length::Fill);
-        dd.into()
-    }
-}
-
-impl DeviceDesigner {
-    /// clear selection
-    fn clear_selected(&mut self) {
-        self.selected.clear();
-    }
-    /// clear tentative selections (cursor hover highlight)
-    fn clear_tentatives(&mut self) {}
-    /// set tentative flags by intersection with ssb
-    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        self.clear_tentatives();
-        let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-    }
-    /// set 1 tentative flag by vsp, skipping skip elements which contains vsp. Returns netname if tentative is a net segment
-    pub fn tentative_by_vspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
-        self.clear_tentatives();
-        if let Some(be) = self.selectable(ssp, skip) {}
-    }
-    /// set 1 tentative flag by vsp, sets flag on next qualifying element. Returns netname i tentative is a net segment
-    pub fn tentative_next_by_vsp(&mut self, ssp: SSPoint) {
-        let mut skip = self.selskip;
-        let s = self.tentative_by_vspoint(ssp, &mut skip);
-        self.selskip = skip;
-        s
-    }
-    /// put every element with tentative flag set into selected vector
-    fn tentatives_to_selected(&mut self) {}
-    /// draw onto active cache
-    pub fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        // draw elements which may need to be redrawn at any event
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match &self.state {
-            DesignerState::DrawLine(Some(pts)) => {
-                let l = LineSeg {
-                    src: pts.0,
-                    dst: pts.1,
-                    interactable: LineSeg::interactable(pts.0, pts.1, false),
-                };
-                l.draw_preview(vct, vcscale, frame);
+            DesignerSt::Wiring(Some((nets, _))) => {
+                nets.draw_preview(vct, vcscale, frame);
             }
+            DesignerSt::Idle => {}
             _ => {}
         }
     }
-    /// draw onto passive cache
-    pub fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        // draw elements which may need to be redrawn at any event
-        for l in &self.dev {
-            l.draw_persistent(vct, vcscale, frame);
+}
+
+impl schematic::Content<DesignerElement, Msg> for Designer {
+    fn bounds(&self) -> VSBox {
+        let bbn = self.nets.bounding_box();
+        let bbl = self.labels.bounding_box();
+        bbn.union(&bbl)
+    }
+    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<DesignerElement> {
+        let mut ret = HashSet::new();
+        for seg in self.nets.intersects_ssbox(&ssb) {
+            ret.insert(DesignerElement::NetEdge(seg));
         }
+        for rcrl in self.labels.intersects_ssb(&ssb) {
+            ret.insert(DesignerElement::Label(rcrl));
+        }
+        ret
     }
-    /// returns the bouding box of all elements on canvas
-    pub fn bounding_box(&self) -> VSBox {
-        todo!()
+
+    fn occupies_ssp(&self, _ssp: SSPoint) -> bool {
+        false
     }
-    /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<()> {
+
+    /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
+    /// count is updated to track the number of elements skipped over
+    fn selectable(
+        &mut self,
+        ssp: SSPoint,
+        skip: usize,
+        count: &mut usize,
+    ) -> Option<DesignerElement> {
+        if let Some(l) = self.labels.selectable(ssp, skip, count) {
+            return Some(DesignerElement::Label(l));
+        }
+        if let Some(e) = self.nets.selectable(ssp, skip, count) {
+            return Some(DesignerElement::NetEdge(e));
+        }
         None
     }
-    /// delete all elements which appear in the selected array
-    pub fn delete_selected(&mut self) {}
-    /// move all elements in the selected array by sst
-    fn move_selected(&mut self, sst: SSTransform) {}
+
+    fn update(&mut self, msg: Msg) -> SchematicMsg<DesignerElement> {
+        let ret_msg = match msg {
+            Msg::CanvasEvent(event, curpos_ssp) => {
+                if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
+                    self.update_cursor_ssp(curpos_ssp);
+                }
+
+                let mut state = self.state.clone();
+                let mut ret_msg_tmp = SchematicMsg::None;
+                match (&mut state, event) {
+                    // wiring
+                    (
+                        DesignerSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::W,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        state = DesignerSt::Wiring(None);
+                    }
+                    (
+                        DesignerSt::Wiring(opt_ws),
+                        Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
+                    ) => {
+                        let ssp = curpos_ssp;
+                        let new_ws;
+                        if let Some((g, prev_ssp)) = opt_ws {
+                            // subsequent click
+                            if ssp == *prev_ssp {
+                                new_ws = None;
+                            } else if self.occupies_ssp(ssp) {
+                                self.nets.merge(g.as_ref(), vec![]);
+                                new_ws = None;
+                            } else {
+                                self.nets.merge(g.as_ref(), vec![]);
+                                new_ws = Some((Box::<Nets>::default(), ssp));
+                            }
+                            ret_msg_tmp = SchematicMsg::ClearPassive;
+                        } else {
+                            // first click
+                            new_ws = Some((Box::<Nets>::default(), ssp));
+                        }
+                        state = DesignerSt::Wiring(new_ws);
+                    }
+                    // label
+                    (
+                        DesignerSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::L,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        let l = NetLabels::new_label();
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(DesignerElement::Label(l)));
+                    }
+                    // state reset
+                    (
+                        _,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::Escape,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        state = DesignerSt::Idle;
+                    }
+                    _ => {}
+                }
+                self.state = state;
+                ret_msg_tmp
+            }
+            Msg::Wire => {
+                self.state = DesignerSt::Wiring(None);
+                SchematicMsg::None
+            }
+        };
+        ret_msg
+    }
+
+    fn move_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &SSTransform) {
+        for e in elements {
+            match e {
+                DesignerElement::NetEdge(e) => {
+                    self.nets.transform(e.clone(), *sst);
+                }
+                DesignerElement::Label(l) => {
+                    l.0.borrow_mut().transform(*sst);
+                    // if moving an existing label, does nothing
+                    // inserts the label if placing a new label
+                    self.labels.insert(l.clone());
+                }
+            }
+        }
+    }
+
+    fn copy_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &SSTransform) {
+        for e in elements {
+            match e {
+                DesignerElement::NetEdge(seg) => {
+                    let mut seg = seg.clone();
+                    seg.transform(*sst);
+                    self.nets
+                        .graph
+                        .add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg.clone());
+                }
+                DesignerElement::Label(rcl) => {
+                    //unwrap refcell
+                    let refcell_d = rcl.0.borrow();
+                    let mut label = (*refcell_d).clone();
+                    label.transform(*sst);
+
+                    //build BaseElement
+                    let l_refcell = RefCell::new(label);
+                    let l_rc = Rc::new(l_refcell);
+                    let rcr_label = RcRLabel(l_rc);
+                    self.labels.insert(rcr_label);
+                }
+            }
+        }
+    }
+
+    fn delete_elements(&mut self, elements: &HashSet<DesignerElement>) {
+        for e in elements {
+            match e {
+                DesignerElement::NetEdge(e) => {
+                    self.nets.delete_edge(e);
+                }
+                DesignerElement::Label(l) => {
+                    self.labels.delete_item(l);
+                }
+            }
+        }
+    }
+
+    fn is_idle(&self) -> bool {
+        matches!(self.state, DesignerSt::Idle)
+    }
 }

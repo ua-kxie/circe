@@ -1,28 +1,29 @@
 //! Circe
 //! Schematic Capture for EDA with ngspice integration
 
-use std::{fmt::Debug, rc::Rc};
+use std::fmt::Debug;
 
+mod designer;
+mod designer_page;
 mod transforms;
-// use designer::DeviceDesigner;
 mod viewport;
 mod viewport_free_aspect;
 
 mod circuit;
-mod circuit_gui;
+mod circuit_page;
 mod plot;
 mod plot_page;
 mod schematic;
 
-use circuit_gui::CircuitPage;
+use circuit_page::CircuitPage;
 use plot_page::{PlotPage, PlotPageMsg};
+use designer_page::DevicePage;
 
 // mod designer;
 
 use iced::{executor, Application, Command, Element, Settings, Theme};
 
 use iced_aw::{TabLabel, Tabs};
-use transforms::{Point, VSPoint};
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -40,17 +41,17 @@ pub struct Circe {
     /// schematic
     schematic: CircuitPage,
     /// intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
-    // designer: DeviceDesigner,
     plot_view: PlotPage,
 
     /// active tab index
     active_tab: usize,
+    designer: DevicePage,
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    // DeviceDesignerMsg(designer::DeviceDesignerMsg),
-    SchematicMsg(circuit_gui::CircuitPageMsg),
+    DesignerMsg(designer_page::DevicePageMsg),
+    SchematicMsg(circuit_page::CircuitPageMsg),
     PlotViewMsg(plot_page::PlotPageMsg),
     // Event(Event),
     TabSel(usize),
@@ -66,7 +67,7 @@ impl Application for Circe {
         (
             Circe {
                 schematic: CircuitPage::default(),
-                // designer: DeviceDesigner::default(),
+                designer: DevicePage::default(),
                 plot_view: PlotPage::default(),
                 active_tab: 1,
             },
@@ -88,9 +89,9 @@ impl Application for Circe {
                     self.plot_view.update(msg);
                 }
             }
-            // Msg::DeviceDesignerMsg(device_designer_msg) => {
-            //     self.designer.update(device_designer_msg);
-            // }
+            Msg::DesignerMsg(device_designer_msg) => {
+                self.designer.update(device_designer_msg);
+            }
             Msg::PlotViewMsg(plot_msg) => {
                 self.plot_view.update(plot_msg);
             }
@@ -104,18 +105,13 @@ impl Application for Circe {
     fn view(&self) -> Element<Msg> {
         let schematic = self.schematic.view().map(Msg::SchematicMsg);
         let plot = self.plot_view.view().map(Msg::PlotViewMsg);
-        // let device_designer = self.designer.view().map(Msg::DeviceDesignerMsg);
+        let devices = self.designer.view().map(Msg::DesignerMsg);
 
         let tabs = Tabs::with_tabs(
             vec![
                 (0, TabLabel::Text("Graphs".to_string()), plot),
                 (1, TabLabel::Text("Schematic".to_string()), schematic),
-                (
-                    2,
-                    TabLabel::Text("Device Creator".to_string()),
-                    // device_designer,
-                    iced::widget::text("placeholder").into(),
-                ),
+                (2, TabLabel::Text("Device Designer".to_string()), devices),
             ],
             Msg::TabSel,
         );
