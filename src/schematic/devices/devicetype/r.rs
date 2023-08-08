@@ -2,6 +2,7 @@
 
 use super::super::params;
 use super::{Graphics, Port};
+use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;
 
@@ -23,11 +24,13 @@ lazy_static! {
         ports: vec![
             Port {
                 name: "+".to_string(),
-                offset: SSPoint::new(0, 3)
+                offset: SSPoint::new(0, 3),
+                interactable: Interactable::default(),
             },
             Port {
                 name: "-".to_string(),
-                offset: SSPoint::new(0, -3)
+                offset: SSPoint::new(0, -3),
+                interactable: Interactable::default(),
             },
         ],
         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),

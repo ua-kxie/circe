@@ -43,7 +43,6 @@ pub type CSVec = euclid::Vector2D<f32, CanvasSpace>;
 /// ViewportSpace Vector
 pub type VSVec = euclid::Vector2D<f32, ViewportSpace>;
 /// SchematicSpace Vector
-#[allow(dead_code)]
 pub type SSVec = euclid::Vector2D<i16, SchematicSpace>;
 
 /// viewport to canvas space transform

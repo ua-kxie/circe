@@ -5,6 +5,8 @@ use std::{cell::RefCell, collections::HashSet, hash::Hasher, rc::Rc};
 mod deviceinstance;
 mod devicetype;
 mod params;
+pub mod port;
+pub mod strokes;
 
 use crate::{
     transforms::{SSBox, SSPoint, VCTransform, VSBox},

@@ -330,15 +330,11 @@ where
                     stcp = State::NewView(vsp, vsp);
                 }
                 (
-                    State::NewView(vsp0, vsp1),
+                    State::NewView(_vsp0, vsp1),
                     Event::Mouse(iced::mouse::Event::CursorMoved { .. }),
                 ) => {
                     let vsp_now = self.cv_transform().transform_point(curpos_csp);
-                    if (vsp_now - *vsp0).length() > 10. {
-                        *vsp1 = vsp_now;
-                    } else {
-                        *vsp1 = *vsp0;
-                    }
+                    *vsp1 = vsp_now;
                     viewport_msg = Msg::CursorMoved(curpos_csp);
                 }
                 (

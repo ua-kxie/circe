@@ -1,7 +1,7 @@
-//! Schematic GUI page
+//! Designer Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::designer::{DesignerElement, Msg, Designer};
+use crate::designer::{Designer, DesignerElement, Msg};
 use crate::schematic;
 use crate::transforms::VCTransformLockedAspect;
 
@@ -38,7 +38,7 @@ impl Default for DevicePage {
             .pre_flip_y()
             .then_scale(10.0);
         DevicePage {
-            viewport: viewport::Viewport::new(1.0, 1.0, 100.0, vct),
+            viewport: viewport::Viewport::new(8.0, 1.0, 100.0, vct),
             net_name: Default::default(),
             active_element: Default::default(),
             text: Default::default(),
@@ -52,30 +52,12 @@ impl IcedStruct<DevicePageMsg> for DevicePage {
             DevicePageMsg::TextInputChanged(s) => {
                 self.text = s;
             }
-            DevicePageMsg::TextInputSubmit => {
-                if let Some(ad) = &self.active_element {
-                    match ad {
-                        DesignerElement::NetEdge(_) => {}
-                        DesignerElement::Label(l) => {
-                            l.0.borrow_mut().set_name(self.text.clone());
-                        }
-                    }
-                    self.viewport.passive_cache.clear();
-                }
-            }
+            DevicePageMsg::TextInputSubmit => {}
             DevicePageMsg::ViewportEvt(msgs) => {
                 self.viewport.update(msgs);
 
                 match &self.viewport.content.active_element {
-                    Some(ae) => {
-                        self.active_element = Some(ae.clone());
-                        match ae {
-                            DesignerElement::NetEdge(_) => {}
-                            DesignerElement::Label(l) => {
-                                self.text = l.0.borrow().read().to_string();
-                            }
-                        }
-                    }
+                    Some(_) => {}
                     None => self.text = String::from(""),
                 }
             }
@@ -111,7 +93,7 @@ impl IcedStruct<DevicePageMsg> for DevicePage {
         let toolbar =
             row![
                 button("wire").on_press(DevicePageMsg::ViewportEvt(viewport::CompositeMsg {
-                    content_msg: schematic::Msg::ContentMsg(Msg::Wire),
+                    content_msg: schematic::Msg::ContentMsg(Msg::Line),
                     viewport_msg: viewport::Msg::None,
                 })),
             ]

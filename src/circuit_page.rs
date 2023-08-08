@@ -1,4 +1,4 @@
-//! Schematic GUI page
+//! Circuit Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
 use crate::circuit::{Circuit, CircuitElement, Msg};

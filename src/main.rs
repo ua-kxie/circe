@@ -16,8 +16,8 @@ mod plot_page;
 mod schematic;
 
 use circuit_page::CircuitPage;
-use plot_page::{PlotPage, PlotPageMsg};
 use designer_page::DevicePage;
+use plot_page::{PlotPage, PlotPageMsg};
 
 // mod designer;
 

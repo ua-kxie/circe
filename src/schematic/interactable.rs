@@ -8,7 +8,7 @@ pub trait Interactive {
 }
 
 /// struct to facillitates and unify implementation of interactive logic through composition
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct Interactable {
     /// the bounds of the interactable. e.g. mouse hover over this area should highlight the interactable.
     pub bounds: SSBox,
@@ -25,5 +25,9 @@ impl Interactable {
         let mut ssb = self.bounds;
         ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
         ssb.contains(ssp)
+    }
+    /// returns true if bounds intersects with argument.
+    pub fn intersects_ssb(&self, ssb: &SSBox) -> bool {
+        self.bounds.intersects(ssb)
     }
 }

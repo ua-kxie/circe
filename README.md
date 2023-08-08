@@ -23,7 +23,7 @@ followed by `cargo run`
 * select single device to edit parameter (wonky) - if you have ideas for implementing a properties editor, get in touch ~
   
 #### Hotkeys:
-### Circuit Schematic:
+##### Circuit Schematic:
 L - net label (does no thing for now)
 
 W - draw wire
@@ -48,14 +48,19 @@ Space - run dc op simulation
 
 Shift T - run transient simulation (10u 1m)
 
-### Plot/chart view
+##### Plot/chart view
 (shift) X - horizontal zoom
 
 (shift) Y - vertical zoom 
 
 F - fit viewport to geometry
 
+##### device designer view
+W - draw a line
 
+P - place port (wrong scale at the moment)
+
+### Goals
 Target application is EDA schematic capture
 
 ### Contribute:

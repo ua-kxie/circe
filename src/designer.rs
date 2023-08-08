@@ -1,51 +1,34 @@
-//! Circuit
-//! Concrete types for schematic content
+//! Designer
+//! Concrete types for schematic content for designing device appearances
+//! intended to eventually allow users to define hierarchical devices
+//! for now, intended only to allow devs to quickly draw up basic device symbols
 
-use crate::schematic::nets::NetLabels;
-use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
-use crate::schematic::{
-    self, interactable::Interactive, SchematicElement, SchematicMsg,
-};
+use crate::schematic::devices::port::{RcRPort, Port};
+use crate::schematic::interactable::Interactive;
+use crate::schematic::{self, SchematicElement, SchematicMsg};
+use crate::transforms::VSPoint;
 use crate::{
     transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
     viewport::Drawable,
 };
 use iced::widget::canvas::{event::Event, Frame};
-
 use send_wrapper::SendWrapper;
-use std::cell::RefCell;
-use std::rc::Rc;
+
+use crate::schematic::devices::strokes::{Linear, RcRLinear};
 use std::collections::HashSet;
 
-/// trait for a type of element in schematic. e.g. nets or devices
-pub trait SchematicSet {
-    /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
-    /// count is incremented by 1 for every element skipped over
-    /// skip is updated if an element is returned, equal to count
-    fn selectable(
-        &mut self,
-        curpos_ssp: SSPoint,
-        skip: &mut usize,
-        count: &mut usize,
-    ) -> Option<DesignerElement>;
-
-    /// returns the bounding box of all contained elements
-    fn bounding_box(&self) -> VSBox;
-}
-
-/// an enum to unify different types in schematic (nets and devices)
+/// an enum to unify different types in schematic (lines and ellipses)
 #[derive(Debug, Clone)]
 pub enum DesignerElement {
-    NetEdge(NetEdge),
-    Label(RcRLabel),
+    Linear(RcRLinear),
+    Port(RcRPort),
 }
 
 impl PartialEq for DesignerElement {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::NetEdge(l0), Self::NetEdge(r0)) => *l0 == *r0,
-            (Self::Label(l0), Self::Label(r0)) => {
-                by_address::ByAddress(l0) == by_address::ByAddress(r0)
+            (Self::Linear(l0), Self::Linear(r0)) => {
+                by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
             }
             _ => false,
         }
@@ -57,8 +40,8 @@ impl Eq for DesignerElement {}
 impl std::hash::Hash for DesignerElement {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
-            DesignerElement::NetEdge(e) => e.hash(state),
-            DesignerElement::Label(l) => by_address::ByAddress(l).hash(state),
+            DesignerElement::Linear(rcrl) => by_address::ByAddress(rcrl.0.clone()).hash(state),
+            DesignerElement::Port(rcrp) => by_address::ByAddress(rcrp.0.clone()).hash(state),
         }
     }
 }
@@ -66,22 +49,22 @@ impl std::hash::Hash for DesignerElement {
 impl Drawable for DesignerElement {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match self {
-            DesignerElement::NetEdge(e) => e.draw_persistent(vct, vcscale, frame),
-            DesignerElement::Label(l) => l.draw_persistent(vct, vcscale, frame),
+            DesignerElement::Linear(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
+            DesignerElement::Port(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
         }
     }
 
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match self {
-            DesignerElement::NetEdge(e) => e.draw_selected(vct, vcscale, frame),
-            DesignerElement::Label(l) => l.draw_selected(vct, vcscale, frame),
+            DesignerElement::Linear(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
+            DesignerElement::Port(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
         }
     }
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match self {
-            DesignerElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
-            DesignerElement::Label(l) => l.draw_preview(vct, vcscale, frame),
+            DesignerElement::Linear(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
+            DesignerElement::Port(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
         }
     }
 }
@@ -89,16 +72,22 @@ impl Drawable for DesignerElement {
 impl SchematicElement for DesignerElement {
     fn contains_ssp(&self, ssp: SSPoint) -> bool {
         match self {
-            DesignerElement::NetEdge(e) => e.interactable.contains_ssp(ssp),
-            DesignerElement::Label(l) => l.0.borrow().interactable.contains_ssp(ssp),
+            DesignerElement::Linear(l) => l.0.borrow().interactable.contains_ssp(ssp),
+            DesignerElement::Port(l) => l.0.borrow().interactable.contains_ssp(ssp),
         }
+    }
+}
+
+impl DesignerElement {
+    fn bounding_box(&self) -> VSBox {
+        todo!();
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
     CanvasEvent(Event, SSPoint),
-    Wire,
+    Line,
 }
 
 impl schematic::ContentMsg for Msg {
@@ -111,29 +100,27 @@ impl schematic::ContentMsg for Msg {
 pub enum DesignerSt {
     #[default]
     Idle,
-    Wiring(Option<(Box<Nets>, SSPoint)>),
+    Line(Option<(SSPoint, SSPoint)>),
 }
 
-/// struct holding schematic state (nets, devices, and their locations)
+/// struct holding schematic state (lines and ellipses)
 #[derive(Debug, Default, Clone)]
 pub struct Designer {
     pub infobarstr: Option<String>,
 
     state: DesignerSt,
 
-    nets: Nets,
-    labels: NetLabels,
+    content: HashSet<DesignerElement>,
+
     curpos_ssp: SSPoint,
 }
 
 impl Designer {
     fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
         self.curpos_ssp = curpos_ssp;
-        self.infobarstr = self.nets.net_name_at(curpos_ssp);
         match &mut self.state {
-            DesignerSt::Wiring(Some((nets, ssp_prev))) => {
-                nets.clear();
-                nets.route(*ssp_prev, curpos_ssp);
+            DesignerSt::Line(Some((_ssp0, ssp1))) => {
+                *ssp1 = curpos_ssp;
             }
             DesignerSt::Idle => {}
             _ => {}
@@ -143,8 +130,9 @@ impl Designer {
 
 impl Drawable for Designer {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.nets.draw_persistent(vct, vcscale, frame);
-        self.labels.draw_persistent(vct, vcscale, frame);
+        for e in &self.content {
+            e.draw_persistent(vct, vcscale, frame);
+        }
     }
 
     fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
@@ -153,8 +141,8 @@ impl Drawable for Designer {
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match &self.state {
-            DesignerSt::Wiring(Some((nets, _))) => {
-                nets.draw_preview(vct, vcscale, frame);
+            DesignerSt::Line(Some((ssp0, ssp1))) => {
+                Linear::new(*ssp0, *ssp1).draw_preview(vct, vcscale, frame)
             }
             DesignerSt::Idle => {}
             _ => {}
@@ -164,17 +152,32 @@ impl Drawable for Designer {
 
 impl schematic::Content<DesignerElement, Msg> for Designer {
     fn bounds(&self) -> VSBox {
-        let bbn = self.nets.bounding_box();
-        let bbl = self.labels.bounding_box();
-        bbn.union(&bbl)
+        if !self.content.is_empty() {
+            let v_pts: Vec<_> = self
+                .content
+                .iter()
+                .flat_map(|f| [f.bounding_box().min, f.bounding_box().max])
+                .collect();
+            VSBox::from_points(v_pts)
+        } else {
+            VSBox::from_points([VSPoint::new(-1.0, -1.0), VSPoint::new(1.0, 1.0)])
+        }
     }
     fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<DesignerElement> {
         let mut ret = HashSet::new();
-        for seg in self.nets.intersects_ssbox(&ssb) {
-            ret.insert(DesignerElement::NetEdge(seg));
-        }
-        for rcrl in self.labels.intersects_ssb(&ssb) {
-            ret.insert(DesignerElement::Label(rcrl));
+        for d in &self.content {
+            match d {
+                DesignerElement::Linear(l) => {
+                    if l.0.borrow_mut().interactable.intersects_ssb(&ssb) {
+                        ret.insert(DesignerElement::Linear(l.clone()));
+                    }
+                }
+                DesignerElement::Port(l) => {
+                    if l.0.borrow_mut().interactable.intersects_ssb(&ssb) {
+                        ret.insert(DesignerElement::Port(l.clone()));
+                    }
+                }
+            }
         }
         ret
     }
@@ -191,11 +194,29 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         skip: usize,
         count: &mut usize,
     ) -> Option<DesignerElement> {
-        if let Some(l) = self.labels.selectable(ssp, skip, count) {
-            return Some(DesignerElement::Label(l));
-        }
-        if let Some(e) = self.nets.selectable(ssp, skip, count) {
-            return Some(DesignerElement::NetEdge(e));
+        for d in &self.content {
+            match d {
+                DesignerElement::Linear(l) => {
+                    if l.0.borrow_mut().interactable.contains_ssp(ssp) {
+                        if *count == skip {
+                            // skipped just enough
+                            return Some(d.clone());
+                        } else {
+                            *count += 1;
+                        }
+                    }
+                }
+                DesignerElement::Port(l) => {
+                    if l.0.borrow_mut().interactable.contains_ssp(ssp) {
+                        if *count == skip {
+                            // skipped just enough
+                            return Some(d.clone());
+                        } else {
+                            *count += 1;
+                        }
+                    }
+                }
+            }
         }
         None
     }
@@ -210,6 +231,17 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
                 match (&mut state, event) {
+                    // port placement
+                    (
+                        DesignerSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::P,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(DesignerElement::Port(RcRPort::new(Port::default()))));
+                    }
                     // wiring
                     (
                         DesignerSt::Idle,
@@ -218,43 +250,35 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                             modifiers: _,
                         }),
                     ) => {
-                        state = DesignerSt::Wiring(None);
+                        state = DesignerSt::Line(None);
                     }
                     (
-                        DesignerSt::Wiring(opt_ws),
+                        DesignerSt::Line(opt_ws),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
                         let ssp = curpos_ssp;
                         let new_ws;
-                        if let Some((g, prev_ssp)) = opt_ws {
+                        if let Some((ssp0, _ssp1)) = opt_ws {
                             // subsequent click
-                            if ssp == *prev_ssp {
+                            if ssp == *ssp0 {
                                 new_ws = None;
                             } else if self.occupies_ssp(ssp) {
-                                self.nets.merge(g.as_ref(), vec![]);
+                                self.content.insert(DesignerElement::Linear(RcRLinear::new(
+                                    Linear::new(*ssp0, ssp),
+                                )));
                                 new_ws = None;
                             } else {
-                                self.nets.merge(g.as_ref(), vec![]);
-                                new_ws = Some((Box::<Nets>::default(), ssp));
+                                self.content.insert(DesignerElement::Linear(RcRLinear::new(
+                                    Linear::new(*ssp0, ssp),
+                                )));
+                                new_ws = Some((ssp, ssp));
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
                         } else {
                             // first click
-                            new_ws = Some((Box::<Nets>::default(), ssp));
+                            new_ws = Some((ssp, ssp));
                         }
-                        state = DesignerSt::Wiring(new_ws);
-                    }
-                    // label
-                    (
-                        DesignerSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::L,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        let l = NetLabels::new_label();
-                        ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(DesignerElement::Label(l)));
+                        state = DesignerSt::Line(new_ws);
                     }
                     // state reset
                     (
@@ -271,8 +295,8 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                 self.state = state;
                 ret_msg_tmp
             }
-            Msg::Wire => {
-                self.state = DesignerSt::Wiring(None);
+            Msg::Line => {
+                self.state = DesignerSt::Line(None);
                 SchematicMsg::None
             }
         };
@@ -282,14 +306,17 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
     fn move_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &SSTransform) {
         for e in elements {
             match e {
-                DesignerElement::NetEdge(e) => {
-                    self.nets.transform(e.clone(), *sst);
-                }
-                DesignerElement::Label(l) => {
+                DesignerElement::Linear(l) => {
                     l.0.borrow_mut().transform(*sst);
-                    // if moving an existing label, does nothing
-                    // inserts the label if placing a new label
-                    self.labels.insert(l.clone());
+                    // if moving an existing line, does nothing
+                    // inserts the line if placing a new line
+                    self.content.insert(DesignerElement::Linear(l.clone()));
+                }
+                DesignerElement::Port(l) => {
+                    l.0.borrow_mut().transform(*sst);
+                    // if moving an existing line, does nothing
+                    // inserts the line if placing a new line
+                    self.content.insert(DesignerElement::Port(l.clone()));
                 }
             }
         }
@@ -298,24 +325,25 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
     fn copy_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &SSTransform) {
         for e in elements {
             match e {
-                DesignerElement::NetEdge(seg) => {
-                    let mut seg = seg.clone();
-                    seg.transform(*sst);
-                    self.nets
-                        .graph
-                        .add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg.clone());
-                }
-                DesignerElement::Label(rcl) => {
+                DesignerElement::Linear(rcl) => {
                     //unwrap refcell
                     let refcell_d = rcl.0.borrow();
-                    let mut label = (*refcell_d).clone();
-                    label.transform(*sst);
+                    let mut line = (*refcell_d).clone();
+                    line.transform(*sst);
 
                     //build BaseElement
-                    let l_refcell = RefCell::new(label);
-                    let l_rc = Rc::new(l_refcell);
-                    let rcr_label = RcRLabel(l_rc);
-                    self.labels.insert(rcr_label);
+                    self.content
+                        .insert(DesignerElement::Linear(RcRLinear::new(line)));
+                }
+                DesignerElement::Port(rcl) => {
+                    //unwrap refcell
+                    let refcell_d = rcl.0.borrow();
+                    let mut port = (*refcell_d).clone();
+                    port.transform(*sst);
+
+                    //build BaseElement
+                    self.content
+                        .insert(DesignerElement::Port(RcRPort::new(port)));
                 }
             }
         }
@@ -323,14 +351,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
     fn delete_elements(&mut self, elements: &HashSet<DesignerElement>) {
         for e in elements {
-            match e {
-                DesignerElement::NetEdge(e) => {
-                    self.nets.delete_edge(e);
-                }
-                DesignerElement::Label(l) => {
-                    self.labels.delete_item(l);
-                }
-            }
+            self.content.remove(e);
         }
     }
 
