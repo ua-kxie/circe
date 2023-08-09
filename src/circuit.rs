@@ -7,8 +7,9 @@ use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
 use crate::schematic::{
     self, interactable::Interactive, RcRDevice, SchematicElement, SchematicMsg,
 };
+use crate::transforms::VSPoint;
 use crate::{
-    transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
+    transforms::{SSPoint, VCTransform, VSBox, VVTransform},
     viewport::Drawable,
 };
 use iced::widget::canvas::{event::Event, Frame};
@@ -96,26 +97,26 @@ impl Drawable for CircuitElement {
 }
 
 impl SchematicElement for CircuitElement {
-    fn contains_ssp(&self, ssp: SSPoint) -> bool {
+    fn contains_vsp(&self, vsp: VSPoint) -> bool {
         match self {
-            CircuitElement::NetEdge(e) => e.interactable.contains_ssp(ssp),
-            CircuitElement::Device(d) => d.0.borrow().interactable.contains_ssp(ssp),
-            CircuitElement::Label(l) => l.0.borrow().interactable.contains_ssp(ssp),
+            CircuitElement::NetEdge(e) => e.interactable.contains_vsp(vsp),
+            CircuitElement::Device(d) => d.0.borrow().interactable.contains_vsp(vsp),
+            CircuitElement::Label(l) => l.0.borrow().interactable.contains_vsp(vsp),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    CanvasEvent(Event, SSPoint),
+    CanvasEvent(Event, VSPoint),
     Wire,
     NetList,
     DcOp(PkVecvaluesall),
 }
 
 impl schematic::ContentMsg for Msg {
-    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self {
-        Msg::CanvasEvent(event, curpos_ssp)
+    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
+        Msg::CanvasEvent(event, curpos_vsp)
     }
 }
 
@@ -140,7 +141,11 @@ pub struct Circuit {
 }
 
 impl Circuit {
-    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
+    pub fn curpos_ssp(&self) -> SSPoint {
+        self.curpos_ssp
+    }
+    fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
+        let curpos_ssp = curpos_vsp.round().cast().cast_unit();
         self.curpos_ssp = curpos_ssp;
         self.infobarstr = self.nets.net_name_at(curpos_ssp);
         match &mut self.state {
@@ -151,6 +156,10 @@ impl Circuit {
             CircuitSt::Idle => {}
             _ => {}
         }
+    }
+
+    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+        self.nets.occupies_ssp(ssp) || self.devices.any_port_occupy_ssp(ssp)
     }
 }
 
@@ -183,39 +192,35 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         let bbl = self.labels.bounding_box();
         bbn.union(&bbi).union(&bbl)
     }
-    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<CircuitElement> {
+    fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<CircuitElement> {
         let mut ret = HashSet::new();
-        for seg in self.nets.intersects_ssbox(&ssb) {
+        for seg in self.nets.intersects_vsbox(&vsb) {
             ret.insert(CircuitElement::NetEdge(seg));
         }
-        for rcrd in self.devices.intersects_ssb(&ssb) {
+        for rcrd in self.devices.intersects_vsb(&vsb) {
             ret.insert(CircuitElement::Device(rcrd));
         }
-        for rcrl in self.labels.intersects_ssb(&ssb) {
+        for rcrl in self.labels.intersects_vsb(&vsb) {
             ret.insert(CircuitElement::Label(rcrl));
         }
         ret
-    }
-
-    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.nets.occupies_ssp(ssp) || self.devices.any_port_occupy_ssp(ssp)
     }
 
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
     /// count is updated to track the number of elements skipped over
     fn selectable(
         &mut self,
-        ssp: SSPoint,
+        vsp: VSPoint,
         skip: usize,
         count: &mut usize,
     ) -> Option<CircuitElement> {
-        if let Some(l) = self.labels.selectable(ssp, skip, count) {
+        if let Some(l) = self.labels.selectable(vsp, skip, count) {
             return Some(CircuitElement::Label(l));
         }
-        if let Some(e) = self.nets.selectable(ssp, skip, count) {
+        if let Some(e) = self.nets.selectable(vsp, skip, count) {
             return Some(CircuitElement::NetEdge(e));
         }
-        if let Some(d) = self.devices.selectable(ssp, skip, count) {
+        if let Some(d) = self.devices.selectable(vsp, skip, count) {
             return Some(CircuitElement::Device(d));
         }
         None
@@ -223,9 +228,9 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
         let ret_msg = match msg {
-            Msg::CanvasEvent(event, curpos_ssp) => {
+            Msg::CanvasEvent(event, curpos_vsp) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_ssp(curpos_ssp);
+                    self.update_cursor_vsp(curpos_vsp);
                 }
 
                 let mut state = self.state.clone();
@@ -245,7 +250,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Wiring(opt_ws),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
-                        let ssp = curpos_ssp;
+                        let ssp = self.curpos_ssp();
                         let new_ws;
                         if let Some((g, prev_ssp)) = opt_ws {
                             // subsequent click
@@ -342,7 +347,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         ret_msg
     }
 
-    fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
+    fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &VVTransform) {
         for e in elements {
             match e {
                 CircuitElement::NetEdge(e) => {
@@ -365,7 +370,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         self.prune();
     }
 
-    fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &SSTransform) {
+    fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &VVTransform) {
         for e in elements {
             match e {
                 CircuitElement::NetEdge(seg) => {

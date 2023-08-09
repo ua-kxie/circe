@@ -6,13 +6,10 @@ pub mod interactable;
 pub(crate) mod nets;
 
 pub use self::devices::RcRDevice;
-use crate::transforms::CSVec;
+use crate::transforms::{CSVec, VVTransform};
 use crate::viewport;
 use crate::{
-    transforms::{
-        self, CSPoint, Point, SSBox, SSPoint, SSTransform, VCTransform, VSBox, VSPoint,
-        ViewportSpace,
-    },
+    transforms::{self, CSPoint, Point, SSTransform, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
 use iced::keyboard::Modifiers;
@@ -29,7 +26,7 @@ use std::hash::Hash;
 
 pub trait SchematicElement: Hash + Eq + Drawable + Clone {
     /// returns true if self contains ssp
-    fn contains_ssp(&self, ssp: SSPoint) -> bool;
+    fn contains_vsp(&self, vsp: VSPoint) -> bool;
 }
 
 /// Internal Schematic Message
@@ -49,7 +46,7 @@ where
 /// Trait for message type of schematic content
 pub trait ContentMsg {
     /// Create message to have schematic content process canvas event
-    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self;
+    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self;
 }
 
 /// Message type which is a composite of canvas Event, SchematicMsg, and ContentMsg
@@ -87,19 +84,20 @@ pub enum SchematicSt {
     #[default]
     Idle,
     /// left click-drag area selection
-    AreaSelect(SSBox),
+    AreaSelect(VSBox),
     /// selected elements preview follow mouse cursor - move, new device,
-    Moving(Option<(SSPoint, SSPoint, SSTransform)>),
+    Moving(Option<(VSPoint, VSPoint, SSTransform)>),
     /// identical to `Moving` state but signals content to make copy of elements instead of move
-    Copying(Option<(SSPoint, SSPoint, SSTransform)>),
+    Copying(Option<(VSPoint, VSPoint, SSTransform)>),
 }
 
 impl SchematicSt {
     /// this function returns a transform which applies sst about ssp0 and then translates to ssp1
-    fn move_transform(ssp0: &SSPoint, ssp1: &SSPoint, sst: &SSTransform) -> SSTransform {
-        sst.pre_translate(SSPoint::origin() - *ssp0)
-            .then_translate(*ssp0 - SSPoint::origin())
-            .then_translate(*ssp1 - *ssp0)
+    fn move_transform(vsp0: VSPoint, vsp1: VSPoint, sst: SSTransform) -> VVTransform {
+        let vvt = transforms::sst_to_vvt(sst);
+        vvt.pre_translate(VSPoint::origin() - vsp0)
+            .then_translate(vsp0 - VSPoint::origin())
+            .then_translate(vsp1 - vsp0)
     }
 }
 
@@ -110,21 +108,21 @@ where
     /// return true if content is in its default/idle state
     fn is_idle(&self) -> bool;
     /// apply sst to elements
-    fn move_elements(&mut self, elements: &HashSet<E>, sst: &SSTransform);
+    fn move_elements(&mut self, elements: &HashSet<E>, vvt: &VVTransform);
     /// apply sst to a copy of elements
-    fn copy_elements(&mut self, elements: &HashSet<E>, sst: &SSTransform);
+    fn copy_elements(&mut self, elements: &HashSet<E>, vvt: &VVTransform);
     /// delete elements
     fn delete_elements(&mut self, elements: &HashSet<E>);
     /// process message, returns whether or not to clear the passive cache
     fn update(&mut self, msg: M) -> SchematicMsg<E>;
     /// return bounds which enclose all elements
     fn bounds(&self) -> VSBox;
-    /// return whether or not ssp intersects with any schematic element
-    fn occupies_ssp(&self, ssp: SSPoint) -> bool;
+    // /// return whether or not ssp intersects with any schematic element
+    // fn occupies_vsp(&self, vsp: VSPoint) -> bool;
     /// returns a single SchematicElement over which ssp lies. Skips the first skip elements
-    fn selectable(&mut self, ssp: SSPoint, skip: usize, count: &mut usize) -> Option<E>;
+    fn selectable(&mut self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<E>;
     ///  returns hashset of elements which intersects ssb
-    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<E>;
+    fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<E>;
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
@@ -149,7 +147,7 @@ where
     /// Hashset of tentative elements (mouse hovering over, inside area selection)
     tentatives: HashSet<E>,
     /// cursor position in schematic space
-    curpos_ssp: SSPoint,
+    curpos_vsp: VSPoint,
 }
 
 impl<C, E, M> Default for Schematic<C, E, M>
@@ -166,7 +164,7 @@ where
             selected: Default::default(),
             tentatives: Default::default(),
             content_msg: std::marker::PhantomData,
-            curpos_ssp: Default::default(),
+            curpos_vsp: Default::default(),
         }
     }
 }
@@ -192,9 +190,9 @@ where
     fn draw_active(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match &self.state {
             SchematicSt::Idle => {}
-            SchematicSt::AreaSelect(ssb) => {
+            SchematicSt::AreaSelect(vsb) => {
                 // draw the selection area
-                let color = if ssb.height() > 0 {
+                let color = if vsb.height() > 0.0 {
                     Color::from_rgba(1., 1., 0., 0.1)
                 } else {
                     Color::from_rgba(0., 1., 1., 0.1)
@@ -203,7 +201,7 @@ where
                     style: canvas::Style::Solid(color),
                     ..canvas::Fill::default()
                 };
-                let csb = vct.outer_transformed_box(&ssb.cast().cast_unit());
+                let csb = vct.outer_transformed_box(&vsb.cast().cast_unit());
                 let size = Size::new(csb.width(), csb.height());
                 frame.fill_rectangle(Point::from(csb.min).into(), size, f);
 
@@ -221,12 +219,10 @@ where
                 };
                 frame.stroke(&path_builder.build(), stroke);
             }
-            SchematicSt::Moving(Some((ssp0, ssp1, sst)))
-            | SchematicSt::Copying(Some((ssp0, ssp1, sst))) => {
+            SchematicSt::Moving(Some((vsp0, vsp1, vvt)))
+            | SchematicSt::Copying(Some((vsp0, vsp1, vvt))) => {
                 // draw selected preview with transform applied
-                let vvt = transforms::sst_to_xxt::<ViewportSpace>(SchematicSt::move_transform(
-                    ssp0, ssp1, sst,
-                ));
+                let vvt = SchematicSt::move_transform(*vsp0, *vsp1, *vvt);
 
                 let vct_c = vvt.then(&vct);
                 for be in &self.selected {
@@ -246,7 +242,7 @@ where
         self.content.draw_preview(vct, vcscale, frame);
 
         /// draw the cursor onto canvas
-        pub fn draw_cursor(vct: VCTransform, frame: &mut Frame, curpos_ssp: SSPoint) {
+        pub fn draw_cursor(vct: VCTransform, frame: &mut Frame, curpos_vsp: VSPoint) {
             let cursor_stroke = || -> Stroke {
                 Stroke {
                     width: 1.0,
@@ -256,13 +252,13 @@ where
                 }
             };
             let curdim = 5.0;
-            let csp = vct.transform_point(curpos_ssp.cast().cast_unit());
+            let csp = vct.transform_point(curpos_vsp);
             let csp_topleft = csp - CSVec::from([curdim / 2.; 2]);
             let s = iced::Size::from([curdim, curdim]);
             let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
             frame.stroke(&c, cursor_stroke());
         }
-        draw_cursor(vct, frame, self.curpos_ssp);
+        draw_cursor(vct, frame, self.curpos_vsp);
     }
     /// draw onto passive cache
     fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
@@ -287,10 +283,10 @@ where
                 if curpos_vsp.is_none() {
                     return false;
                 }
-                let curpos_ssp = curpos_vsp.unwrap().round().cast().cast_unit();
+                let curpos_vsp = curpos_vsp.unwrap();
 
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_ssp(curpos_ssp);
+                    self.update_cursor_vsp(curpos_vsp);
                 }
 
                 if self.content.is_idle() {
@@ -306,7 +302,7 @@ where
                             let mut click_selected = false;
 
                             for s in &self.selected {
-                                if s.contains_ssp(curpos_ssp) {
+                                if s.contains_vsp(curpos_vsp) {
                                     click_selected = true;
                                     break;
                                 }
@@ -314,13 +310,13 @@ where
 
                             if click_selected {
                                 self.state = SchematicSt::Moving(Some((
-                                    curpos_ssp,
-                                    curpos_ssp,
+                                    curpos_vsp,
+                                    curpos_vsp,
                                     SSTransform::identity(),
                                 )));
                             } else {
                                 self.state =
-                                    SchematicSt::AreaSelect(SSBox::new(curpos_ssp, curpos_ssp));
+                                    SchematicSt::AreaSelect(VSBox::new(curpos_vsp, curpos_vsp));
                             }
                         }
 
@@ -364,17 +360,17 @@ where
                                 iced::mouse::Button::Left,
                             )),
                         ) => {
-                            if let Some((ssp0, ssp1, sst)) = &mut opt_pts {
+                            if let Some((vsp0, vsp1, vvt)) = &mut opt_pts {
                                 self.content.move_elements(
                                     &self.selected,
-                                    &SchematicSt::move_transform(ssp0, ssp1, sst),
+                                    &SchematicSt::move_transform(*vsp0, *vsp1, *vvt),
                                 );
                                 clear_passive = true;
                                 self.state = SchematicSt::Idle;
                             } else {
                                 let sst = SSTransform::identity();
                                 self.state =
-                                    SchematicSt::Moving(Some((curpos_ssp, curpos_ssp, sst)));
+                                    SchematicSt::Moving(Some((curpos_vsp, curpos_vsp, sst)));
                             }
                         }
                         // copying
@@ -393,18 +389,18 @@ where
                                 iced::mouse::Button::Left,
                             )),
                         ) => match opt_pts {
-                            Some((ssp0, ssp1, sst)) => {
+                            Some((vsp0, vsp1, vvt)) => {
                                 self.content.copy_elements(
                                     &self.selected,
-                                    &SchematicSt::move_transform(ssp0, ssp1, sst),
+                                    &SchematicSt::move_transform(*vsp0, *vsp1, *vvt),
                                 );
                                 clear_passive = true;
                                 self.state = SchematicSt::Idle;
                             }
                             None => {
                                 self.state = SchematicSt::Copying(Some((
-                                    curpos_ssp,
-                                    curpos_ssp,
+                                    curpos_vsp,
+                                    curpos_vsp,
                                     SSTransform::identity(),
                                 )));
                             }
@@ -429,7 +425,7 @@ where
                                 modifiers: _,
                             }),
                         ) => {
-                            self.tentative_next_by_ssp(curpos_ssp);
+                            self.tentative_next_by_vsp(curpos_vsp);
                             clear_passive = true;
                         }
 
@@ -451,13 +447,13 @@ where
                         },
                         // something else - pass to content
                         _ => {
-                            let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
+                            let m = self.content.update(M::canvas_event_msg(event, curpos_vsp));
                             clear_passive = self.update(Msg::SchematicMsg(m));
                         }
                     }
                 } else {
                     // if content is not idling, pass event directly to content
-                    let m = self.content.update(M::canvas_event_msg(event, curpos_ssp));
+                    let m = self.content.update(M::canvas_event_msg(event, curpos_vsp));
                     clear_passive = self.update(Msg::SchematicMsg(m));
                 }
             }
@@ -476,8 +472,8 @@ where
                         self.selected.clear();
                         self.selected.insert(e.take());
                         self.state = SchematicSt::Moving(Some((
-                            SSPoint::origin(),
-                            self.curpos_ssp,
+                            VSPoint::origin(),
+                            self.curpos_vsp,
                             SSTransform::identity(),
                         )));
                     }
@@ -503,42 +499,41 @@ where
     //     }
     // }
     /// update schematic cursor position
-    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
-        self.curpos_ssp = curpos_ssp;
-        self.tentative_by_sspoint(curpos_ssp, &mut self.selskip.clone());
+    fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
+        self.tentative_by_vspoint(curpos_vsp, &mut self.selskip.clone());
 
         let mut stcp = self.state;
         match &mut stcp {
-            SchematicSt::AreaSelect(ssb) => {
-                ssb.max = curpos_ssp;
-                self.tentatives_by_ssbox(ssb);
+            SchematicSt::AreaSelect(vsb) => {
+                vsb.max = curpos_vsp;
+                self.tentatives_by_vsbox(vsb);
             }
             SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
-                *ssp1 = curpos_ssp;
+                *ssp1 = curpos_vsp;
             }
             SchematicSt::Copying(Some((_ssp0, ssp1, _sst))) => {
-                *ssp1 = curpos_ssp;
+                *ssp1 = curpos_vsp;
             }
             _ => {}
         }
         self.state = stcp;
     }
     /// set tentative flags by intersection with ssb
-    pub fn tentatives_by_ssbox(&mut self, ssb: &SSBox) {
-        let ssb_p = SSBox::from_points([ssb.min, ssb.max]).inflate(1, 1);
-        self.tentatives = self.content.intersects_ssb(ssb_p)
+    pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
+        let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
+        self.tentatives = self.content.intersects_vsb(vsb_p)
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
-    pub fn tentative_by_sspoint(&mut self, ssp: SSPoint, skip: &mut usize) {
+    pub fn tentative_by_vspoint(&mut self, vsp: VSPoint, skip: &mut usize) {
         self.tentatives.clear();
-        if let Some(e) = self.selectable(ssp, skip) {
+        if let Some(e) = self.selectable(vsp, skip) {
             self.tentatives.insert(e);
         }
     }
     /// set 1 tentative flag by ssp, sets flag on next qualifying element. Returns netname i tentative is a net segment
-    pub fn tentative_next_by_ssp(&mut self, ssp: SSPoint) {
+    pub fn tentative_next_by_vsp(&mut self, vsp: VSPoint) {
         let mut skip = self.selskip.wrapping_add(1);
-        self.tentative_by_sspoint(ssp, &mut skip);
+        self.tentative_by_vspoint(vsp, &mut skip);
         self.selskip = skip;
     }
     /// put every element with tentative flag set into selected vector
@@ -551,10 +546,10 @@ where
         self.tentatives.clear();
     }
     /// set 1 tentative flag based on ssp and skip number. Returns the flagged element, if any.
-    fn selectable(&mut self, ssp: SSPoint, skip: &mut usize) -> Option<E> {
+    fn selectable(&mut self, vsp: VSPoint, skip: &mut usize) -> Option<E> {
         loop {
             let mut count = 0; // tracks the number of skipped elements
-            if let Some(e) = self.content.selectable(ssp, *skip, &mut count) {
+            if let Some(e) = self.content.selectable(vsp, *skip, &mut count) {
                 return Some(e);
             }
             if count == 0 {

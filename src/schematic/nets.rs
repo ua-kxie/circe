@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::{
     schematic::interactable::Interactive,
-    transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
+    transforms::{SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
 };
 use petgraph::algo::tarjan_scc;
 use petgraph::graphmap::GraphMap;
@@ -93,12 +93,12 @@ impl Nets {
     /// count is updated to track the number of elements skipped over
     pub fn selectable(
         &mut self,
-        curpos_ssp: SSPoint,
+        curpos_vsp: VSPoint,
         skip: usize,
         count: &mut usize,
     ) -> Option<NetEdge> {
         for e in self.graph.all_edges_mut() {
-            if e.2.interactable.contains_ssp(curpos_ssp) {
+            if e.2.interactable.contains_vsp(curpos_vsp) {
                 if *count == skip {
                     // has skipped enough elements
                     return Some(e.2.clone());
@@ -128,10 +128,10 @@ impl Nets {
         // self.label_manager.new_floating_label()
     }
     /// return unique NetEdges bound within ssb
-    pub fn intersects_ssbox(&mut self, ssb: &SSBox) -> Vec<NetEdge> {
+    pub fn intersects_vsbox(&mut self, vsb: &VSBox) -> Vec<NetEdge> {
         let mut ret = vec![];
         for e in self.graph.all_edges() {
-            if e.2.interactable.bounds.intersects(ssb) {
+            if e.2.interactable.bounds.cast().cast_unit().intersects(vsb) {
                 ret.push(e.2.clone());
             }
         }
@@ -196,7 +196,7 @@ impl Nets {
         for v in &all_vertices {
             let mut colliding_edges = vec![];
             for e in self.graph.all_edges() {
-                if e.2.intersects_ssp(v.0) {
+                if e.2.intersects_vsp(v.0.cast().cast_unit()) {
                     colliding_edges.push((e.0, e.1, e.2.label.clone()));
                 }
             }
@@ -250,7 +250,7 @@ impl Nets {
                         label: first_e.2.label.clone(),
                         interactable: NetEdge::interactable(src.0, dst.0),
                     };
-                    if ew.intersects_ssp(v.0) {
+                    if ew.intersects_vsp(v.0.cast().cast_unit()) {
                         self.graph.remove_node(v);
                         self.graph.add_edge(src, dst, ew);
                     }
@@ -262,7 +262,7 @@ impl Nets {
         for v in extra_vertices {
             let mut colliding_edges = vec![];
             for e in self.graph.all_edges() {
-                if e.2.intersects_ssp(v) {
+                if e.2.intersects_vsp(v.cast().cast_unit()) {
                     colliding_edges.push((e.0, e.1, e.2.label.clone()));
                 }
             }
@@ -305,7 +305,7 @@ impl Nets {
     /// returns true if any net segment intersects with ssp
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         for (_, _, edge) in self.graph.all_edges() {
-            if edge.interactable.contains_ssp(ssp) {
+            if edge.interactable.contains_vsp(ssp.cast().cast_unit()) {
                 return true;
             }
         }
@@ -381,7 +381,7 @@ impl Nets {
         self.prune(extra_vertices);
     }
     /// applies transformation sst to NetEdge e. Moves an existing edge or adds a new one with the transformation applied.
-    pub fn transform(&mut self, mut e: NetEdge, sst: SSTransform) {
+    pub fn transform(&mut self, mut e: NetEdge, sst: VVTransform) {
         self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
         e.transform(sst);
         self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);

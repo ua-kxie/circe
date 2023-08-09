@@ -67,8 +67,8 @@ impl IcedStruct<DevicePageMsg> for DevicePage {
     fn view(&self) -> Element<DevicePageMsg> {
         let str_ssp = format!(
             "x: {}; y: {}",
-            self.viewport.curpos_ssp().x,
-            self.viewport.curpos_ssp().y
+            self.viewport.content.content.curpos_vsp().x,
+            self.viewport.content.content.curpos_vsp().y
         );
         let canvas = self.viewport.view().map(DevicePageMsg::ViewportEvt);
         let pe =

@@ -2,7 +2,7 @@
 
 use std::ops::Mul;
 
-use euclid::{Point2D, Transform2D};
+use euclid::Point2D;
 use iced::Point as IcedPoint;
 use serde::{Deserialize, Serialize};
 
@@ -51,6 +51,8 @@ pub type VCTransform = euclid::Transform2D<f32, ViewportSpace, CanvasSpace>;
 pub type CVTransform = euclid::Transform2D<f32, CanvasSpace, ViewportSpace>;
 /// schematic space transform
 pub type SSTransform = euclid::Transform2D<i16, SchematicSpace, SchematicSpace>;
+/// viewport space transform
+pub type VVTransform = euclid::Transform2D<f32, ViewportSpace, ViewportSpace>;
 
 /// viewport to canvas space transform with locked aspect ratio
 #[derive(Debug, Clone, Copy)]
@@ -176,9 +178,22 @@ pub const SST_CWR: SSTransform = SSTransform::new(0, -1, 1, 0, 0, 0);
 /// 90 deg counter clockwise rotation transform
 pub const SST_CCWR: SSTransform = SSTransform::new(0, 1, -1, 0, 0, 0);
 
-/// converts SSTransform to VVTransform so that it can be composited with VCTransform
-pub fn sst_to_xxt<T>(sst: SSTransform) -> Transform2D<f32, T, T> {
+/// converts SSTransform to SSTransform so that it can be composited with VCTransform
+pub fn sst_to_vvt(sst: SSTransform) -> VVTransform {
     sst.cast().with_destination().with_source()
+}
+
+/// converts SSTransform to SSTransform so that it can be composited with VCTransform
+pub fn vvt_to_sst(vvt: VVTransform) -> SSTransform {
+    SSTransform {
+        m11: vvt.m11.round() as i16,
+        m12: vvt.m12.round() as i16,
+        m21: vvt.m21.round() as i16,
+        m22: vvt.m22.round() as i16,
+        m31: vvt.m31.round() as i16,
+        m32: vvt.m32.round() as i16,
+        _unit: std::marker::PhantomData,
+    }
 }
 
 /// Newtype for working with iced::Point and euclid::Point2D s

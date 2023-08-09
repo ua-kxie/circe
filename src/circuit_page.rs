@@ -278,8 +278,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
     fn view(&self) -> Element<CircuitPageMsg> {
         let str_ssp = format!(
             "x: {}; y: {}",
-            self.viewport.curpos_ssp().x,
-            self.viewport.curpos_ssp().y
+            self.viewport.content.content.curpos_ssp().x,
+            self.viewport.content.content.curpos_ssp().y
         );
         let canvas = self.viewport.view().map(CircuitPageMsg::ViewportEvt);
         let pe =

@@ -6,9 +6,9 @@ use iced::{
 };
 
 use crate::{
+    schematic::devices::port::Port,
     transforms::{Point, SSBox, VCTransform, VSPoint},
     viewport::Drawable,
-    schematic::devices::port::Port,
 };
 
 pub mod gnd;

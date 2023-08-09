@@ -6,8 +6,7 @@
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
 use crate::transforms::{
-    CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformLockedAspect, VSBox,
-    VSPoint, VSVec,
+    CSBox, CSPoint, CVTransform, Point, VCTransform, VCTransformLockedAspect, VSBox, VSPoint, VSVec,
 };
 use crate::IcedStruct;
 use iced::widget::canvas::path::Arc;
@@ -103,15 +102,12 @@ where
     vct: VCTransformLockedAspect,
 
     /// the cursor positions in the different spaces
-    curpos: (CSPoint, VSPoint, SSPoint),
+    curpos: (CSPoint, VSPoint),
 
     /// zoom in limit
     max_zoom: f32,
     /// zoom out limit
     min_zoom: f32,
-    /// ssp always rounds to i16. This scale allows snapping to fixed f32 intervals if not 1.0
-    /// effectively the transform from schematic space to viewport space
-    scale: f32,
 }
 
 impl<C, M> canvas::Program<CompositeMsg<M>> for Viewport<C, M>
@@ -255,9 +251,8 @@ where
     C: Content<M>,
     M: ContentMsg,
 {
-    pub fn new(scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransformLockedAspect) -> Self {
+    pub fn new(_scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransformLockedAspect) -> Self {
         Viewport {
-            scale,
             min_zoom,
             max_zoom,
             vct,
@@ -396,17 +391,6 @@ where
         self.curpos.1
     }
 
-    /// returns the cursor position in schematic space
-    pub fn curpos_ssp(&self) -> SSPoint {
-        self.curpos.2
-    }
-
-    /// returns the cursor position in schematic space
-    #[allow(dead_code)]
-    pub fn curpos_vsp_scaled(&self) -> VSPoint {
-        self.curpos.1 * self.scale
-    }
-
     /// change transform such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
     pub fn display_bounds(&self, csb: CSBox, vsb: VSBox, csp: CSPoint) -> Msg {
         let vct = VCTransformLockedAspect::fit_bounds(csb, vsb, self.min_zoom, self.max_zoom);
@@ -446,13 +430,12 @@ where
     /// update the cursor position
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
-        let ssp1: SSPoint = vsp1.round().cast().cast_unit();
-        self.curpos = (csp1, vsp1, ssp1);
+        self.curpos = (csp1, vsp1);
     }
 
     /// change the viewport zoom by scale
     pub fn zoom(&self, zoom_scale: f32, curpos_csp: CSPoint) -> Msg {
-        let (csp, vsp, _) = self.curpos;
+        let (csp, vsp) = self.curpos;
         let scaled_transform = self.vct.then_scale(zoom_scale);
 
         let mut new_transform; // transform with applied scale and translated to maintain p_viewport position
@@ -482,47 +465,31 @@ where
             content: String::from("origin"),
             position: Point::from(self.vc_transform().transform_point(VSPoint::origin())).into(),
             color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
-            size: self.vc_scale() * self.scale,
+            size: self.vc_scale(),
             ..Default::default()
         };
         frame.fill_text(a);
         let ref_stroke = Stroke {
-            width: (0.1 * self.vc_scale() * self.scale).clamp(0.1, 3.0),
+            width: (0.1 * self.vc_scale()).clamp(0.1, 3.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
         let mut path_builder = Builder::new();
         path_builder.move_to(
-            Point::from(
-                self.vc_transform()
-                    .transform_point(VSPoint::new(0.0, 1.0) * self.scale),
-            )
-            .into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, 1.0))).into(),
         );
         path_builder.line_to(
-            Point::from(
-                self.vc_transform()
-                    .transform_point(VSPoint::new(0.0, -1.0) * self.scale),
-            )
-            .into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(0.0, -1.0))).into(),
         );
         path_builder.move_to(
-            Point::from(
-                self.vc_transform()
-                    .transform_point(VSPoint::new(1.0, 0.0) * self.scale),
-            )
-            .into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(1.0, 0.0))).into(),
         );
         path_builder.line_to(
-            Point::from(
-                self.vc_transform()
-                    .transform_point(VSPoint::new(-1.0, 0.0) * self.scale),
-            )
-            .into(),
+            Point::from(self.vc_transform().transform_point(VSPoint::new(-1.0, 0.0))).into(),
         );
         let p = self.vc_transform().transform_point(VSPoint::origin());
-        let r = self.vc_scale() * self.scale * 0.5;
+        let r = self.vc_scale() * 0.5;
         path_builder.circle(Point::from(p).into(), r);
 
         path_builder.arc(Arc {
@@ -566,14 +533,14 @@ where
                 frame.stroke(&c, stroke.clone());
             }
         }
-        let coarse_grid_threshold: f32 = 2.0 / self.scale;
-        let fine_grid_threshold: f32 = 6.0 / self.scale;
+        let coarse_grid_threshold: f32 = 2.0;
+        let fine_grid_threshold: f32 = 6.0;
         if self.vc_scale() > coarse_grid_threshold {
             // draw coarse grid
-            let spacing = 16.0 * self.scale;
+            let spacing = 16.0;
 
             let grid_stroke = Stroke {
-                width: (0.5 * self.vc_scale() * self.scale).clamp(0.5, 3.0),
+                width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
                 style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
                 line_cap: LineCap::Round,
                 line_dash: LineDash {
@@ -593,7 +560,7 @@ where
 
             if self.vc_scale() > fine_grid_threshold {
                 // draw fine grid if sufficiently zoomed in
-                let spacing = 2.0 * self.scale;
+                let spacing = 2.0;
 
                 let grid_stroke = Stroke {
                     width: 1.0,

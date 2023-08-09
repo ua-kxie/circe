@@ -9,7 +9,7 @@ pub mod port;
 pub mod strokes;
 
 use crate::{
-    transforms::{SSBox, SSPoint, VCTransform, VSBox},
+    transforms::{SSPoint, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
 use deviceinstance::Device;
@@ -97,12 +97,12 @@ impl Devices {
     /// count is updated to track the number of elements skipped over
     pub fn selectable(
         &mut self,
-        curpos_ssp: SSPoint,
+        curpos_vsp: VSPoint,
         skip: usize,
         count: &mut usize,
     ) -> Option<RcRDevice> {
         for d in &self.set {
-            if d.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
+            if d.0.borrow_mut().interactable.contains_vsp(curpos_vsp) {
                 if *count == skip {
                     // skipped just enough
                     return Some(d.clone());
@@ -122,7 +122,7 @@ impl Devices {
             ]
             .into_iter()
         });
-        SSBox::from_points(pts).cast().cast_unit()
+        VSBox::from_points(pts)
     }
     /// process dc operating point simulation results - draws the voltage of connected nets near the connected port
     pub fn op(&mut self, pkvecvaluesall: &paprika::PkVecvaluesall) {
@@ -143,12 +143,19 @@ impl Devices {
         }
     }
     /// return vector of RcRDevice which intersects ssb
-    pub fn intersects_ssb(&self, ssb: &SSBox) -> Vec<RcRDevice> {
+    pub fn intersects_vsb(&self, vsb: &VSBox) -> Vec<RcRDevice> {
         let ret: Vec<_> = self
             .set
             .iter()
             .filter_map(|d| {
-                if d.0.borrow_mut().interactable.bounds.intersects(ssb) {
+                if d.0
+                    .borrow_mut()
+                    .interactable
+                    .bounds
+                    .cast()
+                    .cast_unit()
+                    .intersects(vsb)
+                {
                     Some(d.clone())
                 } else {
                     None

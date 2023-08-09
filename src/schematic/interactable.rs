@@ -1,33 +1,37 @@
 //! common functionality for interactive schematic elements
 
-use crate::transforms::{SSBox, SSPoint, SSTransform, SchematicSpace};
+use crate::transforms::{VSBox, VSPoint, VVTransform, SSPoint, SSBox, SchematicSpace};
 
 /// trait to facillitates and unify implementation of interactive logic
 pub trait Interactive {
-    fn transform(&mut self, sst: SSTransform);
+    fn transform(&mut self, sst: VVTransform);
 }
 
 /// struct to facillitates and unify implementation of interactive logic through composition
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct Interactable {
     /// the bounds of the interactable. e.g. mouse hover over this area should highlight the interactable.
-    pub bounds: SSBox,
+    pub bounds: VSBox,
 }
 
 impl Interactable {
     pub fn new() -> Self {
         Interactable {
-            bounds: SSBox::default(),
+            bounds: VSBox::default(),
         }
     }
     /// returns true if Schematic Space Point intersects with bounds.
     pub fn contains_ssp(&self, ssp: SSPoint) -> bool {
-        let mut ssb = self.bounds;
+        let mut ssb: SSBox = self.bounds.round_out().cast().cast_unit();
         ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
         ssb.contains(ssp)
     }
+    /// returns true if Viewport Space Point intersects with bounds.
+    pub fn contains_vsp(&self, vsp: VSPoint) -> bool {
+        self.bounds.contains(vsp)
+    }
     /// returns true if bounds intersects with argument.
-    pub fn intersects_ssb(&self, ssb: &SSBox) -> bool {
-        self.bounds.intersects(ssb)
+    pub fn intersects_vsb(&self, vsb: &VSBox) -> bool {
+        self.bounds.intersects(vsb)
     }
 }

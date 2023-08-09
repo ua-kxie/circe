@@ -19,8 +19,7 @@ use iced::{
 use crate::{
     schematic::interactable::{Interactable, Interactive},
     transforms::{
-        sst_to_xxt, Point, SSBox, SSPoint, SSTransform, VCTransform, VSBox, VSPoint, VSVec,
-        ViewportSpace,
+        sst_to_vvt, vvt_to_sst, Point, SSTransform, VCTransform, VSBox, VSPoint, VSVec, VVTransform,
     },
     viewport::Drawable,
 };
@@ -37,8 +36,8 @@ pub struct NetLabel {
     pub interactable: Interactable,
     /// label transform - determines the posisiton and orientation of the label in schematic space
     transform: SSTransform,
-    /// interactive bounds
-    bounds: SSBox,
+    /// interactive bounds before transform
+    bounds: VSBox,
 }
 
 impl Default for NetLabel {
@@ -46,10 +45,16 @@ impl Default for NetLabel {
         NetLabel {
             name: String::from("default"),
             interactable: Interactable {
-                bounds: SSBox::from_points([SSPoint::origin(), SSPoint::from([1, 1])]),
+                bounds: VSBox::from_points([
+                    VSPoint::origin() - VSVec::new(0.5, 0.5),
+                    VSPoint::origin() + VSVec::new(0.5, 0.5),
+                ]),
             },
             transform: SSTransform::identity(),
-            bounds: SSBox::from_points([SSPoint::origin()]),
+            bounds: VSBox::from_points([
+                VSPoint::origin() - VSVec::new(0.5, 0.5),
+                VSPoint::origin() + VSVec::new(0.5, 0.5),
+            ]),
         }
     }
 }
@@ -67,7 +72,7 @@ impl NetLabel {
 
     /// returns the composite of the device's transform and the given vct
     fn compose_transform(&self, vct: VCTransform) -> VCTransform {
-        sst_to_xxt::<ViewportSpace>(self.transform).then(&vct)
+        sst_to_vvt(self.transform).then(&vct)
     }
 }
 
@@ -158,9 +163,10 @@ impl Drawable for NetLabel {
 }
 
 impl Interactive for NetLabel {
-    fn transform(&mut self, sst: SSTransform) {
+    fn transform(&mut self, vvt: VVTransform) {
+        let sst = vvt_to_sst(vvt);
         self.transform = self.transform.then(&sst);
-        self.interactable.bounds = self.transform.outer_transformed_box(&self.bounds);
+        self.interactable.bounds = sst_to_vvt(self.transform).outer_transformed_box(&self.bounds);
     }
 }
 
@@ -191,12 +197,12 @@ impl NetLabels {
     /// count is updated to track the number of elements skipped over
     pub fn selectable(
         &mut self,
-        curpos_ssp: SSPoint,
+        curpos_vsp: VSPoint,
         skip: usize,
         count: &mut usize,
     ) -> Option<RcRLabel> {
         for l in &self.set {
-            if l.0.borrow_mut().interactable.contains_ssp(curpos_ssp) {
+            if l.0.borrow_mut().interactable.contains_vsp(curpos_vsp) {
                 if *count == skip {
                     // skipped just enough
                     return Some(l.clone());
@@ -216,19 +222,26 @@ impl NetLabels {
             ]
             .into_iter()
         });
-        SSBox::from_points(pts).cast().cast_unit()
+        VSBox::from_points(pts).cast().cast_unit()
     }
     /// inserts label l into self.
     pub fn insert(&mut self, l: RcRLabel) {
         self.set.insert(l);
     }
     /// return vector of RcRDevice which intersects ssb
-    pub fn intersects_ssb(&self, ssb: &SSBox) -> Vec<RcRLabel> {
+    pub fn intersects_vsb(&self, vsb: &VSBox) -> Vec<RcRLabel> {
         let ret: Vec<_> = self
             .set
             .iter()
             .filter_map(|l| {
-                if l.0.borrow_mut().interactable.bounds.intersects(ssb) {
+                if l.0
+                    .borrow_mut()
+                    .interactable
+                    .bounds
+                    .cast()
+                    .cast_unit()
+                    .intersects(vsb)
+                {
                     Some(l.clone())
                 } else {
                     None

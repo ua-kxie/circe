@@ -9,10 +9,13 @@ use iced::{
     Color,
 };
 
-use crate::schematic::interactable::Interactable;
+use crate::{
+    schematic::interactable::Interactable,
+    transforms::{vvt_to_sst, VVTransform},
+};
 use crate::{
     schematic::{interactable::Interactive, Nets},
-    transforms::{sst_to_xxt, Point, SSPoint, SSTransform, VCTransform, VSPoint, ViewportSpace},
+    transforms::{sst_to_vvt, Point, SSPoint, SSTransform, VCTransform, VSPoint},
     viewport::Drawable,
 };
 use std::hash::Hash;
@@ -130,7 +133,7 @@ impl Device {
     }
     /// returns the composite of the device's transform and the given vct
     fn compose_transform(&self, vct: VCTransform) -> VCTransform {
-        sst_to_xxt::<ViewportSpace>(self.transform).then(&vct)
+        sst_to_vvt(self.transform).then(&vct)
     }
     /// sets the position of the device
     pub fn set_position(&mut self, ssp: SSPoint) {
@@ -138,7 +141,9 @@ impl Device {
         self.transform.m32 = ssp.y;
         self.interactable.bounds = self
             .transform
-            .outer_transformed_box(self.class.graphics().bounds());
+            .outer_transformed_box(self.class.graphics().bounds())
+            .cast()
+            .cast_unit();
     }
     /// returns the device's spice netlist line
     pub fn spice_line(&mut self, nets: &mut Nets) -> String {
@@ -222,10 +227,12 @@ impl Drawable for Device {
 }
 
 impl Interactive for Device {
-    fn transform(&mut self, sst: SSTransform) {
-        self.transform = self.transform.then(&sst);
+    fn transform(&mut self, vvt: VVTransform) {
+        self.transform = self.transform.then(&vvt_to_sst(vvt));
         self.interactable.bounds = self
             .transform
-            .outer_transformed_box(self.class.graphics().bounds());
+            .outer_transformed_box(self.class.graphics().bounds())
+            .cast()
+            .cast_unit();
     }
 }

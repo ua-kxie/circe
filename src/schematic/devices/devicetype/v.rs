@@ -6,6 +6,10 @@
 // VCC 10 0 DC 6 AC 1 PULSE(-1 1 2 NS 2 NS 2 NS 50 NS 100 NS 5)
 // uses transient time zero value for DC if DC value not spec'd
 
+use crate::schematic::devices::port::Port;
+use crate::schematic::interactable::Interactable;
+use crate::transforms::{SSPoint, VSPoint, SSBox};
+
 use super::super::params;
 use super::Graphics;
 use lazy_static::lazy_static;
@@ -13,10 +17,39 @@ use lazy_static::lazy_static;
 pub const ID_PREFIX: &str = "V";
 
 lazy_static! {
-    static ref DEFAULT_GRAPHICS: Graphics =
-        serde_json::from_slice(&std::fs::read("src/schematic/devices/devicetype/v.json").unwrap())
-            .unwrap();
+    static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+        pts: vec![
+            vec![VSPoint::new(0.0, 3.0), VSPoint::new(0.0, 1.5),],
+            vec![VSPoint::new(0.0, -1.5), VSPoint::new(0.0, -3.0),],
+            vec![VSPoint::new(-0.5, -1.0), VSPoint::new(0.5, -1.0),],
+            vec![VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 0.5),],
+            vec![VSPoint::new(-0.5, 1.0), VSPoint::new(0.5, 1.0),],
+        ],
+        circles: vec![
+            (VSPoint::origin(), 1.5)
+        ],
+        ports: vec![
+            Port {
+                name: "+".to_string(),
+                offset: SSPoint::new(0, 3),
+                interactable: Interactable::default(),
+            },
+            Port {
+                name: "-".to_string(),
+                offset: SSPoint::new(0, -3),
+                interactable: Interactable::default(),
+            },
+        ],
+        bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+    };
 }
+
+
+// lazy_static! {
+//     static ref DEFAULT_GRAPHICS: Graphics =
+//         serde_json::from_slice(&std::fs::read("src/schematic/devices/devicetype/v.json").unwrap())
+//             .unwrap();
+// }
 
 // DC 3.3
 // AC 1

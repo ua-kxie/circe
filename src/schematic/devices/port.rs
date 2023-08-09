@@ -1,14 +1,15 @@
 //! Ports, where wires go to get attached.
 
+use crate::{
+    schematic::interactable::{Interactable, Interactive},
+    transforms::{vvt_to_sst, Point, SSPoint, VCTransform, VSBox, VSPoint, VSVec, VVTransform},
+    viewport::Drawable,
+};
 use iced::{
     widget::canvas::{self, path::Builder, stroke, LineCap, Stroke},
     Color, Size,
 };
 use std::{cell::RefCell, rc::Rc};
-use crate::{
-    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSVec, SSVec},
-    viewport::Drawable, schematic::interactable::{Interactive, Interactable},
-};
 
 const STROKE_WIDTH: f32 = 0.1;
 
@@ -23,7 +24,7 @@ impl RcRPort {
 }
 
 /// ports for devices, where wires may be connected
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct Port {
     /// the name of a port (necessary?)
     pub name: String,
@@ -31,6 +32,21 @@ pub struct Port {
     pub offset: SSPoint,
     /// interactable only in effect in device designer
     pub interactable: Interactable,
+}
+
+impl PartialEq for Port {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.offset == other.offset
+    }
+}
+
+impl Eq for Port {}
+
+impl std::hash::Hash for Port {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.offset.hash(state);
+    }
 }
 
 impl Drawable for Port {
@@ -107,8 +123,14 @@ impl Drawable for Port {
 }
 
 impl Interactive for Port {
-    fn transform(&mut self, sst: crate::transforms::SSTransform) {
-        self.offset = sst.transform_point(self.offset);
-        self.interactable = Interactable{bounds: SSBox::new(self.offset, self.offset + SSVec::new(1, 1))}
+    fn transform(&mut self, vvt: VVTransform) {
+        self.offset = vvt_to_sst(vvt).transform_point(self.offset);
+        let offset_vsp: VSPoint = self.offset.cast().cast_unit();
+        self.interactable = Interactable {
+            bounds: VSBox::from_points([
+                offset_vsp - VSVec::new(0.5, 0.5),
+                offset_vsp + VSVec::new(0.5, 0.5),
+            ]),
+        }
     }
 }

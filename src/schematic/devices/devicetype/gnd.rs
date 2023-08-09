@@ -1,7 +1,10 @@
 //! device definition for ground, implemented as a 0-volt voltage source
 
 use super::{Graphics, Port};
-use crate::{transforms::{SSBox, SSPoint, VSPoint}, schematic::interactable::Interactable};
+use crate::{
+    schematic::interactable::Interactable,
+    transforms::{SSBox, SSPoint, VSPoint},
+};
 use lazy_static::lazy_static;
 
 pub const ID_PREFIX: &str = "VGND";

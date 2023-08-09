@@ -3,12 +3,12 @@
 //! intended to eventually allow users to define hierarchical devices
 //! for now, intended only to allow devs to quickly draw up basic device symbols
 
-use crate::schematic::devices::port::{RcRPort, Port};
+use crate::schematic::devices::port::{Port, RcRPort};
 use crate::schematic::interactable::Interactive;
 use crate::schematic::{self, SchematicElement, SchematicMsg};
 use crate::transforms::VSPoint;
 use crate::{
-    transforms::{SSBox, SSPoint, SSTransform, VCTransform, VSBox},
+    transforms::{VCTransform, VSBox, VVTransform},
     viewport::Drawable,
 };
 use iced::widget::canvas::{event::Event, Frame};
@@ -70,10 +70,10 @@ impl Drawable for DesignerElement {
 }
 
 impl SchematicElement for DesignerElement {
-    fn contains_ssp(&self, ssp: SSPoint) -> bool {
+    fn contains_vsp(&self, vsp: VSPoint) -> bool {
         match self {
-            DesignerElement::Linear(l) => l.0.borrow().interactable.contains_ssp(ssp),
-            DesignerElement::Port(l) => l.0.borrow().interactable.contains_ssp(ssp),
+            DesignerElement::Linear(l) => l.0.borrow().interactable.contains_vsp(vsp),
+            DesignerElement::Port(l) => l.0.borrow().interactable.contains_vsp(vsp),
         }
     }
 }
@@ -86,13 +86,13 @@ impl DesignerElement {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    CanvasEvent(Event, SSPoint),
+    CanvasEvent(Event, VSPoint),
     Line,
 }
 
 impl schematic::ContentMsg for Msg {
-    fn canvas_event_msg(event: Event, curpos_ssp: SSPoint) -> Self {
-        Msg::CanvasEvent(event, curpos_ssp)
+    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
+        Msg::CanvasEvent(event, curpos_vsp)
     }
 }
 
@@ -100,11 +100,11 @@ impl schematic::ContentMsg for Msg {
 pub enum DesignerSt {
     #[default]
     Idle,
-    Line(Option<(SSPoint, SSPoint)>),
+    Line(Option<(VSPoint, VSPoint)>),
 }
 
 /// struct holding schematic state (lines and ellipses)
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Designer {
     pub infobarstr: Option<String>,
 
@@ -112,19 +112,39 @@ pub struct Designer {
 
     content: HashSet<DesignerElement>,
 
-    curpos_ssp: SSPoint,
+    rounding_interval: f32,
+    curpos_vsp: VSPoint,
+}
+
+impl Default for Designer {
+    fn default() -> Self {
+        Self { 
+            infobarstr: Default::default(), 
+            state: Default::default(), 
+            content: Default::default(), 
+            rounding_interval: 0.125, 
+            curpos_vsp: Default::default() 
+        }
+    }
 }
 
 impl Designer {
-    fn update_cursor_ssp(&mut self, curpos_ssp: SSPoint) {
-        self.curpos_ssp = curpos_ssp;
+    fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
+        self.curpos_vsp = curpos_vsp;
         match &mut self.state {
-            DesignerSt::Line(Some((_ssp0, ssp1))) => {
-                *ssp1 = curpos_ssp;
+            DesignerSt::Line(Some((_vsp0, vsp1))) => {
+                *vsp1 = (curpos_vsp / self.rounding_interval).round() * self.rounding_interval;
             }
             DesignerSt::Idle => {}
             _ => {}
         }
+    }
+    pub fn curpos_vsp(&self) -> VSPoint {
+        self.curpos_vsp
+    }
+
+    fn occupies_vsp(&self, _vsp: VSPoint) -> bool {
+        false
     }
 }
 
@@ -141,8 +161,8 @@ impl Drawable for Designer {
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match &self.state {
-            DesignerSt::Line(Some((ssp0, ssp1))) => {
-                Linear::new(*ssp0, *ssp1).draw_preview(vct, vcscale, frame)
+            DesignerSt::Line(Some((vsp0, vsp1))) => {
+                Linear::new(*vsp0, *vsp1).draw_preview(vct, vcscale, frame);
             }
             DesignerSt::Idle => {}
             _ => {}
@@ -163,17 +183,17 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
             VSBox::from_points([VSPoint::new(-1.0, -1.0), VSPoint::new(1.0, 1.0)])
         }
     }
-    fn intersects_ssb(&mut self, ssb: SSBox) -> HashSet<DesignerElement> {
+    fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<DesignerElement> {
         let mut ret = HashSet::new();
         for d in &self.content {
             match d {
                 DesignerElement::Linear(l) => {
-                    if l.0.borrow_mut().interactable.intersects_ssb(&ssb) {
+                    if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
                         ret.insert(DesignerElement::Linear(l.clone()));
                     }
                 }
                 DesignerElement::Port(l) => {
-                    if l.0.borrow_mut().interactable.intersects_ssb(&ssb) {
+                    if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
                         ret.insert(DesignerElement::Port(l.clone()));
                     }
                 }
@@ -182,22 +202,18 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         ret
     }
 
-    fn occupies_ssp(&self, _ssp: SSPoint) -> bool {
-        false
-    }
-
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
     /// count is updated to track the number of elements skipped over
     fn selectable(
         &mut self,
-        ssp: SSPoint,
+        vsp: VSPoint,
         skip: usize,
         count: &mut usize,
     ) -> Option<DesignerElement> {
         for d in &self.content {
             match d {
                 DesignerElement::Linear(l) => {
-                    if l.0.borrow_mut().interactable.contains_ssp(ssp) {
+                    if l.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
                             return Some(d.clone());
@@ -207,7 +223,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     }
                 }
                 DesignerElement::Port(l) => {
-                    if l.0.borrow_mut().interactable.contains_ssp(ssp) {
+                    if l.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
                             return Some(d.clone());
@@ -223,9 +239,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<DesignerElement> {
         let ret_msg = match msg {
-            Msg::CanvasEvent(event, curpos_ssp) => {
+            Msg::CanvasEvent(event, curpos_vsp) => {
                 if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_ssp(curpos_ssp);
+                    self.update_cursor_vsp(curpos_vsp);
                 }
 
                 let mut state = self.state.clone();
@@ -239,8 +255,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                             modifiers: _,
                         }),
                     ) => {
-                        ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(DesignerElement::Port(RcRPort::new(Port::default()))));
+                        ret_msg_tmp = SchematicMsg::NewElement(SendWrapper::new(
+                            DesignerElement::Port(RcRPort::new(Port::default())),
+                        ));
                     }
                     // wiring
                     (
@@ -256,27 +273,27 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         DesignerSt::Line(opt_ws),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
-                        let ssp = curpos_ssp;
+                        let vsp = curpos_vsp;
                         let new_ws;
                         if let Some((ssp0, _ssp1)) = opt_ws {
                             // subsequent click
-                            if ssp == *ssp0 {
+                            if vsp == *ssp0 {
                                 new_ws = None;
-                            } else if self.occupies_ssp(ssp) {
+                            } else if self.occupies_vsp(vsp) {
                                 self.content.insert(DesignerElement::Linear(RcRLinear::new(
-                                    Linear::new(*ssp0, ssp),
+                                    Linear::new(*ssp0, vsp),
                                 )));
                                 new_ws = None;
                             } else {
                                 self.content.insert(DesignerElement::Linear(RcRLinear::new(
-                                    Linear::new(*ssp0, ssp),
+                                    Linear::new(*ssp0, vsp),
                                 )));
-                                new_ws = Some((ssp, ssp));
+                                new_ws = Some((vsp, vsp));
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
                         } else {
                             // first click
-                            new_ws = Some((ssp, ssp));
+                            new_ws = Some((vsp, vsp));
                         }
                         state = DesignerSt::Line(new_ws);
                     }
@@ -303,7 +320,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         ret_msg
     }
 
-    fn move_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &SSTransform) {
+    fn move_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &VVTransform) {
         for e in elements {
             match e {
                 DesignerElement::Linear(l) => {
@@ -322,7 +339,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         }
     }
 
-    fn copy_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &SSTransform) {
+    fn copy_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &VVTransform) {
         for e in elements {
             match e {
                 DesignerElement::Linear(rcl) => {
