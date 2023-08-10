@@ -106,7 +106,7 @@ impl Device {
     pub fn new_with_ord_class(wm: usize, class: DeviceClass) -> Self {
         Device {
             id: Identifier::new_with_prefix_ord(class.id_prefix(), wm),
-            interactable: Interactable::new(),
+            interactable: Interactable::new(class.graphics().bounds().cast().cast_unit()),
             transform: SSTransform::identity(),
             class,
             connected_nets: vec![],

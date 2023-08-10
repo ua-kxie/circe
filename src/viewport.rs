@@ -464,14 +464,14 @@ where
         let a = Text {
             content: String::from("origin"),
             position: Point::from(self.vc_transform().transform_point(VSPoint::origin())).into(),
-            color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
+            color: Color::from_rgba(1.0, 1.0, 1.0, 0.25),
             size: self.vc_scale(),
             ..Default::default()
         };
         frame.fill_text(a);
         let ref_stroke = Stroke {
             width: (0.1 * self.vc_scale()).clamp(0.1, 3.0),
-            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.25)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };

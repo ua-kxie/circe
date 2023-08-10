@@ -317,8 +317,10 @@ where
                                     SSTransform::identity(),
                                 )));
                             } else {
-                                self.state =
-                                    SchematicSt::AreaSelect(VSBox::new(self.curpos_vsp, self.curpos_vsp));
+                                self.state = SchematicSt::AreaSelect(VSBox::new(
+                                    self.curpos_vsp,
+                                    self.curpos_vsp,
+                                ));
                             }
                         }
 
@@ -371,8 +373,11 @@ where
                                 self.state = SchematicSt::Idle;
                             } else {
                                 let sst = SSTransform::identity();
-                                self.state =
-                                    SchematicSt::Moving(Some((self.curpos_vsp, self.curpos_vsp, sst)));
+                                self.state = SchematicSt::Moving(Some((
+                                    self.curpos_vsp,
+                                    self.curpos_vsp,
+                                    sst,
+                                )));
                             }
                         }
                         // copying

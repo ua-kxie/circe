@@ -7,7 +7,7 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 1. Clone the repository
 2. Run `git submodule init`
 2. Run `git submodule update`
-3. Run `cago run`
+3. Run `cargo run`
 
 Alternatively, clone the repository with the following:
 > `git clone --recurse-submodules https://github.com/ua-kxie/circe.git`

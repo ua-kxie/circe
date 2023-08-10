@@ -60,6 +60,7 @@ lazy_static! {
 // }
 
 /// shared definition for independent voltage and current sources
+#[allow(unused)]
 struct VIDef {
     // implment trait for definitions
     dc: f32,
@@ -67,7 +68,7 @@ struct VIDef {
     acphase: f32,
     tran: VITran,
 }
-
+#[allow(unused)]
 enum VITran {
     None,
     Pulse(VITranPulse),
@@ -76,6 +77,7 @@ enum VITran {
 }
 
 /// ngspice manual 4.1.1 Voltage/Current Sources - independent - Pulse
+#[allow(unused)]
 struct VITranPulse {
     v1: f32,  // off/initial value
     v2: f32,  // on value
@@ -89,6 +91,7 @@ struct VITranPulse {
 }
 
 /// ngspice manual 4.1.2 Voltage/Current Sources - indenpendent - Sinusoidal
+#[allow(unused)]
 struct VITranSine {
     vo: f32,    // offset volt/amp
     va: f32,    // amplitude volt/amp
@@ -99,6 +102,7 @@ struct VITranSine {
 }
 
 /// ngspice manual 4.1.4 Voltage/Current Sources - independent - piecewise linear
+#[allow(unused)]
 struct VITranPwl {
     vec: Vec<(f32, f32)>, // time, value tuple
                           // r: usize - available only with voltage source for now (ngspice)

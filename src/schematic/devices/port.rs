@@ -80,8 +80,8 @@ impl Drawable for Port {
         frame: &mut iced::widget::canvas::Frame,
     ) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.),
-            style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.0)),
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.0),
+            style: stroke::Style::Solid(Color::from_rgb(0.8, 0.8, 0.0)),
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
@@ -104,8 +104,8 @@ impl Drawable for Port {
         frame: &mut iced::widget::canvas::Frame,
     ) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.),
-            style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
+            width: (STROKE_WIDTH * vcscale / 2.0).max(STROKE_WIDTH * 0.5),
+            style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.2)),
             line_cap: LineCap::Square,
             ..Stroke::default()
         };
@@ -127,10 +127,7 @@ impl Interactive for Port {
         self.offset = vvt_to_sst(vvt).transform_point(self.offset);
         let offset_vsp: VSPoint = self.offset.cast().cast_unit();
         self.interactable = Interactable {
-            bounds: VSBox::from_points([
-                offset_vsp - VSVec::new(0.5, 0.5),
-                offset_vsp + VSVec::new(0.5, 0.5),
-            ]),
+            bounds: VSBox::from_points([offset_vsp, offset_vsp]),
         }
     }
 }
