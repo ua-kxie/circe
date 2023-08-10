@@ -19,6 +19,7 @@ use send_wrapper::SendWrapper;
 
 use crate::schematic::devices::strokes::{Bounds, Linear, RcRBounds, RcRLinear};
 use std::collections::HashSet;
+use std::fs;
 
 /// an enum to unify different types in schematic (lines and ellipses)
 #[derive(Debug, Clone)]
@@ -167,6 +168,75 @@ impl Designer {
     fn occupies_vsp(&self, _vsp: VSPoint) -> bool {
         false
     }
+    /// create graphics for the current designer and save it.
+    // lazy_static! {
+    //     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+    //         pts: vec![
+    //             vec![VSPoint::new(0., 3.), VSPoint::new(0., -3.),],
+    //             vec![
+    //                 VSPoint::new(-1., 2.),
+    //                 VSPoint::new(-1., -2.),
+    //                 VSPoint::new(1., -2.),
+    //                 VSPoint::new(1., 2.),
+    //                 VSPoint::new(-1., 2.),
+    //             ],
+    //         ],
+    //         circles: vec![],
+    //         ports: vec![
+    //             Port {
+    //                 name: "+".to_string(),
+    //                 offset: SSPoint::new(0, 3),
+    //                 interactable: Interactable::default(),
+    //             },
+    //             Port {
+    //                 name: "-".to_string(),
+    //                 offset: SSPoint::new(0, -3),
+    //                 interactable: Interactable::default(),
+    //             },
+    //         ],
+    //         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+    //     };
+    // }
+    fn graphics(&mut self) {
+        let mut graphics = String::from("lazy_static! {\n    static ref DEFAULT_GRAPHICS: Graphics = Graphics {\n");
+        let pts: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Linear(l) = x {Some(l)} else {None}).collect();
+        let circles = 0;
+        let ports: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Port(p) = x {Some(p)} else {None}).collect();
+        let bounds: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Bounds(b) = x {Some(b)} else {None}).collect();
+        graphics.push_str("        pts: vec![\n");
+        // lines
+        for line in pts {
+            let pt01 = line.0.borrow().pts();
+            graphics.push_str(&format!("            vec![VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}),],\n", pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y))
+        }
+        graphics.push_str("        ],\n");
+        graphics.push_str("        circles: vec![],\n");
+        graphics.push_str("        ports: vec![\n");
+        // ports
+        for (i, &port) in ports.iter().enumerate() {
+            //             Port {
+            //                 name: "+".to_string(),
+            //                 offset: SSPoint::new(0, 3),
+            //                 interactable: Interactable::default(),
+            //             },
+            graphics.push_str("            Port {\n");
+            graphics.push_str(&format!("                name: \"{}\".to_string(),\n", i));
+            graphics.push_str(&format!("                offset: SSPoint::new({}, {}),\n", port.0.borrow().offset.x, port.0.borrow().offset.y));
+            graphics.push_str("                interactable: Interactable::default()\n");
+            graphics.push_str("            },\n");
+        } 
+        graphics.push_str("        ],\n");
+        // bounds
+        for bound in bounds {
+            //         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+            let pt01 = bound.0.borrow().pts();
+            graphics.push_str(&format!("        bounds: SSBox::new(SSPoint::new({}, {}), SSPoint::new({}, {})),\n", pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y))
+        }
+        graphics.push_str("    };\n");
+        graphics.push_str(" }\n");
+        
+        fs::write("graphics.txt", graphics.as_bytes()).expect("Unable to write file");
+    }
 }
 
 impl Drawable for Designer {
@@ -313,6 +383,16 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
                 match (&mut state, event) {
+                    // output graphics definition
+                    (
+                        DesignerSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::Space,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        self.graphics();
+                    }
                     // draw bounds
                     (
                         DesignerSt::Idle,

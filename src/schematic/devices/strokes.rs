@@ -10,7 +10,7 @@ use iced::{
 
 use crate::{
     schematic::interactable::{Interactable, Interactive},
-    transforms::{Point, SSBox, VCTransform, VSBox, VSPoint, VSVec},
+    transforms::{Point, SSBox, VCTransform, VSBox, VSPoint, VSVec, SSPoint},
     viewport::Drawable,
 };
 
@@ -43,6 +43,9 @@ impl Linear {
                 bounds: VSBox::from_points([vsp0, vsp1]),
             },
         }
+    }
+    pub fn pts(&self) -> (VSPoint, VSPoint) {
+        (self.pt0, self.pt1)
     }
 }
 
@@ -135,6 +138,9 @@ impl Bounds {
             ssb,
             interactable: Interactable::new(ssb.cast().cast_unit()),
         }
+    }
+    pub fn pts(&self) -> (SSPoint, SSPoint) {
+        (self.ssb.min, self.ssb.max)
     }
 }
 

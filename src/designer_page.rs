@@ -1,5 +1,6 @@
 //! Designer Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
+//! for now, intended only as a dev tool for adding new devices
 
 use crate::designer::{Designer, DesignerElement, Msg};
 use crate::schematic::{self, Content};

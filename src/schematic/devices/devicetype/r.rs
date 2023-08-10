@@ -11,31 +11,63 @@ pub const ID_PREFIX: &str = "R";
 lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
         pts: vec![
-            vec![VSPoint::new(0., 3.), VSPoint::new(0., -3.),],
-            vec![
-                VSPoint::new(-1., 2.),
-                VSPoint::new(-1., -2.),
-                VSPoint::new(1., -2.),
-                VSPoint::new(1., 2.),
-                VSPoint::new(-1., 2.),
-            ],
+            vec![VSPoint::new(-1.00, 1.75), VSPoint::new(1.00, 1.25),],
+            vec![VSPoint::new(1.00, -1.75), VSPoint::new(0.00, -2.00),],
+            vec![VSPoint::new(-1.00, -0.25), VSPoint::new(1.00, -0.75),],
+            vec![VSPoint::new(0.00, 3.00), VSPoint::new(0.00, 2.00),],
+            vec![VSPoint::new(1.00, 0.25), VSPoint::new(-1.00, -0.25),],
+            vec![VSPoint::new(-1.00, -1.25), VSPoint::new(1.00, -1.75),],
+            vec![VSPoint::new(1.00, -0.75), VSPoint::new(-1.00, -1.25),],
+            vec![VSPoint::new(0.00, -2.00), VSPoint::new(0.00, -3.00),],
+            vec![VSPoint::new(-1.00, 0.75), VSPoint::new(1.00, 0.25),],
+            vec![VSPoint::new(0.00, 2.00), VSPoint::new(-1.00, 1.75),],
+            vec![VSPoint::new(1.00, 1.25), VSPoint::new(-1.00, 0.75),],
         ],
         circles: vec![],
         ports: vec![
             Port {
-                name: "+".to_string(),
-                offset: SSPoint::new(0, 3),
-                interactable: Interactable::default(),
+                name: "0".to_string(),
+                offset: SSPoint::new(0, -3),
+                interactable: Interactable::default()
             },
             Port {
-                name: "-".to_string(),
-                offset: SSPoint::new(0, -3),
-                interactable: Interactable::default(),
+                name: "1".to_string(),
+                offset: SSPoint::new(0, 3),
+                interactable: Interactable::default()
             },
         ],
-        bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+        bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
-}
+ }
+
+// lazy_static! {
+//     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+//         pts: vec![
+//             vec![VSPoint::new(0., 3.), VSPoint::new(0., -3.),],
+//             vec![
+//                 VSPoint::new(-1., 2.),
+//                 VSPoint::new(-1., -2.),
+//                 VSPoint::new(1., -2.),
+//                 VSPoint::new(1., 2.),
+//                 VSPoint::new(-1., 2.),
+//             ],
+//         ],
+//         circles: vec![],
+//         ports: vec![
+//             Port {
+//                 name: "+".to_string(),
+//                 offset: SSPoint::new(0, 3),
+//                 interactable: Interactable::default(),
+//             },
+//             Port {
+//                 name: "-".to_string(),
+//                 offset: SSPoint::new(0, -3),
+//                 interactable: Interactable::default(),
+//             },
+//         ],
+//         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+//     };
+// }
 
 /// Enumerates the different ways to specifify parameters for a resistor
 #[derive(Debug, Clone)]
