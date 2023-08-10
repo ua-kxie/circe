@@ -80,19 +80,26 @@ impl SchematicElement for DesignerElement {
 
 impl DesignerElement {
     fn bounding_box(&self) -> VSBox {
-        todo!();
+        match self {
+            DesignerElement::Linear(l) => {
+                l.0.borrow().interactable.bounds
+            },
+            DesignerElement::Port(p) => {
+                p.0.borrow().interactable.bounds
+            },
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    CanvasEvent(Event, VSPoint),
+    CanvasEvent(Event),
     Line,
 }
 
 impl schematic::ContentMsg for Msg {
-    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
-        Msg::CanvasEvent(event, curpos_vsp)
+    fn canvas_event_msg(event: Event) -> Self {
+        Msg::CanvasEvent(event)
     }
 }
 
@@ -118,31 +125,27 @@ pub struct Designer {
 
 impl Default for Designer {
     fn default() -> Self {
-        Self { 
-            infobarstr: Default::default(), 
-            state: Default::default(), 
-            content: Default::default(), 
-            rounding_interval: 0.125, 
-            curpos_vsp: Default::default() 
+        Self {
+            infobarstr: Default::default(),
+            state: Default::default(),
+            content: Default::default(),
+            rounding_interval: 0.25,
+            curpos_vsp: Default::default(),
         }
     }
 }
 
 impl Designer {
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
-        self.curpos_vsp = curpos_vsp;
+        self.curpos_vsp = (curpos_vsp / self.rounding_interval).round() * self.rounding_interval;
         match &mut self.state {
             DesignerSt::Line(Some((_vsp0, vsp1))) => {
-                *vsp1 = (curpos_vsp / self.rounding_interval).round() * self.rounding_interval;
+                *vsp1 = self.curpos_vsp;
             }
             DesignerSt::Idle => {}
             _ => {}
         }
     }
-    pub fn curpos_vsp(&self) -> VSPoint {
-        self.curpos_vsp
-    }
-
     fn occupies_vsp(&self, _vsp: VSPoint) -> bool {
         false
     }
@@ -171,6 +174,12 @@ impl Drawable for Designer {
 }
 
 impl schematic::Content<DesignerElement, Msg> for Designer {
+    fn curpos_update(&mut self, vsp: VSPoint) {
+        self.update_cursor_vsp(vsp);
+    }
+    fn curpos_vsp(&self) -> VSPoint {
+        self.curpos_vsp
+    }
     fn bounds(&self) -> VSBox {
         if !self.content.is_empty() {
             let v_pts: Vec<_> = self
@@ -239,11 +248,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<DesignerElement> {
         let ret_msg = match msg {
-            Msg::CanvasEvent(event, curpos_vsp) => {
-                if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_vsp(curpos_vsp);
-                }
-
+            Msg::CanvasEvent(event) => {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
                 match (&mut state, event) {
@@ -273,7 +278,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         DesignerSt::Line(opt_ws),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
-                        let vsp = curpos_vsp;
+                        let vsp = self.curpos_vsp;
                         let new_ws;
                         if let Some((ssp0, _ssp1)) = opt_ws {
                             // subsequent click

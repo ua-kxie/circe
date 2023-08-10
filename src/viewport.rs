@@ -251,7 +251,7 @@ where
     C: Content<M>,
     M: ContentMsg,
 {
-    pub fn new(_scale: f32, min_zoom: f32, max_zoom: f32, vct: VCTransformLockedAspect) -> Self {
+    pub fn new(min_zoom: f32, max_zoom: f32, vct: VCTransformLockedAspect) -> Self {
         Viewport {
             min_zoom,
             max_zoom,

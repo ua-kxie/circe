@@ -1,6 +1,6 @@
 //! common functionality for interactive schematic elements
 
-use crate::transforms::{VSBox, VSPoint, VVTransform, SSPoint, SSBox, SchematicSpace};
+use crate::transforms::{SSBox, SSPoint, SchematicSpace, VSBox, VSPoint, VVTransform};
 
 /// trait to facillitates and unify implementation of interactive logic
 pub trait Interactive {

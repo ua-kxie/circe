@@ -135,7 +135,7 @@ impl Default for CircuitPage {
             .pre_flip_y()
             .then_scale(10.0);
         CircuitPage {
-            viewport: viewport::Viewport::new(1.0, 1.0, 100.0, vct),
+            viewport: viewport::Viewport::new(1.0, 100.0, vct),
             net_name: Default::default(),
             active_element: Default::default(),
             text: Default::default(),

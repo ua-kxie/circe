@@ -8,7 +8,7 @@
 
 use crate::schematic::devices::port::Port;
 use crate::schematic::interactable::Interactable;
-use crate::transforms::{SSPoint, VSPoint, SSBox};
+use crate::transforms::{SSBox, SSPoint, VSPoint};
 
 use super::super::params;
 use super::Graphics;
@@ -25,9 +25,7 @@ lazy_static! {
             vec![VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 0.5),],
             vec![VSPoint::new(-0.5, 1.0), VSPoint::new(0.5, 1.0),],
         ],
-        circles: vec![
-            (VSPoint::origin(), 1.5)
-        ],
+        circles: vec![(VSPoint::origin(), 1.5)],
         ports: vec![
             Port {
                 name: "+".to_string(),
@@ -43,7 +41,6 @@ lazy_static! {
         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
     };
 }
-
 
 // lazy_static! {
 //     static ref DEFAULT_GRAPHICS: Graphics =

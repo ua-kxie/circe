@@ -74,6 +74,18 @@ impl Drawable for Linear {
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
             width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 0.5, 0.2)),
+            line_cap: LineCap::Butt,
+            ..Stroke::default()
+        };
+        let mut path_builder = Builder::new();
+        path_builder.line_to(Point::from(vct.transform_point(self.pt0)).into());
+        path_builder.line_to(Point::from(vct.transform_point(self.pt1)).into());
+        let built_path = path_builder.build();
+        frame.stroke(&built_path, stroke);
+
+        let stroke = Stroke {
+            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Butt,
             line_dash: LineDash {
@@ -82,10 +94,7 @@ impl Drawable for Linear {
             },
             ..Stroke::default()
         };
-        let mut path_builder = Builder::new();
-        path_builder.line_to(Point::from(vct.transform_point(self.pt0)).into());
-        path_builder.line_to(Point::from(vct.transform_point(self.pt1)).into());
-        frame.stroke(&path_builder.build(), stroke.clone());
+        frame.stroke(&built_path, stroke);
     }
 }
 

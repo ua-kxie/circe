@@ -108,15 +108,15 @@ impl SchematicElement for CircuitElement {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    CanvasEvent(Event, VSPoint),
+    CanvasEvent(Event),
     Wire,
     NetList,
     DcOp(PkVecvaluesall),
 }
 
 impl schematic::ContentMsg for Msg {
-    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self {
-        Msg::CanvasEvent(event, curpos_vsp)
+    fn canvas_event_msg(event: Event) -> Self {
+        Msg::CanvasEvent(event)
     }
 }
 
@@ -145,13 +145,12 @@ impl Circuit {
         self.curpos_ssp
     }
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
-        let curpos_ssp = curpos_vsp.round().cast().cast_unit();
-        self.curpos_ssp = curpos_ssp;
-        self.infobarstr = self.nets.net_name_at(curpos_ssp);
+        self.curpos_ssp = curpos_vsp.round().cast().cast_unit();
+        self.infobarstr = self.nets.net_name_at(self.curpos_ssp);
         match &mut self.state {
             CircuitSt::Wiring(Some((nets, ssp_prev))) => {
                 nets.clear();
-                nets.route(*ssp_prev, curpos_ssp);
+                nets.route(*ssp_prev, self.curpos_ssp);
             }
             CircuitSt::Idle => {}
             _ => {}
@@ -186,6 +185,12 @@ impl Drawable for Circuit {
 }
 
 impl schematic::Content<CircuitElement, Msg> for Circuit {
+    fn curpos_update(&mut self, vsp: VSPoint) {
+        self.update_cursor_vsp(vsp);
+    }
+    fn curpos_vsp(&self) -> VSPoint {
+        self.curpos_ssp.cast().cast_unit()
+    }
     fn bounds(&self) -> VSBox {
         let bbn = self.nets.bounding_box();
         let bbi = self.devices.bounding_box();
@@ -228,11 +233,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
         let ret_msg = match msg {
-            Msg::CanvasEvent(event, curpos_vsp) => {
-                if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_vsp(curpos_vsp);
-                }
-
+            Msg::CanvasEvent(event) => {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
                 match (&mut state, event) {

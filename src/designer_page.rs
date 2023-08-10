@@ -2,7 +2,7 @@
 //! includes paramter editor, toolbar, and the canvas itself
 
 use crate::designer::{Designer, DesignerElement, Msg};
-use crate::schematic;
+use crate::schematic::{self, Content};
 use crate::transforms::VCTransformLockedAspect;
 
 use crate::schematic::Schematic;
@@ -38,7 +38,7 @@ impl Default for DevicePage {
             .pre_flip_y()
             .then_scale(10.0);
         DevicePage {
-            viewport: viewport::Viewport::new(8.0, 1.0, 100.0, vct),
+            viewport: viewport::Viewport::new(1.0, 100.0, vct),
             net_name: Default::default(),
             active_element: Default::default(),
             text: Default::default(),

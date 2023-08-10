@@ -46,7 +46,7 @@ where
 /// Trait for message type of schematic content
 pub trait ContentMsg {
     /// Create message to have schematic content process canvas event
-    fn canvas_event_msg(event: Event, curpos_vsp: VSPoint) -> Self;
+    fn canvas_event_msg(event: Event) -> Self;
 }
 
 /// Message type which is a composite of canvas Event, SchematicMsg, and ContentMsg
@@ -73,7 +73,7 @@ where
 {
     // create event to handle iced canvas event
     fn canvas_event_msg(event: Event, curpos_vsp: Option<VSPoint>) -> Self {
-        Msg::Event(event, curpos_vsp.map(|vsp| vsp.round().cast().cast_unit()))
+        Msg::Event(event, curpos_vsp)
     }
 }
 
@@ -117,12 +117,14 @@ where
     fn update(&mut self, msg: M) -> SchematicMsg<E>;
     /// return bounds which enclose all elements
     fn bounds(&self) -> VSBox;
-    // /// return whether or not ssp intersects with any schematic element
-    // fn occupies_vsp(&self, vsp: VSPoint) -> bool;
     /// returns a single SchematicElement over which ssp lies. Skips the first skip elements
     fn selectable(&mut self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<E>;
-    ///  returns hashset of elements which intersects ssb
+    /// returns hashset of elements which intersects ssb
     fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<E>;
+    /// returns the cursor position as stored by content
+    fn curpos_vsp(&self) -> VSPoint;
+    /// update cursor position
+    fn curpos_update(&mut self, vsp: VSPoint);
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
@@ -258,7 +260,7 @@ where
             let c = Path::rectangle(iced::Point::from([csp_topleft.x, csp_topleft.y]), s);
             frame.stroke(&c, cursor_stroke());
         }
-        draw_cursor(vct, frame, self.curpos_vsp);
+        draw_cursor(vct, frame, self.content.curpos_vsp());
     }
     /// draw onto passive cache
     fn draw_passive(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
@@ -279,14 +281,14 @@ where
         let mut clear_passive = false;
 
         match msg {
-            Msg::Event(event, curpos_vsp) => {
-                if curpos_vsp.is_none() {
+            Msg::Event(event, opt_curpos_vsp) => {
+                if let Some(vsp) = opt_curpos_vsp {
+                    if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
+                        self.content.curpos_update(vsp);
+                        self.update_cursor_vsp(self.content.curpos_vsp());
+                    }
+                } else {
                     return false;
-                }
-                let curpos_vsp = curpos_vsp.unwrap();
-
-                if let Event::Mouse(iced::mouse::Event::CursorMoved { .. }) = event {
-                    self.update_cursor_vsp(curpos_vsp);
                 }
 
                 if self.content.is_idle() {
@@ -302,7 +304,7 @@ where
                             let mut click_selected = false;
 
                             for s in &self.selected {
-                                if s.contains_vsp(curpos_vsp) {
+                                if s.contains_vsp(self.curpos_vsp) {
                                     click_selected = true;
                                     break;
                                 }
@@ -310,13 +312,13 @@ where
 
                             if click_selected {
                                 self.state = SchematicSt::Moving(Some((
-                                    curpos_vsp,
-                                    curpos_vsp,
+                                    self.curpos_vsp,
+                                    self.curpos_vsp,
                                     SSTransform::identity(),
                                 )));
                             } else {
                                 self.state =
-                                    SchematicSt::AreaSelect(VSBox::new(curpos_vsp, curpos_vsp));
+                                    SchematicSt::AreaSelect(VSBox::new(self.curpos_vsp, self.curpos_vsp));
                             }
                         }
 
@@ -370,7 +372,7 @@ where
                             } else {
                                 let sst = SSTransform::identity();
                                 self.state =
-                                    SchematicSt::Moving(Some((curpos_vsp, curpos_vsp, sst)));
+                                    SchematicSt::Moving(Some((self.curpos_vsp, self.curpos_vsp, sst)));
                             }
                         }
                         // copying
@@ -399,8 +401,8 @@ where
                             }
                             None => {
                                 self.state = SchematicSt::Copying(Some((
-                                    curpos_vsp,
-                                    curpos_vsp,
+                                    self.curpos_vsp,
+                                    self.curpos_vsp,
                                     SSTransform::identity(),
                                 )));
                             }
@@ -425,7 +427,7 @@ where
                                 modifiers: _,
                             }),
                         ) => {
-                            self.tentative_next_by_vsp(curpos_vsp);
+                            self.tentative_next_by_vsp(self.curpos_vsp);
                             clear_passive = true;
                         }
 
@@ -447,13 +449,13 @@ where
                         },
                         // something else - pass to content
                         _ => {
-                            let m = self.content.update(M::canvas_event_msg(event, curpos_vsp));
+                            let m = self.content.update(M::canvas_event_msg(event));
                             clear_passive = self.update(Msg::SchematicMsg(m));
                         }
                     }
                 } else {
                     // if content is not idling, pass event directly to content
-                    let m = self.content.update(M::canvas_event_msg(event, curpos_vsp));
+                    let m = self.content.update(M::canvas_event_msg(event));
                     clear_passive = self.update(Msg::SchematicMsg(m));
                 }
             }
@@ -500,6 +502,7 @@ where
     // }
     /// update schematic cursor position
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
+        self.curpos_vsp = curpos_vsp;
         self.tentative_by_vspoint(curpos_vsp, &mut self.selskip.clone());
 
         let mut stcp = self.state;
