@@ -14,7 +14,7 @@ todo:
 
 - designer:
     line segment edit - drag/drop end points
-    arc drawing (nor, nand gates curved portion)
+    arc drawing (nor, nand gates curved portion) - need to define as triplet points until after vct transform - hard to transform angles with vct
     serde save graphics
     device saving/loading, device libraries
     ports need to snap to integer

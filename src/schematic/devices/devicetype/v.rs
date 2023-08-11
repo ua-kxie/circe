@@ -7,6 +7,7 @@
 // uses transient time zero value for DC if DC value not spec'd
 
 use crate::schematic::devices::port::Port;
+use crate::schematic::devices::strokes::CirArc;
 use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 
@@ -25,7 +26,10 @@ lazy_static! {
             vec![VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 0.5),],
             vec![VSPoint::new(-0.5, 1.0), VSPoint::new(0.5, 1.0),],
         ],
-        circles: vec![(VSPoint::origin(), 1.5)],
+        cirarcs: vec![
+            CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
+            // (VSPoint::origin(), 1.5)
+            ],
         ports: vec![
             Port {
                 name: "+".to_string(),

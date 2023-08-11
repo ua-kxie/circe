@@ -11,6 +11,8 @@ use crate::{
     viewport::Drawable,
 };
 
+use super::strokes::CirArc;
+
 pub mod gnd;
 pub mod r;
 pub mod v;
@@ -23,7 +25,7 @@ pub struct Graphics {
     /// line is traced from point to point for each inner vector.
     pts: Vec<Vec<VSPoint>>,
     /// arbitrary number of circles (center, radius) to be drawn
-    circles: Vec<(VSPoint, f32)>,
+    cirarcs: Vec<CirArc>,
     /// arbitrary number of device ports
     ports: Vec<Port>,
     /// device bounds
@@ -62,11 +64,8 @@ impl Graphics {
             frame.stroke(&path_builder.build(), stroke.clone());
         }
         let mut path_builder = Builder::new();
-        for (p, r) in &self.circles {
-            path_builder.circle(
-                Point::from(vct_composite.transform_point(*p)).into(),
-                *r * vcscale,
-            );
+        for ca in &self.cirarcs {
+            ca.build_path(vct_composite, vcscale, &mut path_builder);
         }
         frame.stroke(&path_builder.build(), stroke.clone());
     }

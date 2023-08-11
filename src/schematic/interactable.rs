@@ -7,7 +7,7 @@ pub trait Interactive {
 }
 
 /// struct to facillitates and unify implementation of interactive logic through composition
-#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct Interactable {
     /// the bounds of the interactable. e.g. mouse hover over this area should highlight the interactable.
     pub bounds: VSBox,

@@ -17,7 +17,7 @@ use iced::widget::canvas::{stroke, LineCap, Stroke};
 use iced::Color;
 use send_wrapper::SendWrapper;
 
-use crate::schematic::devices::strokes::{Bounds, Linear, RcRBounds, RcRLinear};
+use crate::schematic::devices::strokes::{Bounds, Linear, RcRBounds, RcRLinear, RcRCirArc, CirArc};
 use std::collections::HashSet;
 use std::fs;
 
@@ -26,6 +26,7 @@ use std::fs;
 pub enum DesignerElement {
     Linear(RcRLinear),
     Port(RcRPort),
+    CirArc(RcRCirArc),
     Bounds(RcRBounds),
 }
 
@@ -33,6 +34,9 @@ impl PartialEq for DesignerElement {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Linear(l0), Self::Linear(r0)) => {
+                by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
+            }
+            (Self::CirArc(l0), Self::CirArc(r0)) => {
                 by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
             }
             (Self::Port(l0), Self::Port(r0)) => {
@@ -52,6 +56,7 @@ impl std::hash::Hash for DesignerElement {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             DesignerElement::Linear(rcrl) => by_address::ByAddress(rcrl.0.clone()).hash(state),
+            DesignerElement::CirArc(rcrl) => by_address::ByAddress(rcrl.0.clone()).hash(state),
             DesignerElement::Port(rcrp) => by_address::ByAddress(rcrp.0.clone()).hash(state),
             DesignerElement::Bounds(rcrb) => by_address::ByAddress(rcrb.0.clone()).hash(state),
         }
@@ -62,6 +67,7 @@ impl Drawable for DesignerElement {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match self {
             DesignerElement::Linear(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
+            DesignerElement::CirArc(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
             DesignerElement::Port(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
             DesignerElement::Bounds(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
         }
@@ -70,6 +76,7 @@ impl Drawable for DesignerElement {
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match self {
             DesignerElement::Linear(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
+            DesignerElement::CirArc(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
             DesignerElement::Port(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
             DesignerElement::Bounds(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
         }
@@ -78,6 +85,7 @@ impl Drawable for DesignerElement {
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match self {
             DesignerElement::Linear(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
+            DesignerElement::CirArc(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
             DesignerElement::Port(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
             DesignerElement::Bounds(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
         }
@@ -88,6 +96,7 @@ impl SchematicElement for DesignerElement {
     fn contains_vsp(&self, vsp: VSPoint) -> bool {
         match self {
             DesignerElement::Linear(l) => l.0.borrow().interactable.contains_vsp(vsp),
+            DesignerElement::CirArc(l) => l.0.borrow().interactable.contains_vsp(vsp),
             DesignerElement::Port(l) => l.0.borrow().interactable.contains_vsp(vsp),
             DesignerElement::Bounds(l) => l.0.borrow().interactable.contains_vsp(vsp),
         }
@@ -98,6 +107,7 @@ impl DesignerElement {
     fn bounding_box(&self) -> VSBox {
         match self {
             DesignerElement::Linear(l) => l.0.borrow().interactable.bounds,
+            DesignerElement::CirArc(l) => l.0.borrow().interactable.bounds,
             DesignerElement::Port(p) => p.0.borrow().interactable.bounds,
             DesignerElement::Bounds(p) => p.0.borrow().interactable.bounds,
         }
@@ -121,6 +131,7 @@ pub enum DesignerSt {
     #[default]
     Idle,
     Line(Option<(VSPoint, VSPoint)>),
+    CirArc((Option<(VSPoint, VSPoint, VSPoint)>, u8)),
     Bounds(Option<(SSPoint, SSPoint)>),
 }
 
@@ -158,11 +169,25 @@ impl Designer {
                     *ssp1 = self.curpos_vsp.round().cast().cast_unit();
                 }
             }
-            DesignerSt::Line(Some((_vsp0, vsp1))) => {
-                *vsp1 = self.curpos_vsp;
+            DesignerSt::CirArc((opt_vsps, wmi)) => {
+                if let Some((_vsp_center, vsp0, vsp1)) = opt_vsps {
+                    match wmi {
+                        0 => {
+                            *vsp0 = self.curpos_vsp;
+                        }
+                        1 => {
+                            *vsp1 = self.curpos_vsp;
+                        }
+                        _ => { }
+                    }
+                }
+            }
+            DesignerSt::Line(opt_vsps) => {
+                if let Some((_vsp0, vsp1)) = opt_vsps {
+                    *vsp1 = self.curpos_vsp;
+                }
             }
             DesignerSt::Idle => {}
-            _ => {}
         }
     }
     fn occupies_vsp(&self, _vsp: VSPoint) -> bool {
@@ -210,7 +235,10 @@ impl Designer {
             graphics.push_str(&format!("            vec![VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}),],\n", pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y))
         }
         graphics.push_str("        ],\n");
-        graphics.push_str("        circles: vec![],\n");
+        graphics.push_str("        circles: vec![\n");
+        // for c in circles
+        graphics.push_str("        ],\n");
+
         graphics.push_str("        ports: vec![\n");
         // ports
         for (i, &port) in ports.iter().enumerate() {
@@ -273,15 +301,20 @@ impl Drawable for Designer {
             frame.stroke(&path_builder.build(), cursor_stroke());
         }
         match &self.state {
+            DesignerSt::Line(opt_vsps) => {
+                if let Some((vsp0, vsp1)) = opt_vsps {
+                    Linear::new(*vsp0, *vsp1).draw_preview(vct, vcscale, frame);
+                }
+            }
+            DesignerSt::CirArc(opt_vsps) => {
+                if let (Some((vsp_center, vsp0, vsp1)), _) = opt_vsps {
+                    CirArc::from_triplet(*vsp_center, *vsp0, *vsp1).draw_preview(vct, vcscale, frame);
+                }
+            }
             DesignerSt::Bounds(opt_vsps) => {
                 draw_snap_marker(self.curpos_vsp.round(), vct, vcscale, frame);
                 if let Some((ssp0, ssp1)) = opt_vsps {
                     Bounds::new(SSBox::from_points([ssp0, ssp1])).draw_preview(vct, vcscale, frame);
-                }
-            }
-            DesignerSt::Line(opt_vsps) => {
-                if let Some((vsp0, vsp1)) = opt_vsps {
-                    Linear::new(*vsp0, *vsp1).draw_preview(vct, vcscale, frame);
                 }
             }
             DesignerSt::Idle => {}
@@ -317,6 +350,11 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         ret.insert(DesignerElement::Linear(l.clone()));
                     }
                 }
+                DesignerElement::CirArc(l) => {
+                    if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
+                        ret.insert(DesignerElement::CirArc(l.clone()));
+                    }
+                }
                 DesignerElement::Port(l) => {
                     if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
                         ret.insert(DesignerElement::Port(l.clone()));
@@ -343,6 +381,16 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         for d in &self.content {
             match d {
                 DesignerElement::Linear(l) => {
+                    if l.0.borrow_mut().interactable.contains_vsp(vsp) {
+                        if *count == skip {
+                            // skipped just enough
+                            return Some(d.clone());
+                        } else {
+                            *count += 1;
+                        }
+                    }
+                }
+                DesignerElement::CirArc(l) => {
                     if l.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
@@ -383,6 +431,40 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
                 match (&mut state, event) {
+                    // draw an arc
+                    (
+                        DesignerSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::A,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        state = DesignerSt::CirArc((None, 0));
+                    }
+                    (
+                        DesignerSt::CirArc((cirarc_st, wmi)),
+                        Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
+                    ) => {
+                        if let Some((vsp0, vsp1, vsp2)) = cirarc_st {
+                            match wmi {
+                                0 => {
+                                    *wmi += 1;
+                                }
+                                1 => {
+                                    self.content.insert(DesignerElement::CirArc(RcRCirArc::new(
+                                        CirArc::from_triplet(*vsp0, *vsp1, *vsp2),
+                                    )));
+                                    state = DesignerSt::Idle;
+                                }
+                                _ => {
+                                    state = DesignerSt::Idle;
+                                }
+                            }
+                        } else {
+                            state = DesignerSt::CirArc((Some((self.curpos_vsp, self.curpos_vsp, self.curpos_vsp)), 0))
+                        }
+                        ret_msg_tmp = SchematicMsg::ClearPassive;
+                    }
                     // output graphics definition
                     (
                         DesignerSt::Idle,
@@ -508,6 +590,12 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     // inserts the line if placing a new line
                     self.content.insert(DesignerElement::Linear(l.clone()));
                 }
+                DesignerElement::CirArc(l) => {
+                    l.0.borrow_mut().transform(*sst);
+                    // if moving an existing line, does nothing
+                    // inserts the line if placing a new line
+                    self.content.insert(DesignerElement::CirArc(l.clone()));
+                }
                 DesignerElement::Port(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing line, does nothing
@@ -536,6 +624,16 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     //build BaseElement
                     self.content
                         .insert(DesignerElement::Linear(RcRLinear::new(line)));
+                }
+                DesignerElement::CirArc(rcl) => {
+                    //unwrap refcell
+                    let refcell_d = rcl.0.borrow();
+                    let mut cirarc = (*refcell_d).clone();
+                    cirarc.transform(*sst);
+
+                    //build BaseElement
+                    self.content
+                        .insert(DesignerElement::CirArc(RcRCirArc::new(cirarc)));
                 }
                 DesignerElement::Port(rcl) => {
                     //unwrap refcell
