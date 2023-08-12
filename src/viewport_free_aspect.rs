@@ -530,10 +530,30 @@ where
         );
 
         let grid_stroke = Stroke {
-            width: (0.2 * self.vct.y_scale()).clamp(0.5, 3.0),
+            width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             ..Stroke::default()
         };
+
+        for x in bb_canvas.min.x as i32..bb_canvas.width() as i32{
+            if x % 10 == 0 {
+                let axis = Path::line(
+                    iced::Point::new(x as f32, bb_canvas.center().y + 3.00),
+                    iced::Point::new(x as f32, bb_canvas.center().y - 3.0),
+                );
+                frame.stroke(&axis, grid_stroke.clone());
+            }
+        }
+
+        for y in bb_canvas.min.y as i32..bb_canvas.height() as i32{
+            if y % 10 == 0 {
+                let axis = Path::line(
+                    iced::Point::new(bb_canvas.center().x + 3.00, y as f32),
+                    iced::Point::new(bb_canvas.center().x - 3.0, y as f32),
+                );
+                frame.stroke(&axis, grid_stroke.clone());
+            }
+        }
         frame.stroke(&x_axis, grid_stroke.clone());
         frame.stroke(&y_axis, grid_stroke);
     }
