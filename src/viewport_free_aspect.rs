@@ -5,8 +5,7 @@
 //! SchematicSpace is the schematic coordinate in i16
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
-use euclid::Point2D;
-use crate::transforms::{CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint, VSVec};
+use crate::transforms::{CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint};
 use crate::IcedStruct;
 use iced::Renderer;
 use iced::{
@@ -16,9 +15,7 @@ use iced::{
     },
     Color, Length, Rectangle, Size, Theme,
 };
-use iced::event::Status;
-use iced::mouse::Cursor;
-use iced::widget::canvas::{LineDash, Path};
+use iced::widget::canvas::{Path};
 
 /// viewport state
 #[derive(Clone, Debug, Default)]
@@ -443,10 +440,6 @@ where
         self.vct
     }
 
-    pub fn vc_scale(&self) -> f32 {
-        self.vct.x_scale()
-    }
-
     /// update the cursor position
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
@@ -535,7 +528,7 @@ where
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
         let grid_stroke = Stroke {
-            width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
+            width: (0.5 * self.vct.x_scale()).clamp(0.5, 3.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             ..Stroke::default()
         };
