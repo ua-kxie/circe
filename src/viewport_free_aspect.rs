@@ -535,7 +535,7 @@ where
             ..Stroke::default()
         };
 
-        for x in bb_canvas.min.x as i32..bb_canvas.width() as i32{
+        for x in bb_canvas.min.x as i32..bb_canvas.max.x as i32{
             if x % 10 == 0 {
                 let axis = Path::line(
                     iced::Point::new(x as f32, bb_canvas.center().y + 3.00),
@@ -545,7 +545,7 @@ where
             }
         }
 
-        for y in bb_canvas.min.y as i32..bb_canvas.height() as i32{
+        for y in bb_canvas.min.y as i32..bb_canvas.max.y as i32{
             if y % 10 == 0 {
                 let axis = Path::line(
                     iced::Point::new(bb_canvas.center().x + 3.00, y as f32),
