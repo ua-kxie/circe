@@ -5,8 +5,11 @@
 //! SchematicSpace is the schematic coordinate in i16
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
-use crate::transforms::{CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint};
+use crate::transforms::{
+    CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
+};
 use crate::IcedStruct;
+use iced::widget::canvas::Path;
 use iced::Renderer;
 use iced::{
     mouse,
@@ -15,7 +18,6 @@ use iced::{
     },
     Color, Length, Rectangle, Size, Theme,
 };
-use iced::widget::canvas::{Path};
 
 /// viewport state
 #[derive(Clone, Debug, Default)]
@@ -204,7 +206,6 @@ where
             mouse::Interaction::default()
         }
     }
-
 }
 
 impl<C, M> IcedStruct<CompositeMsg<M>> for Viewport<C, M>
@@ -514,9 +515,8 @@ where
         path_builder.circle(Point::from(p).into(), r);
         frame.stroke(&path_builder.build(), ref_stroke);
     }
-    /// draw the schematic grid onto canvas
+    // draw the schematic grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
-
         //draw x axis
         let x_axis = Path::line(
             iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
@@ -528,13 +528,13 @@ where
             iced::Point::new(bb_canvas.min.x, bb_canvas.center().y),
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
+
         let grid_stroke = Stroke {
-            width: (0.5 * self.vct.x_scale()).clamp(0.5, 3.0),
+            width: (0.2 * self.vct.x_scale()).clamp(0.5, 3.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             ..Stroke::default()
         };
         frame.stroke(&x_axis, grid_stroke.clone());
         frame.stroke(&y_axis, grid_stroke);
-
     }
 }

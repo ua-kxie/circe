@@ -38,7 +38,7 @@ lazy_static! {
         ],
         bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
- }
+}
 
 // lazy_static! {
 //     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
