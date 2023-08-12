@@ -5,9 +5,8 @@
 //! SchematicSpace is the schematic coordinate in i16
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
-use crate::transforms::{
-    CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
-};
+use euclid::Point2D;
+use crate::transforms::{CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint, VSVec};
 use crate::IcedStruct;
 use iced::Renderer;
 use iced::{
@@ -17,6 +16,9 @@ use iced::{
     },
     Color, Length, Rectangle, Size, Theme,
 };
+use iced::event::Status;
+use iced::mouse::Cursor;
+use iced::widget::canvas::{LineDash, Path};
 
 /// viewport state
 #[derive(Clone, Debug, Default)]
@@ -165,6 +167,13 @@ where
         });
 
         let passive = self.passive_cache.draw(renderer, bounds.size(), |frame| {
+            self.draw_grid(
+                frame,
+                CSBox::new(
+                    CSPoint::origin(),
+                    CSPoint::from([bounds.width, bounds.height]),
+                ),
+            );
             self.draw_origin_marker(frame);
             self.content.draw_passive(self.vct.transform(), frame);
         });
@@ -198,6 +207,7 @@ where
             mouse::Interaction::default()
         }
     }
+
 }
 
 impl<C, M> IcedStruct<CompositeMsg<M>> for Viewport<C, M>
@@ -433,6 +443,10 @@ where
         self.vct
     }
 
+    pub fn vc_scale(&self) -> f32 {
+        self.vct.x_scale()
+    }
+
     /// update the cursor position
     pub fn curpos_update(&mut self, csp1: CSPoint) {
         let vsp1 = self.cv_transform().transform_point(csp1);
@@ -506,5 +520,27 @@ where
         let r = self.scale * 0.5;
         path_builder.circle(Point::from(p).into(), r);
         frame.stroke(&path_builder.build(), ref_stroke);
+    }
+    /// draw the schematic grid onto canvas
+    pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
+        // Draw the vertical line (y-axis)
+        let rect = bb_canvas.to_rect();
+        let x_axis = Path::line(
+            iced::Point::new(rect.center().x, bb_canvas.max.y),
+            iced::Point::new(rect.center().x, bb_canvas.min.y),
+        );
+
+        let y_axis = Path::line(
+            iced::Point::new(bb_canvas.min.x, rect.center().y),
+            iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
+        );
+        let grid_stroke = Stroke {
+            width: (0.5 * self.vc_scale()).clamp(0.5, 3.0),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            ..Stroke::default()
+        };
+        frame.stroke(&x_axis, grid_stroke.clone());
+        frame.stroke(&y_axis, grid_stroke);
+
     }
 }
