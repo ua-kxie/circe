@@ -519,8 +519,8 @@ where
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         //draw x axis
         let x_axis = Path::line(
-            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
             iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
+            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
         );
 
         //draw y axis
@@ -530,13 +530,8 @@ where
         );
 
         let grid_stroke = Stroke {
-            width: (0.2 * self.vct.x_scale()).clamp(0.5, 3.0),
+            width: (0.2 * self.vct.y_scale()).clamp(0.5, 3.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
-            line_cap: LineCap::Round,
-            line_dash: LineDash {
-                segments: &[0.0, 1.0 * self.vct().x_scale()],
-                offset: 0,
-            },
             ..Stroke::default()
         };
         frame.stroke(&x_axis, grid_stroke.clone());
