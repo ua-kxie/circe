@@ -516,15 +516,16 @@ where
     }
     /// draw the schematic grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
-        // Draw the vertical line (y-axis)
-        let rect = bb_canvas.to_rect();
+
+        //draw x axis
         let x_axis = Path::line(
-            iced::Point::new(rect.center().x, bb_canvas.max.y),
-            iced::Point::new(rect.center().x, bb_canvas.min.y),
+            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
+            iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
         );
 
+        //draw y axis
         let y_axis = Path::line(
-            iced::Point::new(bb_canvas.min.x, rect.center().y),
+            iced::Point::new(bb_canvas.min.x, bb_canvas.center().y),
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
         let grid_stroke = Stroke {
