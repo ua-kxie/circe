@@ -568,10 +568,28 @@ where
             ..Stroke::default()
         };
 
-
         frame.stroke(&x_axis, grid_stroke_round);
         frame.stroke(&y_axis, grid_stroke_square);
         frame.stroke(&bottom_border, grid_stroke_line.clone());
-        frame.stroke(&left_border, grid_stroke_line);
+        frame.stroke(&left_border, grid_stroke_line.clone());
+        for x in bb_canvas.min.x as i32 + border as i32..bb_canvas.max.x as i32{
+            if x % 10 == 0 {
+                let tick = Path::line(
+                    iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
+                    iced::Point::new(x as f32, bb_canvas.max.y - 40.0),
+                );
+                frame.stroke(&tick, grid_stroke_line.clone());
+            }
+        }
+
+        for y in bb_canvas.min.y as i32..bb_canvas.max.y as i32 - border as i32{
+            if y % 10 == 0 {
+                let tick = Path::line(
+                    iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
+                    iced::Point::new(bb_canvas.min.x + 40.0, y as f32),
+                );
+                frame.stroke(&tick, grid_stroke_line.clone());
+            }
+        }
     }
 }
