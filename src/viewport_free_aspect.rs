@@ -529,32 +529,29 @@ where
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
 
-        let grid_stroke = Stroke {
+        let grid_stroke_square = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            line_cap: LineCap::Square,
+            line_dash: LineDash {
+                segments: &[8.0, self.vct.x_scale()],
+                offset: 0,
+            },
+            ..Stroke::default()
+        };
+        let grid_stroke_round = Stroke {
+            width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            line_cap: LineCap::Round,
+            line_dash: LineDash {
+                segments: &[0.0, self.vct.x_scale()],
+                offset: 0,
+            },
             ..Stroke::default()
         };
 
-        for x in bb_canvas.min.x as i32..bb_canvas.max.x as i32{
-            if x % 10 == 0 {
-                let axis = Path::line(
-                    iced::Point::new(x as f32, bb_canvas.center().y + 3.00),
-                    iced::Point::new(x as f32, bb_canvas.center().y - 3.0),
-                );
-                frame.stroke(&axis, grid_stroke.clone());
-            }
-        }
 
-        for y in bb_canvas.min.y as i32..bb_canvas.max.y as i32{
-            if y % 10 == 0 {
-                let axis = Path::line(
-                    iced::Point::new(bb_canvas.center().x + 3.00, y as f32),
-                    iced::Point::new(bb_canvas.center().x - 3.0, y as f32),
-                );
-                frame.stroke(&axis, grid_stroke.clone());
-            }
-        }
-        frame.stroke(&x_axis, grid_stroke.clone());
-        frame.stroke(&y_axis, grid_stroke);
+        frame.stroke(&x_axis, grid_stroke_round);
+        frame.stroke(&y_axis, grid_stroke_square);
     }
 }
