@@ -518,17 +518,26 @@ where
 
     // draw the x/y grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
-        let border = 50.0;
+        let border = 40.0;
         //draw x axis
         let y_axis = Path::line(
-            iced::Point::new(bb_canvas.center().x, bb_canvas.min.y - border),
-            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
+            iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
+            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y - border),
         );
 
         //draw y axis
         let x_axis = Path::line(
-            iced::Point::new(bb_canvas.min.x - border, bb_canvas.center().y),
+            iced::Point::new(bb_canvas.min.x + border, bb_canvas.center().y),
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
+        );
+
+        let bottom_border = Path::line(
+            iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
+            iced::Point::new(bb_canvas.max.x, bb_canvas.max.y - border),
+        );
+        let left_border = Path::line(
+            iced::Point::new(bb_canvas.min.x + border, bb_canvas.min.y),
+            iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
         );
 
         let grid_stroke_square = Stroke {
@@ -541,6 +550,13 @@ where
             },
             ..Stroke::default()
         };
+
+        let grid_stroke_line = Stroke {
+            width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            ..Stroke::default()
+        };
+
         let grid_stroke_round = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
@@ -555,5 +571,7 @@ where
 
         frame.stroke(&x_axis, grid_stroke_round);
         frame.stroke(&y_axis, grid_stroke_square);
+        frame.stroke(&bottom_border, grid_stroke_line.clone());
+        frame.stroke(&left_border, grid_stroke_line);
     }
 }
