@@ -576,7 +576,7 @@ where
             if x % 10 == 0 {
                 let tick = Path::line(
                     iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
-                    iced::Point::new(x as f32, bb_canvas.max.y - 40.0),
+                    iced::Point::new(x as f32, bb_canvas.max.y - border),
                 );
                 frame.stroke(&tick, grid_stroke_line.clone());
             }
@@ -586,10 +586,11 @@ where
             if y % 10 == 0 {
                 let tick = Path::line(
                     iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
-                    iced::Point::new(bb_canvas.min.x + 40.0, y as f32),
+                    iced::Point::new(bb_canvas.min.x + border, y as f32),
                 );
                 frame.stroke(&tick, grid_stroke_line.clone());
             }
         }
+
     }
 }
