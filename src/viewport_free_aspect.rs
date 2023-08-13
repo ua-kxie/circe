@@ -516,7 +516,7 @@ where
         frame.stroke(&path_builder.build(), ref_stroke);
     }
 
-    // draw the schematic grid onto canvas
+    // draw the x/y grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         let border = 50.0;
         //draw x axis
