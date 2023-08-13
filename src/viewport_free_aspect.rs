@@ -543,11 +543,11 @@ where
         let grid_stroke_square = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
-            line_cap: LineCap::Square,
+            /*line_cap: LineCap::Square,
             line_dash: LineDash {
-                segments: &[8.0, self.vct.x_scale()],
+                segments: &[8.0, 12.0 *self.vct.x_scale()],
                 offset: 0,
-            },
+            },*/
             ..Stroke::default()
         };
 
@@ -560,11 +560,11 @@ where
         let grid_stroke_round = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
             style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
-            line_cap: LineCap::Round,
+            /*line_cap: LineCap::Round,
             line_dash: LineDash {
-                segments: &[0.0, self.vct.x_scale()],
+                segments: &[0.0, 12.0 * self.vct.x_scale()],
                 offset: 0,
-            },
+            },*/
             ..Stroke::default()
         };
 
