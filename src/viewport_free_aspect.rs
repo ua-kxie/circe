@@ -515,17 +515,19 @@ where
         path_builder.circle(Point::from(p).into(), r);
         frame.stroke(&path_builder.build(), ref_stroke);
     }
+
     // draw the schematic grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
+        let border = 50.0;
         //draw x axis
-        let x_axis = Path::line(
-            iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
+        let y_axis = Path::line(
+            iced::Point::new(bb_canvas.center().x, bb_canvas.min.y - border),
             iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
         );
 
         //draw y axis
-        let y_axis = Path::line(
-            iced::Point::new(bb_canvas.min.x, bb_canvas.center().y),
+        let x_axis = Path::line(
+            iced::Point::new(bb_canvas.min.x - border, bb_canvas.center().y),
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
 
