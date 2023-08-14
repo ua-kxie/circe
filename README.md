@@ -1,9 +1,8 @@
 Circe: Prototyping for 2D CAD drawn with Iced canvas
 
 ### Preview:
-![Capture](https://github.com/ua-kxie/circe/assets/56177821/467531f5-45cc-4690-8f6d-2a49444faafe)
-![Capture1](https://github.com/ua-kxie/circe/assets/56177821/2f6394cb-83af-496b-bf8f-24039f3558fc)
-
+Simple op-amp with generic devices
+![Screenshot 2023-08-14 205401](https://github.com/ua-kxie/circe/assets/56177821/24db33c0-69f5-4187-8e41-38a495a6aecc)
 
 ### Setup:
 1. Clone the repository
