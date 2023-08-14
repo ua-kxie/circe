@@ -13,7 +13,9 @@ use crate::{
 
 use super::strokes::CirArc;
 
+pub mod c;
 pub mod gnd;
+pub mod l;
 pub mod nm;
 pub mod pm;
 pub mod r;
@@ -128,6 +130,8 @@ pub enum DeviceClass {
     Nm(nm::M),
     Gnd(gnd::Gnd),
     R(r::R),
+    L(l::L),
+    C(c::C),
     V(v::V),
 }
 impl DeviceClass {
@@ -143,6 +147,12 @@ impl DeviceClass {
             DeviceClass::R(x) => match &mut x.params {
                 r::ParamR::Raw(y) => y.set(new),
             },
+            DeviceClass::L(x) => match &mut x.params {
+                l::ParamL::Raw(y) => y.set(new),
+            },
+            DeviceClass::C(x) => match &mut x.params {
+                c::ParamC::Raw(y) => y.set(new),
+            },
             DeviceClass::Gnd(_) => {}
             DeviceClass::V(x) => match &mut x.params {
                 v::ParamV::Raw(y) => y.set(new),
@@ -156,6 +166,8 @@ impl DeviceClass {
             DeviceClass::Nm(x) => x.graphics,
             DeviceClass::Gnd(x) => x.graphics,
             DeviceClass::R(x) => x.graphics,
+            DeviceClass::L(x) => x.graphics,
+            DeviceClass::C(x) => x.graphics,
             DeviceClass::V(x) => x.graphics,
         }
     }
@@ -166,6 +178,8 @@ impl DeviceClass {
             DeviceClass::Nm(x) => x.params.summary(),
             DeviceClass::Gnd(x) => x.params.summary(),
             DeviceClass::R(x) => x.params.summary(),
+            DeviceClass::L(x) => x.params.summary(),
+            DeviceClass::C(x) => x.params.summary(),
             DeviceClass::V(x) => x.params.summary(),
         }
     }
@@ -176,6 +190,8 @@ impl DeviceClass {
             DeviceClass::Nm(_) => nm::ID_PREFIX,
             DeviceClass::Gnd(_) => gnd::ID_PREFIX,
             DeviceClass::R(_) => r::ID_PREFIX,
+            DeviceClass::L(_) => l::ID_PREFIX,
+            DeviceClass::C(_) => c::ID_PREFIX,
             DeviceClass::V(_) => v::ID_PREFIX,
         }
     }

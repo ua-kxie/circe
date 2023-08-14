@@ -18,7 +18,7 @@ use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
 use by_address::ByAddress;
 use iced::widget::canvas::Frame;
 
-use self::devicetype::{nm, pm};
+use self::devicetype::{c::C, l::L, nm, pm};
 
 use super::interactable::Interactive;
 
@@ -62,6 +62,8 @@ struct DevicesManager {
     nm: ClassManager,
     gnd: ClassManager,
     r: ClassManager,
+    l: ClassManager,
+    c: ClassManager,
     v: ClassManager,
 }
 
@@ -72,6 +74,8 @@ impl Default for DevicesManager {
             nm: ClassManager::new(),
             gnd: ClassManager::new(),
             r: ClassManager::new(),
+            l: ClassManager::new(),
+            c: ClassManager::new(),
             v: ClassManager::new(),
         }
     }
@@ -146,6 +150,8 @@ impl Devices {
                 DeviceClass::Nm(_) => self.manager.nm.incr(),
                 DeviceClass::Gnd(_) => self.manager.gnd.incr(),
                 DeviceClass::R(_) => self.manager.r.incr(),
+                DeviceClass::L(_) => self.manager.l.incr(),
+                DeviceClass::C(_) => self.manager.c.incr(),
                 DeviceClass::V(_) => self.manager.v.incr(),
             };
             d.0.borrow_mut().set_wm(ord);
@@ -174,13 +180,13 @@ impl Devices {
             .collect();
         ret
     }
-    /// create a new resistor with unique ID
+    /// create a new pmos with unique ID
     pub fn new_pmos(&mut self) -> RcRDevice {
         let mut d = Device::new_with_ord_class(0, DeviceClass::Pm(pm::M::new()));
         d.transform(transforms::sst_to_vvt(transforms::SST_YMIR));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
-    /// create a new resistor with unique ID
+    /// create a new nmos with unique ID
     pub fn new_nmos(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::Nm(nm::M::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
@@ -188,6 +194,16 @@ impl Devices {
     /// create a new resistor with unique ID
     pub fn new_res(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::R(R::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
+    }
+    /// create a new inductor with unique ID
+    pub fn new_ind(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::L(L::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
+    }
+    /// create a new capacitor with unique ID
+    pub fn new_cap(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::C(C::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new gnd with unique ID

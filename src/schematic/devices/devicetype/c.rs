@@ -4,41 +4,68 @@
 // + < dtemp = val > < tc1 = val > < tc2 = val > < ic = init_condition >
 
 use super::super::params;
-use super::Graphics;
+use super::{Graphics, Port};
+use crate::schematic::devices::strokes::CirArc;
+use crate::schematic::interactable::Interactable;
+use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;
 
 pub const ID_PREFIX: &str = "C";
 
 lazy_static! {
-    static ref DEFAULT_GRAPHICS: Graphics = todo!();
+    static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+        pts: vec![
+            vec![VSPoint::new(0.00, -0.25), VSPoint::new(0.00, -3.00),],
+            vec![VSPoint::new(-1.00, 0.50), VSPoint::new(1.00, 0.50),],
+            vec![VSPoint::new(0.00, 3.00), VSPoint::new(0.00, 0.50),],
+        ],
+        cirarcs: vec![CirArc::from_triplet(
+            VSPoint::new(0.00, -2.00),
+            VSPoint::new(1.00, -0.50),
+            VSPoint::new(-1.00, -0.50)
+        ),],
+        ports: vec![
+            Port {
+                name: "0".to_string(),
+                offset: SSPoint::new(0, 3),
+                interactable: Interactable::default()
+            },
+            Port {
+                name: "1".to_string(),
+                offset: SSPoint::new(0, -3),
+                interactable: Interactable::default()
+            },
+        ],
+        bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
+    };
 }
 
 #[derive(Debug, Clone)]
-pub enum ParamM {
+pub enum ParamC {
     Raw(params::Raw),
 }
-impl Default for ParamV {
+impl Default for ParamC {
     fn default() -> Self {
-        ParamV::Raw(params::Raw::new(String::from("")))
+        ParamC::Raw(params::Raw::new(String::from("10p")))
     }
 }
-impl ParamV {
+impl ParamC {
     pub fn summary(&self) -> String {
         match self {
-            ParamV::Raw(s) => s.raw.clone(),
+            ParamC::Raw(s) => s.raw.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct V {
-    pub params: ParamV,
+pub struct C {
+    pub params: ParamC,
     pub graphics: &'static Graphics,
 }
-impl V {
-    pub fn new() -> V {
-        V {
-            params: ParamV::default(),
+impl C {
+    pub fn new() -> C {
+        C {
+            params: ParamC::default(),
             graphics: &DEFAULT_GRAPHICS,
         }
     }
