@@ -12,6 +12,7 @@ use crate::{
     transforms::{SSPoint, VCTransform, VSBox, VVTransform},
     viewport::Drawable,
 };
+use iced::keyboard::Modifiers;
 use iced::widget::canvas::{event::Event, Frame};
 use paprika::PkVecvaluesall;
 use send_wrapper::SendWrapper;
@@ -271,18 +272,30 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         }
                         state = CircuitSt::Wiring(new_ws);
                     }
-                    // device placement
+                    // label
                     (
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::C,
-                            modifiers: _,
+                            key_code: iced::keyboard::KeyCode::L,
+                            modifiers: Modifiers::SHIFT,
                         }),
                     ) => {
-                        let d = self.devices.new_cap();
+                        let l = NetLabels::new_label();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Label(l)));
                     }
+                    // device placement
+                    // (  // cap disabled until pattern matching on no modifiers
+                    //     CircuitSt::Idle,
+                    //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                    //         key_code: iced::keyboard::KeyCode::C,
+                    //         modifiers: _,
+                    //     }),
+                    // ) => {
+                    //     let d = self.devices.new_cap();
+                    //     ret_msg_tmp =
+                    //         SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                    // }
                     (
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
@@ -359,18 +372,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         let d = self.devices.new_is();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
-                    }
-                    // label
-                    (
-                        CircuitSt::Idle,
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::L,
-                            modifiers: _,
-                        }),
-                    ) => {
-                        let l = NetLabels::new_label();
-                        ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Label(l)));
                     }
                     // state reset
                     (
