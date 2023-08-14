@@ -5,15 +5,14 @@
 //! SchematicSpace is the schematic coordinate in i16
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
+
 use crate::transforms::{
     CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
 };
 use crate::IcedStruct;
-<<<<<<< HEAD
-use iced::widget::canvas::{LineDash, Path};
-=======
-use iced::widget::canvas::Path;
->>>>>>> fa29711 (after merge)
+
+
+use iced::widget::canvas::{Fill, LineDash, Path, Style};
 use iced::Renderer;
 use iced::{
     mouse,
@@ -22,6 +21,7 @@ use iced::{
     },
     Color, Length, Rectangle, Size, Theme,
 };
+use iced::widget::canvas::fill::Rule;
 
 /// viewport state
 #[derive(Clone, Debug, Default)]
@@ -526,12 +526,12 @@ where
         //draw x axis
         let y_axis = Path::line(
             iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
-            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y - border),
+            iced::Point::new(bb_canvas.center().x, bb_canvas.max.y),
         );
 
         //draw y axis
         let x_axis = Path::line(
-            iced::Point::new(bb_canvas.min.x + border, bb_canvas.center().y),
+            iced::Point::new(bb_canvas.min.x, bb_canvas.center().y),
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
 
@@ -543,6 +543,15 @@ where
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.min.y),
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
         );
+        let size = Size{
+            width: bb_canvas.width(),
+            height: bb_canvas.max.y - border,
+        };
+        let size2 = Size{
+            width: bb_canvas.min.x + border,
+            height: bb_canvas.height(),
+        };
+        //let bottom_box = Path::rectangle(iced::Point::new(bb_canvas.min.x + border, bb_canvas.min.y), size);
 
         let grid_stroke_square = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
@@ -572,10 +581,14 @@ where
             ..Stroke::default()
         };
 
+
         frame.stroke(&x_axis, grid_stroke_round);
         frame.stroke(&y_axis, grid_stroke_square);
+        frame.fill_rectangle(iced::Point::new(bb_canvas.min.x, bb_canvas.max.y - border),size, Fill{ style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)), rule: Rule::NonZero });
+        frame.fill_rectangle(iced::Point::new(bb_canvas.min.x, bb_canvas.min.y),size2, Fill{ style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)), rule: Rule::NonZero });
         frame.stroke(&bottom_border, grid_stroke_line.clone());
         frame.stroke(&left_border, grid_stroke_line.clone());
+
         for x in bb_canvas.min.x as i32 + border as i32..bb_canvas.max.x as i32{
             if x % 10 == 0 {
                 let tick = Path::line(
