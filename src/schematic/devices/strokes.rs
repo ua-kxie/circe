@@ -14,7 +14,7 @@ use iced::{
 
 use crate::{
     schematic::interactable::{Interactable, Interactive},
-    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
+    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
 

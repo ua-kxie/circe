@@ -367,6 +367,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 SchematicMsg::ClearPassive
             }
         };
+        self.prune();
         ret_msg
     }
 
