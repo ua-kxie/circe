@@ -27,7 +27,10 @@ followed by `cargo run`
   
 #### Hotkeys:
 ##### Circuit Schematic:
-L - net label (does no thing for now)
+
+Ctrl-C/Ctrl-V - copy/paste
+
+Shift-L - net label (does no thing for now)
 
 W - draw wire
 
@@ -38,6 +41,10 @@ C - cycle tentative selection
 Del - delete selected
 
 R - resistor (during move/copy, rotates selected, ctrl-R to counter rotate)
+
+L - inductor
+
+<!-- C - capacitor -->
 
 G - ground
 
@@ -50,6 +57,8 @@ P - pmos device
 D - new devices hotkeys
 
 M - move selected
+
+X/Y - flip horizontal/vertical
 
 Space - run dc op simulation
 
@@ -64,6 +73,8 @@ F - fit viewport to geometry
 
 ##### device designer view
 -for now, intended for dev use only-
+
+Ctrl-C/Ctrl-V - copy/paste
 
 W - draw a line
 
