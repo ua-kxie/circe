@@ -18,7 +18,7 @@ use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
 use by_address::ByAddress;
 use iced::widget::canvas::Frame;
 
-use self::devicetype::{c::C, l::L, nm, pm};
+use self::devicetype::{c::C, i::I, l::L, nm, pm};
 
 use super::interactable::Interactive;
 
@@ -65,6 +65,7 @@ struct DevicesManager {
     l: ClassManager,
     c: ClassManager,
     v: ClassManager,
+    i: ClassManager,
 }
 
 impl Default for DevicesManager {
@@ -77,6 +78,7 @@ impl Default for DevicesManager {
             l: ClassManager::new(),
             c: ClassManager::new(),
             v: ClassManager::new(),
+            i: ClassManager::new(),
         }
     }
 }
@@ -153,6 +155,7 @@ impl Devices {
                 DeviceClass::L(_) => self.manager.l.incr(),
                 DeviceClass::C(_) => self.manager.c.incr(),
                 DeviceClass::V(_) => self.manager.v.incr(),
+                DeviceClass::I(_) => self.manager.i.incr(),
             };
             d.0.borrow_mut().set_wm(ord);
             self.set.insert(d);
@@ -214,6 +217,11 @@ impl Devices {
     /// create a new voltage source with unique ID
     pub fn new_vs(&mut self) -> RcRDevice {
         let d = Device::new_with_ord_class(0, DeviceClass::V(V::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
+    }
+    /// create a new current source with unique ID
+    pub fn new_is(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::I(I::new()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// returns a vector of SSPoints of all coordinates occupied by all ports of all devices. A coordinate is returned once for each port on that coordinate

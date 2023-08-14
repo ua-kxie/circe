@@ -15,6 +15,7 @@ use super::strokes::CirArc;
 
 pub mod c;
 pub mod gnd;
+pub mod i;
 pub mod l;
 pub mod nm;
 pub mod pm;
@@ -133,6 +134,7 @@ pub enum DeviceClass {
     L(l::L),
     C(c::C),
     V(v::V),
+    I(i::I),
 }
 impl DeviceClass {
     /// sets the raw parameter of the device
@@ -157,6 +159,9 @@ impl DeviceClass {
             DeviceClass::V(x) => match &mut x.params {
                 v::ParamV::Raw(y) => y.set(new),
             },
+            DeviceClass::I(x) => match &mut x.params {
+                i::ParamI::Raw(y) => y.set(new),
+            },
         }
     }
     /// returns a reference to the device graphics
@@ -169,6 +174,7 @@ impl DeviceClass {
             DeviceClass::L(x) => x.graphics,
             DeviceClass::C(x) => x.graphics,
             DeviceClass::V(x) => x.graphics,
+            DeviceClass::I(x) => x.graphics,
         }
     }
     /// returns a summary of the device parameter for display on canvas
@@ -181,6 +187,7 @@ impl DeviceClass {
             DeviceClass::L(x) => x.params.summary(),
             DeviceClass::C(x) => x.params.summary(),
             DeviceClass::V(x) => x.params.summary(),
+            DeviceClass::I(x) => x.params.summary(),
         }
     }
     /// returns the id prefix of the device class
@@ -193,6 +200,7 @@ impl DeviceClass {
             DeviceClass::L(_) => l::ID_PREFIX,
             DeviceClass::C(_) => c::ID_PREFIX,
             DeviceClass::V(_) => v::ID_PREFIX,
+            DeviceClass::I(_) => i::ID_PREFIX,
         }
     }
 }

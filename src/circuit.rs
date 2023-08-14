@@ -349,6 +349,17 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
                     }
+                    (
+                        CircuitSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::I,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        let d = self.devices.new_is();
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                    }
                     // label
                     (
                         CircuitSt::Idle,
