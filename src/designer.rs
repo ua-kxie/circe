@@ -17,7 +17,7 @@ use iced::widget::canvas::{stroke, LineCap, Stroke};
 use iced::Color;
 use send_wrapper::SendWrapper;
 
-use crate::schematic::devices::strokes::{Bounds, Linear, RcRBounds, RcRLinear, RcRCirArc, CirArc};
+use crate::schematic::devices::strokes::{Bounds, CirArc, Linear, RcRBounds, RcRCirArc, RcRLinear};
 use std::collections::HashSet;
 use std::fs;
 
@@ -179,7 +179,7 @@ impl Designer {
                         1 => {
                             *vsp1 = self.curpos_vsp;
                         }
-                        _ => { }
+                        _ => {}
                     }
                 }
             }
@@ -224,24 +224,69 @@ impl Designer {
     //     };
     // }
     fn graphics(&mut self) {
-        let mut graphics = String::from("lazy_static! {\n    static ref DEFAULT_GRAPHICS: Graphics = Graphics {\n");
-        let pts: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Linear(l) = x {Some(l)} else {None}).collect();
-        let cirarcs: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::CirArc(l) = x {Some(l)} else {None}).collect();
-        let ports: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Port(p) = x {Some(p)} else {None}).collect();
-        let bounds: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Bounds(b) = x {Some(b)} else {None}).collect();
+        let mut graphics = String::from(
+            "lazy_static! {\n    static ref DEFAULT_GRAPHICS: Graphics = Graphics {\n",
+        );
+        let pts: Vec<_> = self
+            .content
+            .iter()
+            .filter_map(|x| {
+                if let DesignerElement::Linear(l) = x {
+                    Some(l)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let cirarcs: Vec<_> = self
+            .content
+            .iter()
+            .filter_map(|x| {
+                if let DesignerElement::CirArc(l) = x {
+                    Some(l)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let ports: Vec<_> = self
+            .content
+            .iter()
+            .filter_map(|x| {
+                if let DesignerElement::Port(p) = x {
+                    Some(p)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let bounds: Vec<_> = self
+            .content
+            .iter()
+            .filter_map(|x| {
+                if let DesignerElement::Bounds(b) = x {
+                    Some(b)
+                } else {
+                    None
+                }
+            })
+            .collect();
         graphics.push_str("        pts: vec![\n");
         // lines
         for line in pts {
             let pt01 = line.0.borrow().pts();
-            graphics.push_str(&format!("            vec![VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}),],\n", pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y))
+            graphics.push_str(&format!(
+                "            vec![VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}),],\n",
+                pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y
+            ))
         }
         graphics.push_str("        ],\n");
         graphics.push_str("        cirarcs: vec![\n");
         for &c in cirarcs.iter() {
-        //         cirarcs: vec![
-        //             CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
-        //             ],
-        //         for c in circles
+            //         cirarcs: vec![
+            //             CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
+            //             ],
+            //         for c in circles
             let pts = c.0.borrow().pts();
             graphics.push_str(&format!("             CirArc::from_triplet(VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2})),\n", pts.0.x, pts.0.y, pts.1.x, pts.1.y, pts.2.x, pts.2.y));
         }
@@ -257,20 +302,27 @@ impl Designer {
             //             },
             graphics.push_str("            Port {\n");
             graphics.push_str(&format!("                name: \"{}\".to_string(),\n", i));
-            graphics.push_str(&format!("                offset: SSPoint::new({}, {}),\n", port.0.borrow().offset.x, port.0.borrow().offset.y));
+            graphics.push_str(&format!(
+                "                offset: SSPoint::new({}, {}),\n",
+                port.0.borrow().offset.x,
+                port.0.borrow().offset.y
+            ));
             graphics.push_str("                interactable: Interactable::default()\n");
             graphics.push_str("            },\n");
-        } 
+        }
         graphics.push_str("        ],\n");
         // bounds
         for bound in bounds {
             //         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
             let pt01 = bound.0.borrow().pts();
-            graphics.push_str(&format!("        bounds: SSBox::new(SSPoint::new({}, {}), SSPoint::new({}, {})),\n", pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y))
+            graphics.push_str(&format!(
+                "        bounds: SSBox::new(SSPoint::new({}, {}), SSPoint::new({}, {})),\n",
+                pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y
+            ))
         }
         graphics.push_str("    };\n");
         graphics.push_str(" }\n");
-        
+
         fs::write("graphics.txt", graphics.as_bytes()).expect("Unable to write file");
     }
 }
@@ -316,7 +368,8 @@ impl Drawable for Designer {
             }
             DesignerSt::CirArc(opt_vsps) => {
                 if let (Some((vsp_center, vsp0, vsp1)), _) = opt_vsps {
-                    CirArc::from_triplet(*vsp_center, *vsp0, *vsp1).draw_preview(vct, vcscale, frame);
+                    CirArc::from_triplet(*vsp_center, *vsp0, *vsp1)
+                        .draw_preview(vct, vcscale, frame);
                 }
             }
             DesignerSt::Bounds(opt_vsps) => {
@@ -469,7 +522,10 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                                 }
                             }
                         } else {
-                            state = DesignerSt::CirArc((Some((self.curpos_vsp, self.curpos_vsp, self.curpos_vsp)), 0))
+                            state = DesignerSt::CirArc((
+                                Some((self.curpos_vsp, self.curpos_vsp, self.curpos_vsp)),
+                                0,
+                            ))
                         }
                         ret_msg_tmp = SchematicMsg::ClearPassive;
                     }

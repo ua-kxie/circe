@@ -9,14 +9,18 @@ pub mod port;
 pub mod strokes;
 
 use crate::{
-    transforms::{SSPoint, VCTransform, VSBox, VSPoint},
+    transforms::{SSPoint, VCTransform, VSBox, VSPoint, self},
     viewport::Drawable,
 };
 use deviceinstance::Device;
-use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
+use devicetype::{gnd::Gnd, r::R, v::V, nm::M, DeviceClass};
 
 use by_address::ByAddress;
 use iced::widget::canvas::Frame;
+
+use self::devicetype::{pm, nm};
+
+use super::interactable::Interactive;
 
 /// newtype wrapper for `Rc<RefCell<Device>>`. Hashes by memory address.
 #[derive(Debug, Clone)]
@@ -54,6 +58,7 @@ impl ClassManager {
 /// struct to keep track of unique IDs for all devices of all types
 #[derive(Debug, Clone)]
 struct DevicesManager {
+    m: ClassManager,
     gnd: ClassManager,
     r: ClassManager,
     v: ClassManager,
@@ -62,6 +67,7 @@ struct DevicesManager {
 impl Default for DevicesManager {
     fn default() -> Self {
         Self {
+            m: ClassManager::new(),
             gnd: ClassManager::new(),
             r: ClassManager::new(),
             v: ClassManager::new(),
@@ -134,6 +140,8 @@ impl Devices {
     pub fn insert(&mut self, d: RcRDevice) {
         if !self.set.contains(&d) {
             let ord = match d.0.borrow().class() {
+                DeviceClass::Pm(_) => self.manager.m.incr(),
+                DeviceClass::Nm(_) => self.manager.m.incr(),
                 DeviceClass::Gnd(_) => self.manager.gnd.incr(),
                 DeviceClass::R(_) => self.manager.r.incr(),
                 DeviceClass::V(_) => self.manager.v.incr(),
@@ -163,6 +171,17 @@ impl Devices {
             })
             .collect();
         ret
+    }
+    /// create a new resistor with unique ID
+    pub fn new_pmos(&mut self) -> RcRDevice {
+        let mut d = Device::new_with_ord_class(0, DeviceClass::Pm(pm::M::new()));
+        d.transform(transforms::sst_to_vvt(transforms::SST_YMIR));
+        RcRDevice(Rc::new(RefCell::new(d)))
+    }
+    /// create a new resistor with unique ID
+    pub fn new_nmos(&mut self) -> RcRDevice {
+        let d = Device::new_with_ord_class(0, DeviceClass::Nm(nm::M::new()));
+        RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new resistor with unique ID
     pub fn new_res(&mut self) -> RcRDevice {

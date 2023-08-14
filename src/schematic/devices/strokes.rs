@@ -5,13 +5,16 @@ use std::{cell::RefCell, rc::Rc};
 
 use euclid::approxeq::ApproxEq;
 use iced::{
-    widget::canvas::{path::{Builder, Arc}, stroke, Frame, LineCap, LineDash, Stroke},
+    widget::canvas::{
+        path::{Arc, Builder},
+        stroke, Frame, LineCap, LineDash, Stroke,
+    },
     Color,
 };
 
 use crate::{
     schematic::interactable::{Interactable, Interactive},
-    transforms::{Point, SSBox, VCTransform, VSBox, VSPoint, VSVec, SSPoint},
+    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
     viewport::Drawable,
 };
 
@@ -137,12 +140,12 @@ impl CirArc {
         let radius = (vsp0 - vsp_center).length();
         let p0 = VSPoint::new(vsp_center.x - radius, vsp_center.y - radius);
         let p1 = VSPoint::new(vsp_center.x + radius, vsp_center.y + radius);
-        CirArc { 
+        CirArc {
             center: vsp_center,
             vsp0,
             vsp1,
             radius,
-            interactable: Interactable::new(VSBox::from_points([p0, p1]))
+            interactable: Interactable::new(VSBox::from_points([p0, p1])),
         }
     }
     pub fn pts(&self) -> (VSPoint, VSPoint, VSPoint) {
@@ -151,20 +154,35 @@ impl CirArc {
     pub fn build_path(&self, vct: VCTransform, vcscale: f32, path_builder: &mut Builder) {
         if self.vsp0.approx_eq(&self.vsp1) {
             // render as circle
-            path_builder.circle(Point::from(vct.transform_point(self.center)).into(), self.radius * vcscale)
-        } else {
-            let start_angle_raw = vct.transform_vector(self.vsp0 - self.center).angle_from_x_axis().radians;
-            let end_angle_raw = vct.transform_vector(self.vsp1 - self.center).angle_from_x_axis().radians;
-            let start_angle = if start_angle_raw.is_finite() {start_angle_raw} else {0.0};
-            let end_angle = if end_angle_raw.is_finite() {end_angle_raw} else {start_angle};
-            path_builder.arc(
-                Arc{
-                    center: Point::from(vct.transform_point(self.center)).into(),
-                    radius: self.radius * vcscale,
-                    start_angle,
-                    end_angle,
-                }
+            path_builder.circle(
+                Point::from(vct.transform_point(self.center)).into(),
+                self.radius * vcscale,
             )
+        } else {
+            let start_angle_raw = vct
+                .transform_vector(self.vsp0 - self.center)
+                .angle_from_x_axis()
+                .radians;
+            let end_angle_raw = vct
+                .transform_vector(self.vsp1 - self.center)
+                .angle_from_x_axis()
+                .radians;
+            let start_angle = if start_angle_raw.is_finite() {
+                start_angle_raw
+            } else {
+                0.0
+            };
+            let end_angle = if end_angle_raw.is_finite() {
+                end_angle_raw
+            } else {
+                start_angle
+            };
+            path_builder.arc(Arc {
+                center: Point::from(vct.transform_point(self.center)).into(),
+                radius: self.radius * vcscale,
+                start_angle,
+                end_angle,
+            })
         }
     }
 }

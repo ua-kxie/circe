@@ -190,6 +190,13 @@ pub const SST_CWR: SSTransform = SSTransform::new(0, -1, 1, 0, 0, 0);
 /// 90 deg counter clockwise rotation transform
 pub const SST_CCWR: SSTransform = SSTransform::new(0, 1, -1, 0, 0, 0);
 
+/// mirror along X axis
+#[allow(unused)]
+pub const SST_XMIR: SSTransform = SSTransform::new(-1, 0, 0, 1, 0, 0);
+
+/// mirror along Y axis
+pub const SST_YMIR: SSTransform = SSTransform::new(1, 0, 0, -1, 0, 0);
+
 /// converts SSTransform to SSTransform so that it can be composited with VCTransform
 pub fn sst_to_vvt(sst: SSTransform) -> VVTransform {
     sst.cast().with_destination().with_source()

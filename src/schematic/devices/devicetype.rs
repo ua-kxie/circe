@@ -16,6 +16,8 @@ use super::strokes::CirArc;
 pub mod gnd;
 pub mod r;
 pub mod v;
+pub mod nm;
+pub mod pm;
 
 const STROKE_WIDTH: f32 = 0.1;
 
@@ -122,6 +124,8 @@ pub trait DeviceType {
 /// DeviceClass enumerates the various classes of devices. E.g. ground, resistor, voltage source... etc
 #[derive(Debug, Clone)]
 pub enum DeviceClass {
+    Pm(pm::M),
+    Nm(nm::M),
     Gnd(gnd::Gnd),
     R(r::R),
     V(v::V),
@@ -130,6 +134,12 @@ impl DeviceClass {
     /// sets the raw parameter of the device
     pub fn set_raw_param(&mut self, new: String) {
         match self {
+            DeviceClass::Pm(x) => match &mut x.params {
+                pm::ParamM::Raw(y) => y.set(new),
+            },
+            DeviceClass::Nm(x) => match &mut x.params {
+                nm::ParamM::Raw(y) => y.set(new),
+            },
             DeviceClass::R(x) => match &mut x.params {
                 r::ParamR::Raw(y) => y.set(new),
             },
@@ -142,6 +152,8 @@ impl DeviceClass {
     /// returns a reference to the device graphics
     pub fn graphics(&self) -> &'static Graphics {
         match self {
+            DeviceClass::Pm(x) => x.graphics,
+            DeviceClass::Nm(x) => x.graphics,
             DeviceClass::Gnd(x) => x.graphics,
             DeviceClass::R(x) => x.graphics,
             DeviceClass::V(x) => x.graphics,
@@ -150,6 +162,8 @@ impl DeviceClass {
     /// returns a summary of the device parameter for display on canvas
     pub fn param_summary(&self) -> String {
         match self {
+            DeviceClass::Pm(x) => x.params.summary(),
+            DeviceClass::Nm(x) => x.params.summary(),
             DeviceClass::Gnd(x) => x.params.summary(),
             DeviceClass::R(x) => x.params.summary(),
             DeviceClass::V(x) => x.params.summary(),
@@ -158,6 +172,8 @@ impl DeviceClass {
     /// returns the id prefix of the device class
     pub fn id_prefix(&self) -> &'static str {
         match self {
+            DeviceClass::Pm(_) => pm::ID_PREFIX,
+            DeviceClass::Nm(_) => nm::ID_PREFIX,
             DeviceClass::Gnd(_) => gnd::ID_PREFIX,
             DeviceClass::R(_) => r::ID_PREFIX,
             DeviceClass::V(_) => v::ID_PREFIX,
