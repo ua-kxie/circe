@@ -14,10 +14,10 @@ use crate::{
 use super::strokes::CirArc;
 
 pub mod gnd;
-pub mod r;
-pub mod v;
 pub mod nm;
 pub mod pm;
+pub mod r;
+pub mod v;
 
 const STROKE_WIDTH: f32 = 0.1;
 

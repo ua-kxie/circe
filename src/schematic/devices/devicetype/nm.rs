@@ -16,7 +16,7 @@ use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;
 
-pub const ID_PREFIX: &str = "M";
+pub const ID_PREFIX: &str = "MN";
 
 lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
@@ -32,8 +32,7 @@ lazy_static! {
             vec![VSPoint::new(-0.50, 1.50), VSPoint::new(-0.50, -1.50),],
             vec![VSPoint::new(2.00, -1.50), VSPoint::new(1.00, -2.00),],
         ],
-        cirarcs: vec![
-        ],
+        cirarcs: vec![],
         ports: vec![
             Port {
                 name: "0".to_string(),
@@ -58,7 +57,7 @@ lazy_static! {
         ],
         bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
- }
+}
 
 #[derive(Debug, Clone)]
 pub enum ParamM {
@@ -74,7 +73,7 @@ impl ParamM {
         match self {
             ParamM::Raw(s) => {
                 format!("mosn {}", s.raw.clone())
-            },
+            }
         }
     }
 }
