@@ -428,7 +428,7 @@ where
                         (
                             SchematicSt::Idle,
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                key_code: iced::keyboard::KeyCode::C,
+                                key_code: iced::keyboard::KeyCode::K,
                                 modifiers: _,
                             }),
                         ) => {
