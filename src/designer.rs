@@ -174,6 +174,7 @@ impl Designer {
                     match wmi {
                         0 => {
                             *vsp0 = self.curpos_vsp;
+                            *vsp1 = self.curpos_vsp;
                         }
                         1 => {
                             *vsp1 = self.curpos_vsp;
@@ -225,7 +226,7 @@ impl Designer {
     fn graphics(&mut self) {
         let mut graphics = String::from("lazy_static! {\n    static ref DEFAULT_GRAPHICS: Graphics = Graphics {\n");
         let pts: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Linear(l) = x {Some(l)} else {None}).collect();
-        let circles = 0;
+        let cirarcs: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::CirArc(l) = x {Some(l)} else {None}).collect();
         let ports: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Port(p) = x {Some(p)} else {None}).collect();
         let bounds: Vec<_> = self.content.iter().filter_map(|x| if let DesignerElement::Bounds(b) = x {Some(b)} else {None}).collect();
         graphics.push_str("        pts: vec![\n");
@@ -235,12 +236,19 @@ impl Designer {
             graphics.push_str(&format!("            vec![VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}),],\n", pt01.0.x, pt01.0.y, pt01.1.x, pt01.1.y))
         }
         graphics.push_str("        ],\n");
-        graphics.push_str("        circles: vec![\n");
-        // for c in circles
+        graphics.push_str("        cirarcs: vec![\n");
+        for &c in cirarcs.iter() {
+        //         cirarcs: vec![
+        //             CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
+        //             ],
+        //         for c in circles
+            let pts = c.0.borrow().pts();
+            graphics.push_str(&format!("             CirArc::from_triplet(VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2})),\n", pts.0.x, pts.0.y, pts.1.x, pts.1.y, pts.2.x, pts.2.y));
+        }
         graphics.push_str("        ],\n");
 
-        graphics.push_str("        ports: vec![\n");
         // ports
+        graphics.push_str("        ports: vec![\n");
         for (i, &port) in ports.iter().enumerate() {
             //             Port {
             //                 name: "+".to_string(),
@@ -445,14 +453,14 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         DesignerSt::CirArc((cirarc_st, wmi)),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
-                        if let Some((vsp0, vsp1, vsp2)) = cirarc_st {
+                        if let Some((vsp_center, vsp0, vsp1)) = cirarc_st {
                             match wmi {
                                 0 => {
                                     *wmi += 1;
                                 }
                                 1 => {
                                     self.content.insert(DesignerElement::CirArc(RcRCirArc::new(
-                                        CirArc::from_triplet(*vsp0, *vsp1, *vsp2),
+                                        CirArc::from_triplet(*vsp_center, *vsp0, *vsp1),
                                     )));
                                     state = DesignerSt::Idle;
                                 }
