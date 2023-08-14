@@ -275,6 +275,28 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     (
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::P,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        let d = self.devices.new_pmos();
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                    }
+                    (
+                        CircuitSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::N,
+                            modifiers: _,
+                        }),
+                    ) => {
+                        let d = self.devices.new_nmos();
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                    }
+                    (
+                        CircuitSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::R,
                             modifiers: _,
                         }),
@@ -436,12 +458,14 @@ impl Circuit {
     pub fn netlist(&mut self) {
         self.nets.pre_netlist();
         let mut netlist = String::from("Netlist Created by Circe\n");
-        for d in self.devices.get_set() {
-            netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
-        }
-        if netlist == "Netlist Created by Circe\n" {
+        netlist.push_str(".model MOSN NMOS level=1\n");
+        netlist.push_str(".model MOSP PMOS level=1\n");
+        if self.devices.get_set().is_empty() {
             // empty netlist
             netlist.push_str("V_0 0 n1 0"); // give it something so spice doesnt hang
+        }
+        for d in self.devices.get_set() {
+            netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
         }
         netlist.push('\n');
         fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");

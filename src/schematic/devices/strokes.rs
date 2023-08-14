@@ -14,7 +14,11 @@ use iced::{
 
 use crate::{
     schematic::interactable::{Interactable, Interactive},
+<<<<<<< HEAD
     transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint},
+=======
+    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
+>>>>>>> 9e8b2a7 (added nmos, pmos devices)
     viewport::Drawable,
 };
 

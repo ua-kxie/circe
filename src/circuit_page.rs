@@ -327,6 +327,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 R: Resistor
                 V: Voltage Source
                 G: Ground
+                P: PMOS
+                N: NMOS
                 ",
                 ),
             )

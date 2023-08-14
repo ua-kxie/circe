@@ -2,6 +2,8 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 
 ### Preview:
 ![Capture](https://github.com/ua-kxie/circe/assets/56177821/467531f5-45cc-4690-8f6d-2a49444faafe)
+![Capture1](https://github.com/ua-kxie/circe/assets/56177821/2f6394cb-83af-496b-bf8f-24039f3558fc)
+
 
 ### Setup:
 1. Clone the repository
@@ -10,7 +12,8 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 3. Run `cargo run`
 
 Alternatively, clone the repository with the following:
-> `git clone --recurse-submodules https://github.com/ua-kxie/circe.git`
+
+`git clone --recurse-submodules https://github.com/ua-kxie/circe.git`
 
 followed by `cargo run`
 
@@ -40,6 +43,10 @@ G - ground
 
 V - voltage source
 
+N - nmos device
+
+P - pmos device
+
 D - new devices hotkeys
 
 M - move selected
@@ -56,12 +63,20 @@ Shift T - run transient simulation (10u 1m)
 F - fit viewport to geometry
 
 ##### device designer view
+-for now, intended for dev use only-
+
 W - draw a line
 
-P - place port (wrong scale at the moment)
+A - draw an arc/circle
+
+P - place port
+
+B - define device boundary
 
 ### Goals
 Target application is EDA schematic capture
 
 ### Contribute:
-use `cargo fmt`.
+Consider using `cargo fmt` & `cargo fix`.
+
+Looking for experienced help with architecture and GUI.
