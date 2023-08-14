@@ -359,6 +359,24 @@ where
                             }
                         }
                         (
+                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::X,
+                                modifiers: _,
+                            }),
+                        ) => {
+                            *sst = sst.then(&transforms::SST_XMIR);
+                        }
+                        (
+                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                            Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                                key_code: iced::keyboard::KeyCode::Y,
+                                modifiers: _,
+                            }),
+                        ) => {
+                            *sst = sst.then(&transforms::SST_YMIR);
+                        }
+                        (
                             SchematicSt::Moving(mut opt_pts),
                             Event::Mouse(iced::mouse::Event::ButtonReleased(
                                 iced::mouse::Button::Left,
