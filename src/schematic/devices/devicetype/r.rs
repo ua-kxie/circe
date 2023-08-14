@@ -39,7 +39,6 @@ lazy_static! {
         bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
 }
-<<<<<<< HEAD
 
 // lazy_static! {
 //     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
@@ -69,8 +68,7 @@ lazy_static! {
 //         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
 //     };
 // }
-=======
->>>>>>> 9e8b2a7 (added nmos, pmos devices)
+
 
 // lazy_static! {
 //     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
@@ -100,6 +98,7 @@ lazy_static! {
 //         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
 //     };
 // }
+
 
 /// Enumerates the different ways to specifify parameters for a resistor
 #[derive(Debug, Clone)]

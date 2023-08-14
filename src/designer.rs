@@ -238,7 +238,18 @@ impl Designer {
                 }
             })
             .collect();
-        let circles = 0;
+
+        let cirarcs: Vec<_> = self
+            .content
+            .iter()
+            .filter_map(|x| {
+                if let DesignerElement::CirArc(l) = x {
+                    Some(l)
+                } else {
+                    None
+                }
+            })
+            .collect();
         let ports: Vec<_> = self
             .content
             .iter()

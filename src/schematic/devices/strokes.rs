@@ -14,7 +14,7 @@ use iced::{
 
 use crate::{
     schematic::interactable::{Interactable, Interactive},
-    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint, VSVec},
+    transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
 
@@ -148,31 +148,8 @@ impl CirArc {
             interactable: Interactable::new(VSBox::from_points([p0, p1])),
         }
     }
-    pub fn path(&self, vct: VCTransform, vcscale: f32) -> Arc {
-        let start_angle_raw = -vct
-            .transform_vector(self.vsp0 - self.center)
-            .angle_from_x_axis()
-            .radians;
-        let end_angle_raw = -vct
-            .transform_vector(self.vsp1 - self.center)
-            .angle_from_x_axis()
-            .radians;
-        let start_angle = if start_angle_raw.is_finite() {
-            start_angle_raw
-        } else {
-            0.0
-        };
-        let end_angle = if end_angle_raw.is_finite() {
-            end_angle_raw
-        } else {
-            start_angle
-        };
-        Arc {
-            center: Point::from(vct.transform_point(self.center)).into(),
-            radius: self.radius * vcscale,
-            start_angle,
-            end_angle,
-        }
+    pub fn pts(&self) -> (VSPoint, VSPoint, VSPoint) {
+        (self.center, self.vsp0, self.vsp1)
     }
     pub fn build_path(&self, vct: VCTransform, vcscale: f32, path_builder: &mut Builder) {
         if self.vsp0.approx_eq(&self.vsp1) {
@@ -182,11 +159,11 @@ impl CirArc {
                 self.radius * vcscale,
             )
         } else {
-            let start_angle_raw = -vct
+            let start_angle_raw = vct
                 .transform_vector(self.vsp0 - self.center)
                 .angle_from_x_axis()
                 .radians;
-            let end_angle_raw = -vct
+            let end_angle_raw = vct
                 .transform_vector(self.vsp1 - self.center)
                 .angle_from_x_axis()
                 .radians;
