@@ -174,6 +174,7 @@ impl Designer {
                     match wmi {
                         0 => {
                             *vsp0 = self.curpos_vsp;
+                            *vsp1 = self.curpos_vsp;
                         }
                         1 => {
                             *vsp1 = self.curpos_vsp;
@@ -237,7 +238,17 @@ impl Designer {
                 }
             })
             .collect();
-        let circles = 0;
+        let cirarcs: Vec<_> = self
+            .content
+            .iter()
+            .filter_map(|x| {
+                if let DesignerElement::CirArc(l) = x {
+                    Some(l)
+                } else {
+                    None
+                }
+            })
+            .collect();
         let ports: Vec<_> = self
             .content
             .iter()
@@ -270,12 +281,19 @@ impl Designer {
             ))
         }
         graphics.push_str("        ],\n");
-        graphics.push_str("        circles: vec![\n");
-        // for c in circles
+        graphics.push_str("        cirarcs: vec![\n");
+        for &c in cirarcs.iter() {
+            //         cirarcs: vec![
+            //             CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
+            //             ],
+            //         for c in circles
+            let pts = c.0.borrow().pts();
+            graphics.push_str(&format!("             CirArc::from_triplet(VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2}), VSPoint::new({:0.2}, {:0.2})),\n", pts.0.x, pts.0.y, pts.1.x, pts.1.y, pts.2.x, pts.2.y));
+        }
         graphics.push_str("        ],\n");
 
-        graphics.push_str("        ports: vec![\n");
         // ports
+        graphics.push_str("        ports: vec![\n");
         for (i, &port) in ports.iter().enumerate() {
             //             Port {
             //                 name: "+".to_string(),
@@ -478,9 +496,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::A,
-                            modifiers: _,
-                        }),
+                                            key_code: iced::keyboard::KeyCode::A,
+                                            modifiers: _,
+                                        }),
                     ) => {
                         state = DesignerSt::CirArc((None, 0));
                     }
@@ -488,14 +506,14 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         DesignerSt::CirArc((cirarc_st, wmi)),
                         Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)),
                     ) => {
-                        if let Some((vsp0, vsp1, vsp2)) = cirarc_st {
+                        if let Some((vsp_center, vsp0, vsp1)) = cirarc_st {
                             match wmi {
                                 0 => {
                                     *wmi += 1;
                                 }
                                 1 => {
                                     self.content.insert(DesignerElement::CirArc(RcRCirArc::new(
-                                        CirArc::from_triplet(*vsp0, *vsp1, *vsp2),
+                                        CirArc::from_triplet(*vsp_center, *vsp0, *vsp1),
                                     )));
                                     state = DesignerSt::Idle;
                                 }
@@ -515,9 +533,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::Space,
-                            modifiers: _,
-                        }),
+                                            key_code: iced::keyboard::KeyCode::Space,
+                                            modifiers: _,
+                                        }),
                     ) => {
                         self.graphics();
                     }
@@ -525,9 +543,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::B,
-                            modifiers: _,
-                        }),
+                                            key_code: iced::keyboard::KeyCode::B,
+                                            modifiers: _,
+                                        }),
                     ) => {
                         state = DesignerSt::Bounds(None);
                     }
@@ -558,9 +576,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::P,
-                            modifiers: _,
-                        }),
+                                            key_code: iced::keyboard::KeyCode::P,
+                                            modifiers: _,
+                                        }),
                     ) => {
                         ret_msg_tmp = SchematicMsg::NewElement(SendWrapper::new(
                             DesignerElement::Port(RcRPort::new(Port::default())),
@@ -570,9 +588,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::W,
-                            modifiers: _,
-                        }),
+                                            key_code: iced::keyboard::KeyCode::W,
+                                            modifiers: _,
+                                        }),
                     ) => {
                         state = DesignerSt::Line(None);
                     }
@@ -608,9 +626,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         _,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::Escape,
-                            modifiers: _,
-                        }),
+                                            key_code: iced::keyboard::KeyCode::Escape,
+                                            modifiers: _,
+                                        }),
                     ) => {
                         state = DesignerSt::Idle;
                     }

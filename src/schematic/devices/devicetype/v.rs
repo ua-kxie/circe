@@ -20,31 +20,60 @@ pub const ID_PREFIX: &str = "V";
 lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
         pts: vec![
-            vec![VSPoint::new(0.0, 3.0), VSPoint::new(0.0, 1.5),],
-            vec![VSPoint::new(0.0, -1.5), VSPoint::new(0.0, -3.0),],
-            vec![VSPoint::new(-0.5, -1.0), VSPoint::new(0.5, -1.0),],
-            vec![VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 0.5),],
-            vec![VSPoint::new(-0.5, 1.0), VSPoint::new(0.5, 1.0),],
+            vec![VSPoint::new(-0.25, 0.50), VSPoint::new(0.25, 0.50),],
+            vec![VSPoint::new(0.00, 3.00), VSPoint::new(0.00, 1.00),],
+            vec![VSPoint::new(0.00, 0.75), VSPoint::new(0.00, 0.25),],
+            vec![VSPoint::new(0.00, -1.00), VSPoint::new(0.00, -3.00),],
+            vec![VSPoint::new(-0.25, -0.50), VSPoint::new(0.25, -0.50),],
         ],
         cirarcs: vec![
-            CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
-            // (VSPoint::origin(), 1.5)
-            ],
+             CirArc::from_triplet(VSPoint::new(0.00, 0.00), VSPoint::new(1.00, 0.00), VSPoint::new(1.00, 0.00)),
+        ],
         ports: vec![
             Port {
-                name: "+".to_string(),
+                name: "0".to_string(),
                 offset: SSPoint::new(0, 3),
-                interactable: Interactable::default(),
+                interactable: Interactable::default()
             },
             Port {
-                name: "-".to_string(),
+                name: "1".to_string(),
                 offset: SSPoint::new(0, -3),
-                interactable: Interactable::default(),
+                interactable: Interactable::default()
             },
         ],
-        bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+        bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
-}
+ }
+
+
+// lazy_static! {
+//     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+//         pts: vec![
+//             vec![VSPoint::new(0.0, 3.0), VSPoint::new(0.0, 1.5),],
+//             vec![VSPoint::new(0.0, -1.5), VSPoint::new(0.0, -3.0),],
+//             vec![VSPoint::new(-0.5, -1.0), VSPoint::new(0.5, -1.0),],
+//             vec![VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 0.5),],
+//             vec![VSPoint::new(-0.5, 1.0), VSPoint::new(0.5, 1.0),],
+//         ],
+//         cirarcs: vec![
+//             CirArc::from_triplet(VSPoint::origin(), VSPoint::new(0.0, 1.5), VSPoint::new(0.0, 1.5))
+//             // (VSPoint::origin(), 1.5)
+//             ],
+//         ports: vec![
+//             Port {
+//                 name: "+".to_string(),
+//                 offset: SSPoint::new(0, 3),
+//                 interactable: Interactable::default(),
+//             },
+//             Port {
+//                 name: "-".to_string(),
+//                 offset: SSPoint::new(0, -3),
+//                 interactable: Interactable::default(),
+//             },
+//         ],
+//         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+//     };
+// }
 
 // lazy_static! {
 //     static ref DEFAULT_GRAPHICS: Graphics =
