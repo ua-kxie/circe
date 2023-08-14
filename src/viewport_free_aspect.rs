@@ -9,7 +9,11 @@ use crate::transforms::{
     CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
 };
 use crate::IcedStruct;
+<<<<<<< HEAD
 use iced::widget::canvas::{LineDash, Path};
+=======
+use iced::widget::canvas::Path;
+>>>>>>> fa29711 (after merge)
 use iced::Renderer;
 use iced::{
     mouse,
@@ -591,6 +595,12 @@ where
                 frame.stroke(&tick, grid_stroke_line.clone());
             }
         }
-
+        let grid_stroke = Stroke {
+            width: (0.2 * self.vct.x_scale()).clamp(0.5, 3.0),
+            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            ..Stroke::default()
+        };
+        frame.stroke(&x_axis, grid_stroke.clone());
+        frame.stroke(&y_axis, grid_stroke);
     }
 }

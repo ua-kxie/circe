@@ -72,6 +72,35 @@ lazy_static! {
 =======
 >>>>>>> 9e8b2a7 (added nmos, pmos devices)
 
+// lazy_static! {
+//     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+//         pts: vec![
+//             vec![VSPoint::new(0., 3.), VSPoint::new(0., -3.),],
+//             vec![
+//                 VSPoint::new(-1., 2.),
+//                 VSPoint::new(-1., -2.),
+//                 VSPoint::new(1., -2.),
+//                 VSPoint::new(1., 2.),
+//                 VSPoint::new(-1., 2.),
+//             ],
+//         ],
+//         circles: vec![],
+//         ports: vec![
+//             Port {
+//                 name: "+".to_string(),
+//                 offset: SSPoint::new(0, 3),
+//                 interactable: Interactable::default(),
+//             },
+//             Port {
+//                 name: "-".to_string(),
+//                 offset: SSPoint::new(0, -3),
+//                 interactable: Interactable::default(),
+//             },
+//         ],
+//         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
+//     };
+// }
+
 /// Enumerates the different ways to specifify parameters for a resistor
 #[derive(Debug, Clone)]
 pub enum ParamR {
