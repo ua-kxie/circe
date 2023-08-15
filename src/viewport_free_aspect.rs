@@ -543,17 +543,6 @@ where
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.min.y),
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
         );
-
-        //for the rectangles
-        let x_rect = Size {
-            width: bb_canvas.width(),
-            height: bb_canvas.max.y - border,
-        };
-        let y_rect = Size {
-            width: bb_canvas.min.x + border,
-            height: bb_canvas.height(),
-        };
-
         //this is the grid stroke line being used, solid and thin
         let grid_stroke_line = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
@@ -565,10 +554,21 @@ where
         frame.stroke(&x_axis, grid_stroke_line.clone());
         frame.stroke(&y_axis, grid_stroke_line.clone());
 
+
+        //set up sizes for rectangles to cover axes boundaries
+        let x_size = Size {
+            width: bb_canvas.width(),
+            height: bb_canvas.max.y - border,
+        };
+        let y_size = Size {
+            width: bb_canvas.min.x + border,
+            height: bb_canvas.height(),
+        };
+
         //layer for the borders
         frame.fill_rectangle(
             iced::Point::new(bb_canvas.min.x, bb_canvas.max.y - border),
-            x_rect,
+            x_size,
             Fill {
                 style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
                 rule: Rule::NonZero,
@@ -578,7 +578,7 @@ where
         //rectangle to cover the canvas space bounds
         frame.fill_rectangle(
             iced::Point::new(bb_canvas.min.x, bb_canvas.min.y),
-            y_rect,
+            y_size,
             Fill {
                 style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
                 rule: Rule::NonZero,
