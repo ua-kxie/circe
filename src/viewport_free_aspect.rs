@@ -587,10 +587,13 @@ where
         frame.stroke(&bottom_border, grid_stroke_line.clone());
         frame.stroke(&left_border, grid_stroke_line.clone());
 
-        //build x ticks. min.x starts at left, so it is normal.
+
         let mut exponent = 0;
         let mut exp_indexer = 0;
-        for x in bb_canvas.min.x as i32 + border as i32..bb_canvas.max.x as i32 {
+        let x_min = bb_canvas.min.x as i32 + border as i32;
+        let x_max = bb_canvas.max.x as i32;
+        //build x ticks. min.x starts at left, so it is normal.
+        for x in x_min..x_max {
             if exp_indexer % 10 == 0 {
                 let a = Text {
                     content: format!("10e{}",exponent),
