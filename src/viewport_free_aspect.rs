@@ -12,7 +12,7 @@ use crate::IcedStruct;
 
 use iced::widget::canvas::fill::Rule;
 use iced::widget::canvas::{Fill, LineDash, Path, Style};
-use iced::Renderer;
+use iced::{alignment, Renderer};
 use iced::{
     mouse,
     widget::canvas::{
@@ -588,13 +588,28 @@ where
         frame.stroke(&left_border, grid_stroke_line.clone());
 
         //build x ticks. min.x starts at left, so it is normal.
+        let mut exponent = 0;
+        let mut exp_indexer = 0;
         for x in bb_canvas.min.x as i32 + border as i32..bb_canvas.max.x as i32 {
+            if exp_indexer % 10 == 0 {
+                let a = Text {
+                    content: format!("10e{}",exponent),
+                    position: iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
+                    color: Color::from_rgb(1.0, 1.0, 1.0),
+                    size: self.vct.y_scale(),
+                    ..Default::default()
+                };
+                frame.fill_text(a);
+                exponent+=1;
+                exp_indexer = 0;
+            }
             if x % 10 == 0 {
                 let tick = Path::line(
                     iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
                     iced::Point::new(x as f32, bb_canvas.max.y - border),
                 );
                 frame.stroke(&tick, grid_stroke_line.clone());
+                exp_indexer +=1;
             }
         }
 
@@ -603,7 +618,6 @@ where
         let mut exponent = 0;
         let mut exp_indexer = 0;
         loop{
-
             let tick = Path::line(
                 iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
                 iced::Point::new(bb_canvas.min.x + border, y as f32),
@@ -613,8 +627,8 @@ where
                 let a = Text {
                     content: format!("10e{}",exponent),
                     position: iced::Point::new(bb_canvas.min.x + 5.0, y as f32),
-                    color: Color::from_rgb(0.2, 0.2, 0.2),
-                    size: 12.0,
+                    color: Color::from_rgb(1.0, 1.0, 1.0),
+                    size: self.vct.y_scale(),
                     ..Default::default()
                 };
                 frame.fill_text(a);
