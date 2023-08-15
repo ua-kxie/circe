@@ -5,13 +5,12 @@
 //! SchematicSpace is the schematic coordinate in i16
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
-
 use crate::transforms::{
     CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
 };
 use crate::IcedStruct;
 
-
+use iced::widget::canvas::fill::Rule;
 use iced::widget::canvas::{Fill, LineDash, Path, Style};
 use iced::Renderer;
 use iced::{
@@ -21,7 +20,6 @@ use iced::{
     },
     Color, Length, Rectangle, Size, Theme,
 };
-use iced::widget::canvas::fill::Rule;
 
 /// viewport state
 #[derive(Clone, Debug, Default)]
@@ -523,6 +521,7 @@ where
     // draw the x/y grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         let border = 40.0;
+
         //draw x axis
         let y_axis = Path::line(
             iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
@@ -535,6 +534,8 @@ where
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
 
+
+        //get the line border for the ticks set up
         let bottom_border = Path::line(
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
             iced::Point::new(bb_canvas.max.x, bb_canvas.max.y - border),
@@ -543,53 +544,51 @@ where
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.min.y),
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
         );
-        let size = Size{
+
+        //for the rectangles
+        let size = Size {
             width: bb_canvas.width(),
             height: bb_canvas.max.y - border,
         };
-        let size2 = Size{
+        let size2 = Size {
             width: bb_canvas.min.x + border,
             height: bb_canvas.height(),
-        };
-        //let bottom_box = Path::rectangle(iced::Point::new(bb_canvas.min.x + border, bb_canvas.min.y), size);
-
-        let grid_stroke_square = Stroke {
-            width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
-            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
-            /*line_cap: LineCap::Square,
-            line_dash: LineDash {
-                segments: &[8.0, 12.0 *self.vct.x_scale()],
-                offset: 0,
-            },*/
-            ..Stroke::default()
         };
 
         let grid_stroke_line = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
-            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            style: Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
             ..Stroke::default()
         };
 
-        let grid_stroke_round = Stroke {
-            width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
-            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
-            /*line_cap: LineCap::Round,
-            line_dash: LineDash {
-                segments: &[0.0, 12.0 * self.vct.x_scale()],
-                offset: 0,
-            },*/
-            ..Stroke::default()
-        };
+        //draw axes
+        frame.stroke(&x_axis, grid_stroke_line.clone());
+        frame.stroke(&y_axis, grid_stroke_line.clone());
 
+        //layer for the borders
+        frame.fill_rectangle(
+            iced::Point::new(bb_canvas.min.x, bb_canvas.max.y - border),
+            size,
+            Fill {
+                style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
+                rule: Rule::NonZero,
+            },
+        );
+        frame.fill_rectangle(
+            iced::Point::new(bb_canvas.min.x, bb_canvas.min.y),
+            size2,
+            Fill {
+                style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
+                rule: Rule::NonZero,
+            },
+        );
 
-        frame.stroke(&x_axis, grid_stroke_round);
-        frame.stroke(&y_axis, grid_stroke_square);
-        frame.fill_rectangle(iced::Point::new(bb_canvas.min.x, bb_canvas.max.y - border),size, Fill{ style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)), rule: Rule::NonZero });
-        frame.fill_rectangle(iced::Point::new(bb_canvas.min.x, bb_canvas.min.y),size2, Fill{ style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)), rule: Rule::NonZero });
+        //border for the ticks
         frame.stroke(&bottom_border, grid_stroke_line.clone());
         frame.stroke(&left_border, grid_stroke_line.clone());
 
-        for x in bb_canvas.min.x as i32 + border as i32..bb_canvas.max.x as i32{
+        //build x ticks. min.x starts at left, so it is normal.
+        for x in bb_canvas.min.x as i32 + border as i32..bb_canvas.max.x as i32 {
             if x % 10 == 0 {
                 let tick = Path::line(
                     iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
@@ -599,21 +598,35 @@ where
             }
         }
 
-        for y in bb_canvas.min.y as i32..bb_canvas.max.y as i32 - border as i32{
-            if y % 10 == 0 {
-                let tick = Path::line(
-                    iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
-                    iced::Point::new(bb_canvas.min.x + border, y as f32),
-                );
-                frame.stroke(&tick, grid_stroke_line.clone());
+        //build ticks on y axis. max.y starts at bottom so it needs to decrement
+        let mut y:i32= bb_canvas.max.y as i32 - border as i32;
+        let mut exponent = 0;
+        let mut exp_indexer = 0;
+        loop{
+
+            let tick = Path::line(
+                iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
+                iced::Point::new(bb_canvas.min.x + border, y as f32),
+            );
+            frame.stroke(&tick, grid_stroke_line.clone());
+            if exp_indexer % 10 == 0 {
+                let a = Text {
+                    content: format!("10e{}",exponent),
+                    position: iced::Point::new(bb_canvas.min.x + 5.0, y as f32),
+                    color: Color::from_rgb(0.2, 0.2, 0.2),
+                    size: 12.0,
+                    ..Default::default()
+                };
+                frame.fill_text(a);
+                exponent+=1;
+                exp_indexer = 0;
+            }
+            exp_indexer +=1;
+            y -= 10;
+            if y <= bb_canvas.min.y as i32{
+                break;
             }
         }
-        let grid_stroke = Stroke {
-            width: (0.2 * self.vct.x_scale()).clamp(0.5, 3.0),
-            style: stroke::Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
-            ..Stroke::default()
-        };
-        frame.stroke(&x_axis, grid_stroke.clone());
-        frame.stroke(&y_axis, grid_stroke);
+
     }
 }

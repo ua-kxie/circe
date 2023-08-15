@@ -497,9 +497,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::A,
-                                            modifiers: _,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::A,
+                            modifiers: _,
+                        }),
                     ) => {
                         state = DesignerSt::CirArc((None, 0));
                     }
@@ -534,9 +534,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::Space,
-                                            modifiers: _,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::Space,
+                            modifiers: _,
+                        }),
                     ) => {
                         self.graphics();
                     }
@@ -544,9 +544,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::B,
-                                            modifiers: _,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::B,
+                            modifiers: _,
+                        }),
                     ) => {
                         state = DesignerSt::Bounds(None);
                     }
@@ -577,9 +577,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::P,
-                                            modifiers: _,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::P,
+                            modifiers: _,
+                        }),
                     ) => {
                         ret_msg_tmp = SchematicMsg::NewElement(SendWrapper::new(
                             DesignerElement::Port(RcRPort::new(Port::default())),
@@ -589,9 +589,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         DesignerSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::W,
-                                            modifiers: _,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::W,
+                            modifiers: _,
+                        }),
                     ) => {
                         state = DesignerSt::Line(None);
                     }
@@ -627,9 +627,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                     (
                         _,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                            key_code: iced::keyboard::KeyCode::Escape,
-                                            modifiers: _,
-                                        }),
+                            key_code: iced::keyboard::KeyCode::Escape,
+                            modifiers: _,
+                        }),
                     ) => {
                         state = DesignerSt::Idle;
                     }
