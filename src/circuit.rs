@@ -250,13 +250,14 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             Msg::CanvasEvent(event) => {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
+                const NO_MODIFIER: Modifiers = Modifiers::empty();
                 match (&mut state, event) {
                     // wiring
                     (
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::W,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         state = CircuitSt::Wiring(None);
@@ -298,22 +299,22 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Label(l)));
                     }
                     // device placement
-                    // (  // cap disabled until pattern matching on no modifiers
-                    //     CircuitSt::Idle,
-                    //     Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    //         key_code: iced::keyboard::KeyCode::C,
-                    //         modifiers: _,
-                    //     }),
-                    // ) => {
-                    //     let d = self.devices.new_cap();
-                    //     ret_msg_tmp =
-                    //         SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
-                    // }
+                    (
+                        CircuitSt::Idle,
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::C,
+                            modifiers: NO_MODIFIER,
+                        }),
+                    ) => {
+                        let d = self.devices.new_cap();
+                        ret_msg_tmp =
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                    }
                     (
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::L,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_ind();
@@ -324,7 +325,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::P,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_pmos();
@@ -335,7 +336,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::N,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_nmos();
@@ -346,7 +347,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::R,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_res();
@@ -357,7 +358,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::G,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_gnd();
@@ -368,7 +369,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::V,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_vs();
@@ -379,7 +380,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         CircuitSt::Idle,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::I,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         let d = self.devices.new_is();
@@ -391,7 +392,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         _,
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::Escape,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                     ) => {
                         state = CircuitSt::Idle;

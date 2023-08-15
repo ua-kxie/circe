@@ -296,6 +296,7 @@ where
                 }
 
                 if self.content.is_idle() {
+                    const NO_MODIFIER: Modifiers = Modifiers::empty();
                     // if content is idle, allow schematic to process event before passing onto content - otherwise pass event to content directly
                     match (&mut self.state, event) {
                         // drag/area select - todo move to viewport - content should allow viewport to discern areaselect or drag
@@ -344,7 +345,7 @@ where
                             _,
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::M,
-                                modifiers: _,
+                                modifiers: NO_MODIFIER,
                             }),
                         ) => {
                             self.state = SchematicSt::Moving(None);
@@ -366,7 +367,7 @@ where
                             SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::X,
-                                modifiers: _,
+                                modifiers: NO_MODIFIER,
                             }),
                         ) => {
                             *sst = sst.then(&transforms::SST_XMIR);
@@ -375,7 +376,7 @@ where
                             SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::Y,
-                                modifiers: _,
+                                modifiers: NO_MODIFIER,
                             }),
                         ) => {
                             *sst = sst.then(&transforms::SST_YMIR);
@@ -439,7 +440,7 @@ where
                             SchematicSt::Idle,
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::Delete,
-                                modifiers: _,
+                                modifiers: NO_MODIFIER,
                             }),
                         ) => {
                             self.content.delete_elements(&self.selected);
@@ -451,7 +452,7 @@ where
                             SchematicSt::Idle,
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::K,
-                                modifiers: _,
+                                modifiers: NO_MODIFIER,
                             }),
                         ) => {
                             self.tentative_next_by_vsp(self.curpos_vsp);
@@ -463,7 +464,7 @@ where
                             st,
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::Escape,
-                                modifiers: _,
+                                modifiers: NO_MODIFIER,
                             }),
                         ) => match st {
                             SchematicSt::Idle => {

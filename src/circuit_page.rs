@@ -12,6 +12,7 @@ use crate::{viewport, IcedStruct};
 use iced::widget::canvas::Event;
 use iced::widget::{button, row, Row, Text};
 use iced::{Element, Length};
+use iced::keyboard::Modifiers;
 use std::sync::{Arc, Mutex};
 
 use colored::Colorize;
@@ -149,6 +150,7 @@ impl Default for CircuitPage {
 
 impl IcedStruct<CircuitPageMsg> for CircuitPage {
     fn update(&mut self, msg: CircuitPageMsg) {
+        const NO_MODIFIER: Modifiers = Modifiers::empty();
         match msg {
             CircuitPageMsg::TextInputChanged(s) => {
                 self.text = s;
@@ -174,7 +176,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                     schematic::Msg::Event(
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::D,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                         _,
                     ) => {
@@ -183,7 +185,7 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                     schematic::Msg::Event(
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::Space,
-                            modifiers: _,
+                            modifiers: NO_MODIFIER,
                         }),
                         _,
                     ) => {

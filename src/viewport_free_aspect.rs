@@ -366,7 +366,7 @@ where
                     State::Idle,
                     Event::Keyboard(iced::keyboard::Event::KeyPressed {
                         key_code: iced::keyboard::KeyCode::F,
-                        modifiers: _,
+                        modifiers: _NO_MODIFIER,
                     }),
                 ) => {
                     let vsb = self.content.bounds();
