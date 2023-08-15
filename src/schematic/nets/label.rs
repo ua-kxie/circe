@@ -228,20 +228,28 @@ impl NetLabels {
     pub fn insert(&mut self, l: RcRLabel) {
         self.set.insert(l);
     }
-    /// return vector of RcRDevice which intersects ssb
+    /// return vector of RcRDevice which intersects vsb
     pub fn intersects_vsb(&self, vsb: &VSBox) -> Vec<RcRLabel> {
         let ret: Vec<_> = self
             .set
             .iter()
             .filter_map(|l| {
-                if l.0
-                    .borrow_mut()
-                    .interactable
-                    .bounds
-                    .cast()
-                    .cast_unit()
-                    .intersects(vsb)
-                {
+                if l.0.borrow_mut().interactable.intersects_vsb(vsb) {
+                    Some(l.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        ret
+    }
+    /// return vector of RcRDevice which are contained by vsb
+    pub fn contained_by(&self, vsb: &VSBox) -> Vec<RcRLabel> {
+        let ret: Vec<_> = self
+            .set
+            .iter()
+            .filter_map(|l| {
+                if l.0.borrow_mut().interactable.contained_by(vsb) {
                     Some(l.clone())
                 } else {
                     None

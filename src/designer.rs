@@ -430,7 +430,34 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         }
         ret
     }
-
+    fn contained_by(&mut self, vsb: VSBox) -> HashSet<DesignerElement> {
+        let mut ret = HashSet::new();
+        for d in &self.content {
+            match d {
+                DesignerElement::Linear(l) => {
+                    if l.0.borrow_mut().interactable.contained_by(&vsb) {
+                        ret.insert(DesignerElement::Linear(l.clone()));
+                    }
+                }
+                DesignerElement::CirArc(l) => {
+                    if l.0.borrow_mut().interactable.contained_by(&vsb) {
+                        ret.insert(DesignerElement::CirArc(l.clone()));
+                    }
+                }
+                DesignerElement::Port(l) => {
+                    if l.0.borrow_mut().interactable.contained_by(&vsb) {
+                        ret.insert(DesignerElement::Port(l.clone()));
+                    }
+                }
+                DesignerElement::Bounds(l) => {
+                    if l.0.borrow_mut().interactable.contained_by(&vsb) {
+                        ret.insert(DesignerElement::Bounds(l.clone()));
+                    }
+                }
+            }
+        }
+        ret
+    }
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
     /// count is updated to track the number of elements skipped over
     fn selectable(

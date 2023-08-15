@@ -191,7 +191,6 @@ pub const SST_CWR: SSTransform = SSTransform::new(0, -1, 1, 0, 0, 0);
 pub const SST_CCWR: SSTransform = SSTransform::new(0, 1, -1, 0, 0, 0);
 
 /// mirror along X axis
-#[allow(unused)]
 pub const SST_XMIR: SSTransform = SSTransform::new(-1, 0, 0, 1, 0, 0);
 
 /// mirror along Y axis

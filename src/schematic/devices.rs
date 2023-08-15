@@ -161,20 +161,28 @@ impl Devices {
             self.set.insert(d);
         }
     }
-    /// return vector of RcRDevice which intersects ssb
+    /// return vector of RcRDevice which intersects vsb
     pub fn intersects_vsb(&self, vsb: &VSBox) -> Vec<RcRDevice> {
         let ret: Vec<_> = self
             .set
             .iter()
             .filter_map(|d| {
-                if d.0
-                    .borrow_mut()
-                    .interactable
-                    .bounds
-                    .cast()
-                    .cast_unit()
-                    .intersects(vsb)
-                {
+                if d.0.borrow_mut().interactable.intersects_vsb(vsb) {
+                    Some(d.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        ret
+    }
+    /// return vector of RcRDevice which is contained by vsb
+    pub fn contained_by(&self, vsb: &VSBox) -> Vec<RcRDevice> {
+        let ret: Vec<_> = self
+            .set
+            .iter()
+            .filter_map(|d| {
+                if d.0.borrow_mut().interactable.contained_by(vsb) {
                     Some(d.clone())
                 } else {
                     None

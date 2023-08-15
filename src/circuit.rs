@@ -211,6 +211,19 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         }
         ret
     }
+    fn contained_by(&mut self, vsb: VSBox) -> HashSet<CircuitElement> {
+        let mut ret = HashSet::new();
+        for seg in self.nets.contained_by(&vsb) {
+            ret.insert(CircuitElement::NetEdge(seg));
+        }
+        for rcrd in self.devices.contained_by(&vsb) {
+            ret.insert(CircuitElement::Device(rcrd));
+        }
+        for rcrl in self.labels.contained_by(&vsb) {
+            ret.insert(CircuitElement::Label(rcrl));
+        }
+        ret
+    }
 
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
     /// count is updated to track the number of elements skipped over
@@ -401,7 +414,6 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 SchematicMsg::ClearPassive
             }
         };
-        self.prune();
         ret_msg
     }
 

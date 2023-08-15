@@ -1,4 +1,5 @@
-
+//! structs for storing ngspice model definitions such as for nmos, pmos, or diode models.
+//! not in use atm
 struct NgModels {
     models: Vec<NgModel>,
 }

@@ -127,11 +127,21 @@ impl Nets {
         None
         // self.label_manager.new_floating_label()
     }
-    /// return unique NetEdges bound within ssb
+    /// return unique NetEdges intersecting with vsb
     pub fn intersects_vsbox(&mut self, vsb: &VSBox) -> Vec<NetEdge> {
         let mut ret = vec![];
         for e in self.graph.all_edges() {
-            if e.2.interactable.bounds.cast().cast_unit().intersects(vsb) {
+            if e.2.interactable.bounds.intersects(vsb) {
+                ret.push(e.2.clone());
+            }
+        }
+        ret
+    }
+    /// return unique NetEdges bound within vsb
+    pub fn contained_by(&mut self, vsb: &VSBox) -> Vec<NetEdge> {
+        let mut ret = vec![];
+        for e in self.graph.all_edges() {
+            if vsb.contains_box(&e.2.interactable.bounds) {
                 ret.push(e.2.clone());
             }
         }
@@ -196,7 +206,7 @@ impl Nets {
         for v in &all_vertices {
             let mut colliding_edges = vec![];
             for e in self.graph.all_edges() {
-                if e.2.intersects_vsp(v.0.cast().cast_unit()) {
+                if e.2.intersects_ssp(v.0.cast().cast_unit()) {
                     colliding_edges.push((e.0, e.1, e.2.label.clone()));
                 }
             }
@@ -235,8 +245,8 @@ impl Nets {
                     self.graph.remove_node(v);
                 }
                 2 => {
-                    let del = connected_vertices[1].0 - connected_vertices[0].0;
-                    match (del.x, del.y) {
+                    let delta = connected_vertices[1].0 - connected_vertices[0].0;
+                    match (delta.x, delta.y) {
                         (0, _y) => {}
                         (_x, 0) => {}
                         _ => continue,
@@ -250,7 +260,7 @@ impl Nets {
                         label: first_e.2.label.clone(),
                         interactable: NetEdge::interactable(src.0, dst.0),
                     };
-                    if ew.intersects_vsp(v.0.cast().cast_unit()) {
+                    if ew.intersects_ssp(v.0) {
                         self.graph.remove_node(v);
                         self.graph.add_edge(src, dst, ew);
                     }
@@ -262,7 +272,7 @@ impl Nets {
         for v in extra_vertices {
             let mut colliding_edges = vec![];
             for e in self.graph.all_edges() {
-                if e.2.intersects_vsp(v.cast().cast_unit()) {
+                if e.2.intersects_ssp(v) {
                     colliding_edges.push((e.0, e.1, e.2.label.clone()));
                 }
             }

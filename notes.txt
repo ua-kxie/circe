@@ -2,22 +2,19 @@ todo:
 
 - schematic: 
     moving items need to support different snap grids depending on element type - e.g. line vs port in device designer
-    vertical/horizontal mirroring
     area selection - contains and intersects by selection area is positive/negative
     connect devices with wire if ports overlap
     wire snapping to ports and visual indicator
-    ctrl-z/undo/redo
+    ctrl-(shift)-z undo/redo
     wiring pathfinder
     gui toolbar
     grabbing (moves devices while keeping wire connections)
     click-drag-move for wires (reroute based on new coord)
+    add layers trait (devices layer, nets layer, etc.)
 
 - designer:
     line segment edit - drag/drop end points
-    arc drawing (nor, nand gates curved portion) - need to define as triplet points until after vct transform - hard to transform angles with vct
-    serde save graphics
     device saving/loading, device libraries
-    ports need to snap to integer
 
 - circuit:
     custom net labels
@@ -26,7 +23,7 @@ todo:
 
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?
-
+    
     clean up colors, use iced theme?
 
 - medium term:

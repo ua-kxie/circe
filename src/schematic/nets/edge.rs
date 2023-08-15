@@ -7,7 +7,7 @@ use crate::{
         interactable::{Interactable, Interactive},
         nets::Drawable,
     },
-    transforms::{vvt_to_sst, SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
+    transforms::{vvt_to_sst, SSPoint, VCTransform, VSBox, VVTransform},
 };
 
 use iced::{
@@ -53,11 +53,15 @@ impl NetEdge {
     }
     /// creates a bound based on source and destination points - return value is guaranteed to have positive area
     pub fn bounds_from_pts(src: SSPoint, dst: SSPoint) -> VSBox {
-        VSBox::from_points([src.cast().cast_unit(), dst.cast().cast_unit()])
+        VSBox::from_points([src.cast().cast_unit(), dst.cast().cast_unit()]).inflate(0.1, 0.1)
     }
-    /// checks if argument VSPoint lies on the edge
-    pub fn intersects_vsp(&self, vsp: VSPoint) -> bool {
-        self.interactable.contains_vsp(vsp)
+    // /// checks if argument VSPoint lies on the edge
+    // pub fn intersects_vsp(&self, vsp: VSPoint) -> bool {
+    //     self.interactable.contains_vsp(vsp)
+    // }
+    /// checks if argument SSPoint lies on the edge (excludes source and destination points)
+    pub fn intersects_ssp(&self, ssp: SSPoint) -> bool {
+        self.interactable.contains_ssp(ssp) && self.src != ssp && self.dst != ssp
     }
 }
 

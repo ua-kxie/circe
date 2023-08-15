@@ -12,6 +12,7 @@ use crate::{
     transforms::{self, CSPoint, Point, SSTransform, VCTransform, VSBox, VSPoint},
     viewport::Drawable,
 };
+
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::{stroke, Path};
 use iced::{
@@ -121,6 +122,8 @@ where
     fn selectable(&mut self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<E>;
     /// returns hashset of elements which intersects ssb
     fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<E>;
+    /// returns hashset of elements which is contained by vsb
+    fn contained_by(&mut self, vsb: VSBox) -> HashSet<E>;
     /// returns the cursor position as stored by content
     fn curpos_vsp(&self) -> VSPoint;
     /// update cursor position
@@ -195,6 +198,7 @@ where
             SchematicSt::AreaSelect(vsb) => {
                 // draw the selection area
                 let color = if vsb.height() > 0.0 {
+                    // intended to distinguish between select by contains and select by intersects
                     Color::from_rgba(1., 1., 0., 0.1)
                 } else {
                     Color::from_rgba(0., 1., 1., 0.1)
@@ -546,8 +550,9 @@ where
     }
     /// set tentative flags by intersection with ssb
     pub fn tentatives_by_vsbox(&mut self, vsb: &VSBox) {
-        let vsb_p = VSBox::from_points([vsb.min, vsb.max]);
-        self.tentatives = self.content.intersects_vsb(vsb_p)
+        let vsb_p = VSBox::from_points([vsb.min, vsb.max]).inflate(0.5, 0.5);
+        // self.tentatives = self.content.intersects_vsb(vsb_p);
+        self.tentatives = self.content.contained_by(vsb_p);
     }
     /// set 1 tentative flag by ssp, skipping skip elements which contains ssp. Returns netname if tentative is a net segment
     pub fn tentative_by_vspoint(&mut self, vsp: VSPoint, skip: &mut usize) {

@@ -1,5 +1,5 @@
 //! common functionality for interactive schematic elements
-use crate::transforms::{SSBox, SSPoint, SchematicSpace, VSBox, VSBoxExt, VSPoint, VVTransform};
+use crate::transforms::{SSPoint, VSBox, VSBoxExt, VSPoint, VVTransform};
 
 /// trait to facillitates and unify implementation of interactive logic
 pub trait Interactive {
@@ -19,9 +19,8 @@ impl Interactable {
     }
     /// returns true if Schematic Space Point intersects with bounds.
     pub fn contains_ssp(&self, ssp: SSPoint) -> bool {
-        let mut ssb: SSBox = self.bounds.round_out().cast().cast_unit();
-        ssb.set_size(ssb.size() + euclid::Size2D::<i16, SchematicSpace>::new(1, 1));
-        ssb.contains(ssp)
+        let vsp = ssp.cast().cast_unit();
+        self.bounds.contains(vsp)
     }
     /// returns true if Viewport Space Point intersects with bounds.
     pub fn contains_vsp(&self, vsp: VSPoint) -> bool {
@@ -30,5 +29,9 @@ impl Interactable {
     /// returns true if bounds intersects with argument.
     pub fn intersects_vsb(&self, vsb: &VSBox) -> bool {
         self.bounds.intersects(vsb)
+    }
+    /// returns true if bound is contained by argument.
+    pub fn contained_by(&self, vsb: &VSBox) -> bool {
+        vsb.contains_box(&self.bounds)
     }
 }
