@@ -534,7 +534,6 @@ where
             iced::Point::new(bb_canvas.max.x, bb_canvas.center().y),
         );
 
-
         //get the line border for the ticks set up
         let bottom_border = Path::line(
             iced::Point::new(bb_canvas.min.x + border, bb_canvas.max.y - border),
@@ -546,15 +545,16 @@ where
         );
 
         //for the rectangles
-        let size = Size {
+        let x_rect = Size {
             width: bb_canvas.width(),
             height: bb_canvas.max.y - border,
         };
-        let size2 = Size {
+        let y_rect = Size {
             width: bb_canvas.min.x + border,
             height: bb_canvas.height(),
         };
 
+        //this is the grid stroke line being used, solid and thin
         let grid_stroke_line = Stroke {
             width: (0.1 * self.vct.y_scale()).clamp(0.5, 2.0),
             style: Style::Solid(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
@@ -568,82 +568,103 @@ where
         //layer for the borders
         frame.fill_rectangle(
             iced::Point::new(bb_canvas.min.x, bb_canvas.max.y - border),
-            size,
-            Fill {
-                style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
-                rule: Rule::NonZero,
-            },
-        );
-        frame.fill_rectangle(
-            iced::Point::new(bb_canvas.min.x, bb_canvas.min.y),
-            size2,
+            x_rect,
             Fill {
                 style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
                 rule: Rule::NonZero,
             },
         );
 
-        //border for the ticks
+        //rectangle to cover the canvas space bounds
+        frame.fill_rectangle(
+            iced::Point::new(bb_canvas.min.x, bb_canvas.min.y),
+            y_rect,
+            Fill {
+                style: Style::from(Color::from_rgb(0.2, 0.2, 0.2)),
+                rule: Rule::NonZero,
+            },
+        );
+
+        //draw border for the ticks
         frame.stroke(&bottom_border, grid_stroke_line.clone());
         frame.stroke(&left_border, grid_stroke_line.clone());
 
-
+        //build/draw x ticks
         let mut exponent = 0;
         let mut exp_indexer = 0;
-        let x_min = bb_canvas.min.x as i32 + border as i32;
+        let mut x = bb_canvas.min.x as i32 + border as i32;
         let x_max = bb_canvas.max.x as i32;
-        //build x ticks. min.x starts at left, so it is normal.
-        for x in x_min..x_max {
+        loop {
+            let tick: Path;
             if exp_indexer % 10 == 0 {
-                let a = Text {
-                    content: format!("10e{}",exponent),
-                    position: iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
-                    color: Color::from_rgb(1.0, 1.0, 1.0),
-                    size: self.vct.y_scale(),
-                    ..Default::default()
-                };
-                frame.fill_text(a);
-                exponent+=1;
-                exp_indexer = 0;
-            }
-            if x % 10 == 0 {
-                let tick = Path::line(
+                tick = Path::line(
+                    iced::Point::new(x as f32, bb_canvas.max.y - 26.0),
+                    iced::Point::new(x as f32, bb_canvas.max.y - border),
+                );
+            } else {
+                tick = Path::line(
                     iced::Point::new(x as f32, bb_canvas.max.y - 30.0),
                     iced::Point::new(x as f32, bb_canvas.max.y - border),
                 );
-                frame.stroke(&tick, grid_stroke_line.clone());
-                exp_indexer +=1;
             }
-        }
-
-        //build ticks on y axis. max.y starts at bottom so it needs to decrement
-        let mut y:i32= bb_canvas.max.y as i32 - border as i32;
-        let mut exponent = 0;
-        let mut exp_indexer = 0;
-        loop{
-            let tick = Path::line(
-                iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
-                iced::Point::new(bb_canvas.min.x + border, y as f32),
-            );
             frame.stroke(&tick, grid_stroke_line.clone());
             if exp_indexer % 10 == 0 {
                 let a = Text {
-                    content: format!("10e{}",exponent),
-                    position: iced::Point::new(bb_canvas.min.x + 5.0, y as f32),
+                    content: format!("10e{}", exponent),
+                    position: iced::Point::new(x as f32, bb_canvas.max.y - 23.0),
                     color: Color::from_rgb(1.0, 1.0, 1.0),
                     size: self.vct.y_scale(),
                     ..Default::default()
                 };
                 frame.fill_text(a);
-                exponent+=1;
+                exponent += 1;
                 exp_indexer = 0;
             }
-            exp_indexer +=1;
-            y -= 10;
-            if y <= bb_canvas.min.y as i32{
+            exp_indexer += 1;
+
+            x += 10;
+            if x >= x_max {
                 break;
             }
         }
 
+        //build/draw ticks on y axis. max.y starts at bottom so it needs to decrement
+        let mut y: i32 = bb_canvas.max.y as i32 - border as i32;
+        let mut exponent = 0;
+        let mut exp_indexer = 0;
+        loop {
+            let tick: Path;
+            if exp_indexer % 10 == 0 {
+                tick = Path::line(
+                    iced::Point::new(bb_canvas.min.x + 26.0, y as f32),
+                    iced::Point::new(bb_canvas.min.x + border, y as f32),
+                );
+            } else {
+                tick = Path::line(
+                    iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
+                    iced::Point::new(bb_canvas.min.x + border, y as f32),
+                );
+            }
+            frame.stroke(&tick, grid_stroke_line.clone());
+            if exp_indexer % 10 == 0 {
+                let a = Text {
+                    content: format!("10e{}", exponent),
+                    position: iced::Point::new(bb_canvas.min.x + 5.0, y as f32),
+                    color: Color::from_rgb(1.0, 1.0, 1.0),
+                    size: self.vct.y_scale(),
+                    horizontal_alignment: alignment::Horizontal::Left,
+                    vertical_alignment: alignment::Vertical::Bottom,
+                    ..Default::default()
+                };
+                frame.fill_text(a);
+                exponent += 1;
+                exp_indexer = 0;
+            }
+            exp_indexer += 1;
+            y -= 10;
+            if y <= bb_canvas.min.y as i32 {
+                break;
+            }
+        }
     }
 }
