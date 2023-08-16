@@ -521,7 +521,8 @@ where
     // draw the x/y grid onto canvas
     pub fn draw_grid(&self, frame: &mut Frame, bb_canvas: CSBox) {
         let border = 40.0;
-
+        let text_tick_border = 23.0;
+        let tick_boder = 30.0;
         //draw x axis
         let y_axis = Path::line(
             iced::Point::new(bb_canvas.center().x, bb_canvas.min.y),
@@ -598,7 +599,7 @@ where
             let tick: Path;
             if exp_indexer % 10 == 0 {
                 tick = Path::line(
-                    iced::Point::new(x as f32, bb_canvas.max.y - 26.0),
+                    iced::Point::new(x as f32, bb_canvas.max.y - text_tick_border),
                     iced::Point::new(x as f32, bb_canvas.max.y - border),
                 );
             } else {
@@ -613,7 +614,7 @@ where
                     content: format!("10e{}", exponent),
                     position: iced::Point::new(x as f32, bb_canvas.max.y - 23.0),
                     color: Color::from_rgb(1.0, 1.0, 1.0),
-                    size: self.vct.y_scale(),
+                    size: self.vct.x_scale(),
                     ..Default::default()
                 };
                 frame.fill_text(a);
@@ -636,12 +637,12 @@ where
             let tick: Path;
             if exp_indexer % 10 == 0 {
                 tick = Path::line(
-                    iced::Point::new(bb_canvas.min.x + 26.0, y as f32),
+                    iced::Point::new(bb_canvas.min.x + text_tick_border, y as f32),
                     iced::Point::new(bb_canvas.min.x + border, y as f32),
                 );
             } else {
                 tick = Path::line(
-                    iced::Point::new(bb_canvas.min.x + 30.0, y as f32),
+                    iced::Point::new(bb_canvas.min.x + tick_boder, y as f32),
                     iced::Point::new(bb_canvas.min.x + border, y as f32),
                 );
             }
