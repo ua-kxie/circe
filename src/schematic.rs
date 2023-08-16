@@ -451,8 +451,8 @@ where
                         (
                             SchematicSt::Idle,
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                                key_code: iced::keyboard::KeyCode::K,
-                                modifiers: NO_MODIFIER,
+                                key_code: iced::keyboard::KeyCode::C,
+                                modifiers: Modifiers::SHIFT,
                             }),
                         ) => {
                             self.tentative_next_by_vsp(self.curpos_vsp);

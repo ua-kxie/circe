@@ -208,6 +208,30 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                     }
                     schematic::Msg::Event(
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                            key_code: iced::keyboard::KeyCode::Space,
+                            modifiers: Modifiers::CTRL,
+                        }),
+                        _,
+                    ) => {
+                        self.viewport.update(CompositeMsg {
+                            content_msg: schematic::Msg::ContentMsg(Msg::NetList),
+                            viewport_msg: viewport::Msg::None,
+                        });
+                        self.lib.command("source netlist.cir"); // results pointer array starts at same address
+                        self.lib.command("ac lin 0 60 60"); // ngspice recommends sending in control statements separately, not as part of netlist
+                        if let Some(pkvecvaluesall) =
+                            self.spmanager.vecvals.try_lock().unwrap().pop()
+                        {
+                            self.viewport.update(CompositeMsg {
+                                content_msg: schematic::Msg::ContentMsg(Msg::Ac(
+                                    pkvecvaluesall.clone(),
+                                )),
+                                viewport_msg: viewport::Msg::None,
+                            });
+                        }
+                    }
+                    schematic::Msg::Event(
+                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::T,
                             modifiers: iced::keyboard::Modifiers::SHIFT,
                         }),

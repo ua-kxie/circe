@@ -10,6 +10,7 @@ use crate::transforms::{
 };
 use crate::IcedStruct;
 use iced::Renderer;
+use iced::keyboard::Modifiers;
 use iced::{
     mouse,
     widget::canvas::{
@@ -261,6 +262,7 @@ where
     ) -> CompositeMsg<M> {
         let mut viewport_msg = Msg::None;
         let mut stcp = state.clone();
+        const NO_MODIFIER: Modifiers = Modifiers::empty();
         if let Some(curpos_csp) = opt_curpos_csp {
             match (&mut stcp, event) {
                 // cursor move
@@ -366,7 +368,7 @@ where
                     State::Idle,
                     Event::Keyboard(iced::keyboard::Event::KeyPressed {
                         key_code: iced::keyboard::KeyCode::F,
-                        modifiers: _NO_MODIFIER,
+                        modifiers: NO_MODIFIER,
                     }),
                 ) => {
                     let vsb = self.content.bounds();

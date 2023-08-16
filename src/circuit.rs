@@ -113,6 +113,7 @@ pub enum Msg {
     Wire,
     NetList,
     DcOp(PkVecvaluesall),
+    Ac(PkVecvaluesall),
 }
 
 impl schematic::ContentMsg for Msg {
@@ -411,6 +412,10 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 SchematicMsg::None
             }
             Msg::DcOp(pkvecvaluesall) => {
+                self.devices.op(&pkvecvaluesall);
+                SchematicMsg::ClearPassive
+            }
+            Msg::Ac(pkvecvaluesall) => {
                 self.devices.op(&pkvecvaluesall);
                 SchematicMsg::ClearPassive
             }

@@ -17,33 +17,38 @@ Alternatively, clone the repository with the following:
 followed by `cargo run`
 
 ### Controls: 
-* click wires or device to select  
+* left click wires or device to select  
 * mouse wheel to zoom and pan  
+* F key to fit viewport to geometry
 * right click drag to zoom to area  
 * left click drag to select area
 * left click drag on selected device to drag selected
 * select single device to edit parameter (wonky) - if you have ideas for implementing a properties editor, get in touch ~
   
 #### Hotkeys:
-##### Circuit Schematic:
 
-Ctrl-C/Ctrl-V - copy/paste
+##### Schematic Controls:
+
+Ctrl-C/left-click - copy/paste
+
+Shift-C - cycle tentative selection
+
+Del - delete selected
+
+M - move selected
+
+X/Y - flip horizontal/vertical during move
+##### Circuit Schematic:
 
 Shift-L - net label (does no thing for now)
 
 W - draw wire
 
-F - fit viewport to geometry
-
-C - cycle tentative selection
-
-Del - delete selected
-
 R - resistor (during move/copy, rotates selected, ctrl-R to counter rotate)
 
 L - inductor
 
-<!-- C - capacitor -->
+C - capacitor
 
 G - ground
 
@@ -53,27 +58,14 @@ N - nmos device
 
 P - pmos device
 
-D - new devices hotkeys
-
-M - move selected
-
-X/Y - flip horizontal/vertical
-
 Space - run dc op simulation
+
+ctrl-space - run ac simulation (freq = 60Hz)
 
 Shift T - run transient simulation (10u 1m)
 
-##### Plot/chart view
-(shift) X - horizontal zoom
-
-(shift) Y - vertical zoom 
-
-F - fit viewport to geometry
-
-##### device designer view
+##### Designer Schematic
 -for now, intended for dev use only-
-
-Ctrl-C/Ctrl-V - copy/paste
 
 W - draw a line
 
@@ -82,6 +74,11 @@ A - draw an arc/circle
 P - place port
 
 B - define device boundary
+
+##### Plot/chart view
+(shift) X - horizontal zoom
+
+(shift) Y - vertical zoom 
 
 ### Goals
 Target application is EDA schematic capture

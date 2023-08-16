@@ -121,7 +121,7 @@ pub enum ParamV {
 impl Default for ParamV {
     fn default() -> Self {
         // ParamV::Raw(params::Raw::new(String::from("3.3")))
-        ParamV::Raw(params::Raw::new(String::from("SIN(3.3 1 2k 0 0)")))
+        ParamV::Raw(params::Raw::new(String::from("AC 1 SIN(3.3 1 2k 0 0)")))
     }
 }
 impl ParamV {

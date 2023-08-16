@@ -87,7 +87,7 @@ pub struct Device {
     /// vector of the connected net names in order of device ports
     connected_nets: Vec<String>,
     /// vector of the connect net voltages in order of device ports
-    op: Vec<f32>,
+    op: Vec<num::Complex<f32>>,
 }
 impl Device {
     /// sets the device identifier watermark
@@ -172,7 +172,8 @@ impl Device {
         for n in &self.connected_nets {
             for v in &pkvecvaluesall.vecsa {
                 if &v.name == n {
-                    self.op.push(v.creal as f32);
+                    let pkval = (*v.as_ref()).clone();
+                    self.op.push(pkval.into());
                     break;
                 }
             }
@@ -206,7 +207,7 @@ impl Drawable for Device {
         let ports = self.class.graphics().ports();
         for (i, v) in self.op.iter().enumerate() {
             let b = Text {
-                content: v.to_string(),
+                content: if v.im != 0.0 {format!{"{:+.2e}", v}} else {format!{"{:+.2e}", v.re}},
                 position: Point::from(vct_c.transform_point(ports[i].offset.cast().cast_unit()))
                     .into(),
                 color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),
