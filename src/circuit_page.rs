@@ -9,10 +9,10 @@ use crate::viewport::CompositeMsg;
 use crate::schematic::Schematic;
 use crate::viewport::Viewport;
 use crate::{viewport, IcedStruct};
+use iced::keyboard::Modifiers;
 use iced::widget::canvas::Event;
 use iced::widget::{button, row, Row, Text};
 use iced::{Element, Length};
-use iced::keyboard::Modifiers;
 use std::sync::{Arc, Mutex};
 
 use colored::Colorize;

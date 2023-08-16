@@ -207,7 +207,11 @@ impl Drawable for Device {
         let ports = self.class.graphics().ports();
         for (i, v) in self.op.iter().enumerate() {
             let b = Text {
-                content: if v.im != 0.0 {format!{"{:+.2e}", v}} else {format!{"{:+.2e}", v.re}},
+                content: if v.im != 0.0 {
+                    format! {"{:+.2e}", v}
+                } else {
+                    format! {"{:+.2e}", v.re}
+                },
                 position: Point::from(vct_c.transform_point(ports[i].offset.cast().cast_unit()))
                     .into(),
                 color: Color::from_rgba(1.0, 1.0, 1.0, 1.0),

@@ -22,7 +22,10 @@ pub struct PkVecvalues {
 
 impl From<PkVecvalues> for num::Complex<f32> {
     fn from(value: PkVecvalues) -> Self {
-        Self { re: value.creal as f32, im: value.cimag as f32 }
+        Self {
+            re: value.creal as f32,
+            im: value.cimag as f32,
+        }
     }
 }
 
