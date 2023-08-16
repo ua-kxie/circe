@@ -5,16 +5,7 @@ Simple op-amp with generic devices
 ![Screenshot 2023-08-14 205401](https://github.com/ua-kxie/circe/assets/56177821/24db33c0-69f5-4187-8e41-38a495a6aecc)
 
 ### Setup:
-1. Clone the repository
-2. Run `git submodule init`
-2. Run `git submodule update`
-3. Run `cargo run`
-
-Alternatively, clone the repository with the following:
-
-`git clone --recurse-submodules https://github.com/ua-kxie/circe.git`
-
-followed by `cargo run`
+`cargo run`
 
 ### Controls: 
 * left click wires or device to select  
