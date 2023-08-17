@@ -25,11 +25,11 @@ impl Default for NgModels {
                     definition: String::from("D"),
                 },
                 NgModel {
-                    name: String::from("QPNP"),
+                    name: String::from("BJTP"),
                     definition: String::from("PNP"),
                 },
                 NgModel {
-                    name: String::from("NPNP"),
+                    name: String::from("BJTN"),
                     definition: String::from("NPN"),
                 },
             ],

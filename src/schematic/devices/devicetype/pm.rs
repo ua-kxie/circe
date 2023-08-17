@@ -8,8 +8,6 @@
 // + < ad = val > < as = val > < pd = val > < ps = val > < nrd = val >
 // + < nrs = val > <off > < ic = vds , vgs , vbs > < temp =t >
 
-// need a way to define models once in the netlist
-
 use super::super::params;
 use super::{Graphics, Port};
 use crate::schematic::interactable::Interactable;

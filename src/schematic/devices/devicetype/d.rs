@@ -12,8 +12,33 @@ use lazy_static::lazy_static;
 pub const ID_PREFIX: &str = "D";
 
 lazy_static! {
-    static ref DEFAULT_GRAPHICS: Graphics = todo!();
-}
+    static ref DEFAULT_GRAPHICS: Graphics = Graphics {
+        pts: vec![
+            vec![VSPoint::new(-1.00, -0.50), VSPoint::new(1.00, -0.50),],
+            vec![VSPoint::new(0.00, -0.50), VSPoint::new(0.00, -3.00),],
+            vec![VSPoint::new(-1.00, 1.00), VSPoint::new(1.00, 1.00),],
+            vec![VSPoint::new(0.00, 1.00), VSPoint::new(0.00, 3.00),],
+            vec![VSPoint::new(0.00, -0.50), VSPoint::new(1.00, 1.00),],
+            vec![VSPoint::new(0.00, -0.50), VSPoint::new(-1.00, 1.00),],
+        ],
+        cirarcs: vec![
+        ],
+        ports: vec![
+            Port {
+                name: "0".to_string(),
+                offset: SSPoint::new(0, 3),
+                interactable: Interactable::default()
+            },
+            Port {
+                name: "1".to_string(),
+                offset: SSPoint::new(0, -3),
+                interactable: Interactable::default()
+            },
+        ],
+        bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
+    };
+ }
+
 
 #[derive(Debug, Clone)]
 pub enum ParamM {
