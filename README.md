@@ -60,9 +60,9 @@ P - pmos device
 
 Space - run dc op simulation
 
-ctrl-space - run ac simulation (freq = 60Hz)
+ctrl-space - run ac simulation
 
-Shift T - run transient simulation (10u 1m)
+Shift T - run transient simulation
 
 ##### Designer Schematic
 -for now, intended for dev use only-

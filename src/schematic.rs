@@ -137,8 +137,6 @@ where
     C: Content<E, M>,
     E: SchematicElement,
 {
-    /// active element
-    pub active_element: Option<E>,
     /// schematic state
     state: SchematicSt,
     /// schematic content - circuit or device designer
@@ -153,6 +151,9 @@ where
     tentatives: HashSet<E>,
     /// cursor position in schematic space
     curpos_vsp: VSPoint,
+
+    /// last single selected element
+    pub active_element: Option<E>,
 }
 
 impl<C, E, M> Default for Schematic<C, E, M>
@@ -162,7 +163,6 @@ where
 {
     fn default() -> Self {
         Self {
-            active_element: None,
             state: Default::default(),
             content: Default::default(),
             selskip: Default::default(),
@@ -170,6 +170,7 @@ where
             tentatives: Default::default(),
             content_msg: std::marker::PhantomData,
             curpos_vsp: Default::default(),
+            active_element: Default::default(),
         }
     }
 }
@@ -568,12 +569,13 @@ where
         self.tentative_by_vspoint(vsp, &mut skip);
         self.selskip = skip;
     }
-    /// put every element with tentative flag set into selected vector
+    /// put every tentative element into selected
     fn tentatives_to_selected(&mut self) {
         self.selected = self.tentatives.clone();
         if self.tentatives.len() == 1 {
-            let mut v: Vec<_> = self.tentatives.iter().collect();
-            self.active_element = v.pop().cloned();
+            self.active_element = self.tentatives.iter().next().cloned();
+        } else {
+            self.active_element = None;
         }
         self.tentatives.clear();
     }

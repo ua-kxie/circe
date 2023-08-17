@@ -11,6 +11,7 @@ mod viewport_free_aspect;
 
 mod circuit;
 mod circuit_page;
+mod ngmodel;
 mod plot;
 mod plot_page;
 mod schematic;
@@ -28,7 +29,7 @@ use iced_aw::{TabLabel, Tabs};
 pub fn main() -> iced::Result {
     Circe::run(Settings {
         window: iced::window::Settings {
-            size: (600, 500),
+            size: (800, 500),
             ..iced::window::Settings::default()
         },
         antialiasing: true,

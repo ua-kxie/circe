@@ -1,6 +1,7 @@
 //! Circuit
 //! Concrete types for schematic content
 
+use crate::ngmodel::NgModels;
 use crate::schematic::devices::Devices;
 use crate::schematic::nets::NetLabels;
 use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
@@ -140,6 +141,8 @@ pub struct Circuit {
     devices: Devices,
     labels: NetLabels,
     curpos_ssp: SSPoint,
+
+    device_models: NgModels,
 }
 
 impl Circuit {
@@ -511,8 +514,7 @@ impl Circuit {
     pub fn netlist(&mut self) {
         self.nets.pre_netlist();
         let mut netlist = String::from("Netlist Created by Circe\n");
-        netlist.push_str(".model MOSN NMOS level=1\n");
-        netlist.push_str(".model MOSP PMOS level=1\n");
+        netlist.push_str(&self.device_models.model_definitions());
         if self.devices.get_set().is_empty() {
             // empty netlist
             netlist.push_str("V_0 0 n1 0"); // give it something so spice doesnt hang

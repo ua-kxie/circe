@@ -11,7 +11,7 @@ use crate::viewport::Viewport;
 use crate::{viewport, IcedStruct};
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::Event;
-use iced::widget::{button, row, Row, Text};
+use iced::widget::{row, text, text_input, Row, Text};
 use iced::{Element, Length};
 use std::sync::{Arc, Mutex};
 
@@ -63,9 +63,12 @@ impl paprika::PkSpiceManager for SpManager {
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
     ViewportEvt(viewport::CompositeMsg<schematic::Msg<Msg, CircuitElement>>),
-    TextInputChanged(String),
-    TextInputSubmit,
+    ParamChanged(String),
+    ParamSubmit,
     CloseModal,
+    HzChanged(String),
+    StepChanged(String),
+    TranChanged(String),
 }
 
 /// schematic
@@ -76,10 +79,6 @@ pub struct CircuitPage {
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
-    /// active device - some if only 1 device selected, otherwise is none
-    active_element: Option<CircuitElement>,
-    /// parameter editor text
-    text: String,
 
     /// spice manager
     spmanager: Arc<SpManager>,
@@ -88,8 +87,19 @@ pub struct CircuitPage {
     /// traces from certain simulations e.g. transient
     pub traces: Option<Vec<Vec<VSPoint>>>,
 
-    /// show new device
+    /// show new devices modal
     show_modal: bool,
+
+    /// active device - some if only 1 device selected, otherwise is none
+    active_element: Option<CircuitElement>,
+    /// parameter editor text
+    param: String,
+    /// ac simulation frequency (hertz)
+    ac_hz: String,
+    /// tran simulation step size (seconds)
+    tran_step: String,
+    /// tran simulation end time (seconds)
+    tran_end: String,
 }
 impl Default for CircuitPage {
     fn default() -> Self {
@@ -139,11 +149,14 @@ impl Default for CircuitPage {
             viewport: viewport::Viewport::new(1.0, 100.0, vct),
             net_name: Default::default(),
             active_element: Default::default(),
-            text: Default::default(),
+            param: Default::default(),
             spmanager,
             lib,
             traces: None,
             show_modal: false,
+            ac_hz: String::from("60"),
+            tran_step: String::from("10u"),
+            tran_end: String::from("1m"),
         }
     }
 }
@@ -152,20 +165,20 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
     fn update(&mut self, msg: CircuitPageMsg) {
         const NO_MODIFIER: Modifiers = Modifiers::empty();
         match msg {
-            CircuitPageMsg::TextInputChanged(s) => {
-                self.text = s;
+            CircuitPageMsg::ParamChanged(s) => {
+                self.param = s;
             }
-            CircuitPageMsg::TextInputSubmit => {
+            CircuitPageMsg::ParamSubmit => {
                 if let Some(ad) = &self.active_element {
                     match ad {
                         CircuitElement::NetEdge(_) => {}
                         CircuitElement::Device(d) => {
                             d.0.borrow_mut()
                                 .class_mut()
-                                .set_raw_param(self.text.clone());
+                                .set_raw_param(self.param.clone());
                         }
                         CircuitElement::Label(l) => {
-                            l.0.borrow_mut().set_name(self.text.clone());
+                            l.0.borrow_mut().set_name(self.param.clone());
                         }
                     }
                     self.viewport.passive_cache.clear();
@@ -218,7 +231,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                             viewport_msg: viewport::Msg::None,
                         });
                         self.lib.command("source netlist.cir"); // results pointer array starts at same address
-                        self.lib.command("ac lin 0 60 60"); // ngspice recommends sending in control statements separately, not as part of netlist
+                        self.lib
+                            .command(&format!("ac lin 0 {} {}", self.ac_hz, self.ac_hz)); // ngspice recommends sending in control statements separately, not as part of netlist
                         if let Some(pkvecvaluesall) =
                             self.spmanager.vecvals.try_lock().unwrap().pop()
                         {
@@ -243,7 +257,8 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                         });
                         self.lib.command("source netlist.cir"); // results pointer array starts at same address
                         self.spmanager.vecvals.try_lock().unwrap().clear();
-                        self.lib.command("tran 10u 1m"); // ngspice recommends sending in control statements separately, not as part of netlist
+                        self.lib
+                            .command(&format!("tran {} {}", self.tran_step, self.tran_end)); // ngspice recommends sending in control statements separately, not as part of netlist
 
                         let pk_results = self.spmanager.vecvals.try_lock().unwrap();
 
@@ -283,14 +298,14 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                         match ae {
                             CircuitElement::NetEdge(_) => {}
                             CircuitElement::Device(d) => {
-                                self.text = d.0.borrow().class().param_summary();
+                                self.param = d.0.borrow().class().param_summary();
                             }
                             CircuitElement::Label(l) => {
-                                self.text = l.0.borrow().read().to_string();
+                                self.param = l.0.borrow().read().to_string();
                             }
                         }
                     }
-                    None => self.text = String::from(""),
+                    None => self.param = String::from(""),
                 }
 
                 self.net_name = self.viewport.content.content.infobarstr.take();
@@ -298,6 +313,9 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             CircuitPageMsg::CloseModal => {
                 self.show_modal = false;
             }
+            CircuitPageMsg::HzChanged(s) => self.ac_hz = s,
+            CircuitPageMsg::StepChanged(s) => self.tran_step = s,
+            CircuitPageMsg::TranChanged(s) => self.tran_end = s,
         }
     }
 
@@ -308,10 +326,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             self.viewport.content.content.curpos_ssp().y
         );
         let canvas = self.viewport.view().map(CircuitPageMsg::ViewportEvt);
-        let pe =
-            param_editor::param_editor(self.text.clone(), CircuitPageMsg::TextInputChanged, || {
-                CircuitPageMsg::TextInputSubmit
-            });
         let infobar = row![
             iced::widget::text(str_ssp)
                 .size(16)
@@ -327,19 +341,32 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
                 .vertical_alignment(iced::alignment::Vertical::Center),
         ]
         .spacing(10);
-        let toolbar =
-            row![
-                button("wire").on_press(CircuitPageMsg::ViewportEvt(viewport::CompositeMsg {
-                    content_msg: schematic::Msg::ContentMsg(Msg::Wire),
-                    viewport_msg: viewport::Msg::None,
-                })),
-            ]
-            .width(Length::Fill);
+        let toolbar = row![
+            // button("wire").on_press(CircuitPageMsg::ViewportEvt(viewport::CompositeMsg {
+            //     content_msg: schematic::Msg::ContentMsg(Msg::Wire),
+            //     viewport_msg: viewport::Msg::None,
+            // })),
+            text("ac freq (Hz): "),
+            text_input("", &self.ac_hz)
+                .width(50)
+                .on_input(CircuitPageMsg::HzChanged),
+            text("tran step (S): "),
+            text_input("", &self.tran_step)
+                .width(50)
+                .on_input(CircuitPageMsg::StepChanged),
+            text("tran end (S): "),
+            text_input("", &self.tran_end)
+                .width(50)
+                .on_input(CircuitPageMsg::TranChanged),
+            text("Param: "),
+            text_input("", &self.param)
+                .width(iced::Length::Fill)
+                .on_input(CircuitPageMsg::ParamChanged)
+                .on_submit(CircuitPageMsg::ParamSubmit),
+        ]
+        .width(Length::Fill);
 
-        let schematic = iced::widget::column![
-            toolbar,
-            iced::widget::row![pe, iced::widget::column![canvas, infobar,]]
-        ];
+        let schematic = iced::widget::column![canvas, infobar, toolbar];
 
         // schematic.into()
 
@@ -366,76 +393,5 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
         .backdrop(CircuitPageMsg::CloseModal)
         .on_esc(CircuitPageMsg::CloseModal)
         .into()
-    }
-}
-
-mod param_editor {
-    use iced::widget::{button, column, component, text_input, Component};
-    use iced::{Element, Length, Renderer};
-
-    #[derive(Debug, Clone)]
-    pub enum Evt {
-        InputChanged(String),
-        InputSubmit,
-    }
-
-    pub struct ParamEditor<Message> {
-        value: String,
-        on_change: Box<dyn Fn(String) -> Message>,
-        on_submit: Box<dyn Fn() -> Message>,
-    }
-
-    impl<Message> ParamEditor<Message> {
-        pub fn new(
-            value: String,
-            on_change: impl Fn(String) -> Message + 'static,
-            on_submit: impl Fn() -> Message + 'static,
-        ) -> Self {
-            Self {
-                value,
-                on_change: Box::new(on_change),
-                on_submit: Box::new(on_submit),
-            }
-        }
-    }
-
-    pub fn param_editor<Message>(
-        value: String,
-        on_change: impl Fn(String) -> Message + 'static,
-        on_submit: impl Fn() -> Message + 'static,
-    ) -> ParamEditor<Message> {
-        ParamEditor::new(value, on_change, on_submit)
-    }
-
-    impl<Message> Component<Message, Renderer> for ParamEditor<Message> {
-        type State = ();
-        type Event = Evt;
-
-        fn update(&mut self, _state: &mut Self::State, event: Evt) -> Option<Message> {
-            match event {
-                Evt::InputChanged(s) => Some((self.on_change)(s)),
-                Evt::InputSubmit => Some((self.on_submit)()),
-            }
-        }
-        fn view(&self, _state: &Self::State) -> Element<Evt, Renderer> {
-            column![
-                text_input("", &self.value)
-                    .width(50)
-                    .on_input(Evt::InputChanged)
-                    .on_submit(Evt::InputSubmit),
-                button("enter").on_press(Evt::InputSubmit),
-            ]
-            .width(Length::Shrink)
-            .into()
-        }
-    }
-
-    impl<'a, Message> From<ParamEditor<Message>> for Element<'a, Message, Renderer>
-    where
-        Message: 'a,
-    {
-        fn from(parameditor: ParamEditor<Message>) -> Self {
-            component(parameditor)
-        }
     }
 }
