@@ -445,6 +445,7 @@ where
                             }),
                         ) => {
                             self.content.delete_elements(&self.selected);
+                            self.active_element = None;
                             self.selected.clear();
                             clear_passive = true;
                         }
@@ -469,6 +470,7 @@ where
                             }),
                         ) => match st {
                             SchematicSt::Idle => {
+                                self.active_element = None;
                                 self.selected.clear();
                                 clear_passive = true;
                             }
@@ -500,6 +502,7 @@ where
                     }
                     SchematicMsg::NewElement(e) => {
                         // place into selected
+                        self.active_element = None;
                         self.selected.clear();
                         self.selected.insert(e.take());
                         self.state = SchematicSt::Moving(Some((

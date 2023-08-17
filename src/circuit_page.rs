@@ -387,7 +387,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             )
             .foot(Row::new().spacing(10).padding(5).width(Length::Fill))
             .max_width(300.0)
-            //.width(Length::Shrink)
             .on_close(CircuitPageMsg::CloseModal),
         )
         .backdrop(CircuitPageMsg::CloseModal)
