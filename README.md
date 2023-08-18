@@ -1,5 +1,7 @@
 Circe: Prototyping for 2D CAD drawn with Iced canvas
 
+Soliciting experienced help and/or advice with architecture and gui
+
 ### Preview:
 Simple op-amp with generic devices
 ![Screenshot 2023-08-14 205401](https://github.com/ua-kxie/circe/assets/56177821/24db33c0-69f5-4187-8e41-38a495a6aecc)
@@ -14,11 +16,11 @@ Simple op-amp with generic devices
 * right click drag to zoom to area  
 * left click drag to select area
 * left click drag on selected device to drag selected
-* select single device to edit parameter (wonky) - if you have ideas for implementing a properties editor, get in touch ~
+* select single device to edit parameter
   
 #### Hotkeys:
 
-##### Schematic Controls:
+##### Schematic Controls (circuit schematic and symbol designer):
 
 Ctrl-C/left-click - copy/paste
 
@@ -55,7 +57,7 @@ ctrl-space - run ac simulation
 
 Shift T - run transient simulation
 
-##### Designer Schematic
+##### Symbol Designer
 -for now, intended for dev use only-
 
 W - draw a line

@@ -10,15 +10,7 @@ use crate::{
 use petgraph::algo::tarjan_scc;
 use petgraph::graphmap::GraphMap;
 
-mod vertex;
-pub use vertex::NetVertex;
-
-mod edge;
-pub use edge::NetEdge;
-
-mod label;
-pub use label::NetLabels;
-pub use label::RcRLabel;
+use crate::schematic::elements::{NetEdge, NetVertex};
 
 use crate::Drawable;
 

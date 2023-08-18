@@ -3,7 +3,7 @@
 //! intended to eventually allow users to define hierarchical devices
 //! for now, intended only to allow devs to quickly draw up basic device symbols
 
-use crate::schematic::devices::port::{Port, RcRPort};
+use crate::schematic::elements::{Port, RcRPort};
 use crate::schematic::interactable::Interactive;
 use crate::schematic::{self, SchematicElement, SchematicMsg};
 use crate::transforms::{Point, SSBox, SSPoint, VSPoint};
@@ -16,7 +16,7 @@ use iced::widget::canvas::{stroke, LineCap, Stroke};
 use iced::Color;
 use send_wrapper::SendWrapper;
 
-use crate::schematic::devices::strokes::{Bounds, CirArc, Linear, RcRBounds, RcRCirArc, RcRLinear};
+use crate::schematic::elements::{Bounds, CirArc, LineSeg, RcRBounds, RcRCirArc, RcRLinear};
 use std::collections::HashSet;
 use std::fs;
 
@@ -334,7 +334,7 @@ impl Drawable for Designer {
         match &self.state {
             DesignerSt::Line(opt_vsps) => {
                 if let Some((vsp0, vsp1)) = opt_vsps {
-                    Linear::new(*vsp0, *vsp1).draw_preview(vct, vcscale, frame);
+                    LineSeg::new(*vsp0, *vsp1).draw_preview(vct, vcscale, frame);
                 }
             }
             DesignerSt::CirArc(opt_vsps) => {
@@ -605,12 +605,12 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                                 new_ws = None;
                             } else if self.occupies_vsp(vsp) {
                                 self.content.insert(DesignerElement::Linear(RcRLinear::new(
-                                    Linear::new(*ssp0, vsp),
+                                    LineSeg::new(*ssp0, vsp),
                                 )));
                                 new_ws = None;
                             } else {
                                 self.content.insert(DesignerElement::Linear(RcRLinear::new(
-                                    Linear::new(*ssp0, vsp),
+                                    LineSeg::new(*ssp0, vsp),
                                 )));
                                 new_ws = Some((vsp, vsp));
                             }

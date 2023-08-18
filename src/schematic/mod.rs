@@ -3,15 +3,14 @@
 
 mod circuit;
 pub(crate) mod circuit_page;
-mod devices;
+mod elements;
 mod interactable;
+mod layers;
 mod models;
-mod nets;
 mod symbols;
 pub(crate) mod symbols_page;
 mod viewport;
 
-pub use self::devices::RcRDevice;
 use crate::transforms::{self, CSPoint, Point, SSTransform, VCTransform, VSBox, VSPoint};
 use crate::transforms::{CSVec, VVTransform};
 use crate::Drawable;
@@ -23,7 +22,6 @@ use iced::{
     widget::canvas::{self, event::Event, path::Builder, Frame, LineCap, Stroke},
     Color, Size,
 };
-use nets::Nets;
 use send_wrapper::SendWrapper;
 use std::collections::HashSet;
 use std::hash::Hash;

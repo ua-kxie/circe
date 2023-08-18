@@ -5,6 +5,10 @@
 // + < ic = vd > < temp = val > < dtemp = val >
 // + < lm = val > < wm = val > < lp = val > < wp = val >
 
+use crate::schematic::elements::Port;
+use crate::schematic::interactable::Interactable;
+use crate::transforms::{SSBox, SSPoint, VSPoint};
+
 use super::super::params;
 use super::Graphics;
 use lazy_static::lazy_static;
@@ -21,8 +25,7 @@ lazy_static! {
             vec![VSPoint::new(0.00, -0.50), VSPoint::new(1.00, 1.00),],
             vec![VSPoint::new(0.00, -0.50), VSPoint::new(-1.00, 1.00),],
         ],
-        cirarcs: vec![
-        ],
+        cirarcs: vec![],
         ports: vec![
             Port {
                 name: "0".to_string(),
@@ -37,8 +40,7 @@ lazy_static! {
         ],
         bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
- }
-
+}
 
 #[derive(Debug, Clone)]
 pub enum Param {
@@ -64,6 +66,9 @@ pub struct D {
 }
 impl Default for D {
     fn default() -> Self {
-        Self { params: Param::default(), graphics: &DEFAULT_GRAPHICS }
+        Self {
+            params: Param::default(),
+            graphics: &DEFAULT_GRAPHICS,
+        }
     }
 }

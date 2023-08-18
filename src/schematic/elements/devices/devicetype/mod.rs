@@ -1,25 +1,26 @@
 //! device type. Resistors are a distinct type from capacitors, etc.
 
+use crate::schematic::elements::Port;
+use crate::transforms::{Point, SSBox, VCTransform, VSPoint};
+use crate::{schematic::elements::CirArc, Drawable};
 use iced::{
     widget::canvas::{path::Builder, stroke, Frame, LineCap, LineDash, Stroke},
     Color, Size,
 };
 
-use super::strokes::CirArc;
-use crate::Drawable;
-use crate::{
-    schematic::devices::port::Port,
-    transforms::{Point, SSBox, VCTransform, VSPoint},
-};
-
-pub mod c;
 pub mod gnd;
 pub mod i;
-pub mod l;
-pub mod nmos;
-pub mod pmos;
-pub mod r;
 pub mod v;
+
+pub mod c;
+pub mod l;
+pub mod r;
+
+pub mod d;
+pub mod nmos;
+pub mod npn;
+pub mod pmos;
+pub mod pnp;
 
 const STROKE_WIDTH: f32 = 0.1;
 

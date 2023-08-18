@@ -3,8 +3,8 @@
 use std::cmp::Ordering;
 
 use crate::{
-    schematic::nets::Drawable,
     transforms::{SSPoint, VCTransform},
+    Drawable,
 };
 use iced::{
     widget::canvas::{stroke, Frame, LineCap, Path, Stroke},

@@ -1,7 +1,5 @@
 //! types and constants facillitating geometry and transforms
 
-
-
 use euclid::Point2D;
 use iced::Point as IcedPoint;
 use serde::{Deserialize, Serialize};

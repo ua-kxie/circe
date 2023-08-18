@@ -1,39 +1,17 @@
 //! devices, e.g. resistors, voltage sources, etc.
 
-use std::{cell::RefCell, collections::HashSet, hash::Hasher, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
-mod deviceinstance;
-mod devicetype;
-mod params;
-pub mod port;
-pub mod strokes;
+use crate::schematic::elements::Device;
+use crate::schematic::elements::DeviceClass;
+use crate::schematic::elements::RcRDevice;
+use crate::schematic::interactable::Interactive;
 use crate::transforms::{self, SSPoint, VCTransform, VSBox, VSPoint};
 use crate::Drawable;
-use deviceinstance::Device;
-use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
 
-use by_address::ByAddress;
 use iced::widget::canvas::Frame;
 
-use self::devicetype::{c::C, i::I, l::L, nmos, pmos};
-
-use super::interactable::Interactive;
-
-/// newtype wrapper for `Rc<RefCell<Device>>`. Hashes by memory address.
-#[derive(Debug, Clone)]
-pub struct RcRDevice(pub Rc<RefCell<Device>>);
-
-impl PartialEq for RcRDevice {
-    fn eq(&self, other: &Self) -> bool {
-        ByAddress(self.0.clone()) == ByAddress(other.0.clone())
-    }
-}
-impl Eq for RcRDevice {}
-impl std::hash::Hash for RcRDevice {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        ByAddress(self.0.clone()).hash(state);
-    }
-}
+use crate::schematic::elements::devicetype::{c::C, gnd::Gnd, i::I, l::L, nmos, pmos, r::R, v::V};
 
 /// struct to keep track of unique IDs for all devices of a type
 #[derive(Debug, Clone)]

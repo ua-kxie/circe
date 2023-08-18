@@ -9,14 +9,15 @@ use iced::{
     Color,
 };
 
-use crate::Drawable;
 use crate::{
-    schematic::interactable::Interactable,
-    transforms::{vvt_to_sst, VVTransform},
-};
-use crate::{
-    schematic::{interactable::Interactive, Nets},
-    transforms::{sst_to_vvt, Point, SSPoint, SSTransform, VCTransform, VSPoint},
+    schematic::{
+        interactable::{Interactable, Interactive},
+        layers::Nets,
+    },
+    transforms::{
+        sst_to_vvt, vvt_to_sst, Point, SSPoint, SSTransform, VCTransform, VSPoint, VVTransform,
+    },
+    Drawable,
 };
 use std::hash::Hash;
 

@@ -1,13 +1,14 @@
 //! Circuit
 //! Concrete types for schematic content
 
-use crate::schematic::devices::Devices;
+use crate::schematic::elements::RcRDevice;
+use crate::schematic::elements::RcRLabel;
+use crate::schematic::elements::{NetEdge, NetVertex};
+use crate::schematic::layers::Devices;
+use crate::schematic::layers::NetLabels;
+use crate::schematic::layers::Nets;
 use crate::schematic::models::NgModels;
-use crate::schematic::nets::NetLabels;
-use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
-use crate::schematic::{
-    self, interactable::Interactive, RcRDevice, SchematicElement, SchematicMsg,
-};
+use crate::schematic::{self, interactable::Interactive, SchematicElement, SchematicMsg};
 use crate::transforms::VSPoint;
 use crate::transforms::{SSPoint, VCTransform, VSBox, VVTransform};
 use crate::Drawable;
@@ -138,6 +139,7 @@ pub struct Circuit {
     nets: Nets,
     devices: Devices,
     labels: NetLabels,
+
     curpos_ssp: SSPoint,
 
     device_models: NgModels,

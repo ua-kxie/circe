@@ -6,7 +6,7 @@
 
 use super::super::params;
 use super::{Graphics, Port};
-use crate::schematic::devices::strokes::CirArc;
+use crate::schematic::elements::CirArc;
 use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;

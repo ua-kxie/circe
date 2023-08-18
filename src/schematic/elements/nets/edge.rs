@@ -3,11 +3,9 @@
 use std::rc::Rc;
 
 use crate::{
-    schematic::{
-        interactable::{Interactable, Interactive},
-        nets::Drawable,
-    },
+    schematic::interactable::{Interactable, Interactive},
     transforms::{vvt_to_sst, SSPoint, VCTransform, VSBox, VVTransform},
+    Drawable,
 };
 
 use iced::{

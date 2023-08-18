@@ -1,4 +1,4 @@
-//! device definition for pnp BJTs (QXXXX)
+//! device definition for npn BJTs (QXXXX)
 // port order: c b e (vbe <-> vgs for reference)
 // followed by model name
 
@@ -12,7 +12,7 @@ use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;
 
-pub const ID_PREFIX: &str = "QP";
+pub const ID_PREFIX: &str = "QN";
 
 lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
@@ -21,13 +21,12 @@ lazy_static! {
             vec![VSPoint::new(0.00, 1.50), VSPoint::new(0.00, -1.50),],
             vec![VSPoint::new(2.00, 1.50), VSPoint::new(2.00, 3.00),],
             vec![VSPoint::new(0.00, 0.00), VSPoint::new(-2.00, 0.00),],
-            vec![VSPoint::new(1.00, -1.00), VSPoint::new(1.75, -0.75),],
+            vec![VSPoint::new(2.00, -1.50), VSPoint::new(1.50, -0.75),],
             vec![VSPoint::new(2.00, -1.50), VSPoint::new(2.00, -3.00),],
-            vec![VSPoint::new(1.00, -1.00), VSPoint::new(1.25, -1.75),],
+            vec![VSPoint::new(2.00, -1.50), VSPoint::new(1.25, -1.75),],
             vec![VSPoint::new(0.00, -0.75), VSPoint::new(2.00, -1.50),],
         ],
-        cirarcs: vec![
-        ],
+        cirarcs: vec![],
         ports: vec![
             Port {
                 name: "0".to_string(),
@@ -47,23 +46,22 @@ lazy_static! {
         ],
         bounds: SSBox::new(SSPoint::new(-2, -3), SSPoint::new(2, 3)),
     };
- }
-
+}
 
 #[derive(Debug, Clone)]
-pub enum ParamM {
+pub enum Param {
     Raw(params::Raw),
 }
-impl Default for ParamM {
+impl Default for Param {
     fn default() -> Self {
-        ParamM::Raw(params::Raw::new(String::from("")))
+        Param::Raw(params::Raw::new(String::from("")))
     }
 }
-impl ParamM {
+impl Param {
     pub fn summary(&self) -> String {
         match self {
-            ParamM::Raw(s) => {
-                format!("bjtp {}", s.raw.clone())
+            Param::Raw(s) => {
+                format!("bjtn {}", s.raw.clone())
             }
         }
     }
@@ -71,11 +69,14 @@ impl ParamM {
 
 #[derive(Debug, Clone)]
 pub struct M {
-    pub params: ParamM,
+    pub params: Param,
     pub graphics: &'static Graphics,
 }
 impl Default for M {
     fn default() -> Self {
-        Self { params: Param::default(), graphics: &DEFAULT_GRAPHICS }
+        Self {
+            params: Param::default(),
+            graphics: &DEFAULT_GRAPHICS,
+        }
     }
 }
