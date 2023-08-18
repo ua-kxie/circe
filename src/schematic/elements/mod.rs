@@ -1,6 +1,6 @@
 mod bounds;
 mod cirarc;
-mod devices;
+mod device;
 mod lineseg;
 mod net_label;
 mod nets;
@@ -13,12 +13,12 @@ pub use cirarc::CirArc;
 pub use cirarc::RcRCirArc;
 
 pub use lineseg::LineSeg;
-pub use lineseg::RcRLinear;
+pub use lineseg::RcRLineSeg;
 
-pub use devices::deviceinstance::Device;
-pub use devices::devicetype;
-pub use devices::devicetype::DeviceClass;
-pub use devices::RcRDevice;
+// pub use device::deviceinstance::Device;
+pub use device::devicetype;
+pub use device::devicetype::DeviceClass;
+pub use device::RcRDevice;
 
 pub use net_label::RcRLabel;
 

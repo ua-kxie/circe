@@ -1,8 +1,8 @@
 //! devices, e.g. resistors, voltage sources, etc.
 
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::collections::HashSet;
 
-use crate::schematic::elements::Device;
+// use crate::schematic::elements::Device;
 use crate::schematic::elements::DeviceClass;
 use crate::schematic::elements::RcRDevice;
 use crate::schematic::interactable::Interactive;
@@ -168,44 +168,38 @@ impl Devices {
     }
     /// create a new pmos with unique ID
     pub fn new_pmos(&mut self) -> RcRDevice {
-        let mut d = Device::new_with_ord_class(0, DeviceClass::Pm(pmos::M::default()));
-        d.transform(transforms::sst_to_vvt(transforms::SST_YMIR));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        let d = RcRDevice::new_with_ord_class(0, DeviceClass::Pm(pmos::M::default()));
+        d.0.borrow_mut()
+            .transform(transforms::sst_to_vvt(transforms::SST_YMIR));
+        d
     }
     /// create a new nmos with unique ID
     pub fn new_nmos(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::Nm(nmos::M::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::Nm(nmos::M::default()))
     }
     /// create a new resistor with unique ID
     pub fn new_res(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::R(R::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::R(R::default()))
     }
     /// create a new inductor with unique ID
     pub fn new_ind(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::L(L::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::L(L::default()))
     }
     /// create a new capacitor with unique ID
     pub fn new_cap(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::C(C::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::C(C::default()))
     }
     /// create a new gnd with unique ID
     pub fn new_gnd(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::Gnd(Gnd::default()))
     }
     /// create a new voltage source with unique ID
     pub fn new_vs(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::V(V::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::V(V::default()))
     }
     /// create a new current source with unique ID
     pub fn new_is(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::I(I::default()));
-        RcRDevice(Rc::new(RefCell::new(d)))
+        RcRDevice::new_with_ord_class(0, DeviceClass::I(I::default()))
     }
     /// returns a vector of SSPoints of all coordinates occupied by all ports of all devices. A coordinate is returned once for each port on that coordinate
     pub fn ports_ssp(&self) -> Vec<SSPoint> {

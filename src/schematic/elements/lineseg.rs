@@ -19,9 +19,9 @@ const STROKE_WIDTH: f32 = 0.1;
 
 /// newtype wrapper for `Rc<RefCell<Linear>>`
 #[derive(Debug, Clone)]
-pub struct RcRLinear(pub Rc<RefCell<LineSeg>>);
+pub struct RcRLineSeg(pub Rc<RefCell<LineSeg>>);
 
-impl RcRLinear {
+impl RcRLineSeg {
     pub fn new(l: LineSeg) -> Self {
         Self(Rc::new(RefCell::new(l)))
     }

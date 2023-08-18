@@ -16,14 +16,14 @@ use iced::widget::canvas::{stroke, LineCap, Stroke};
 use iced::Color;
 use send_wrapper::SendWrapper;
 
-use crate::schematic::elements::{Bounds, CirArc, LineSeg, RcRBounds, RcRCirArc, RcRLinear};
+use crate::schematic::elements::{Bounds, CirArc, LineSeg, RcRBounds, RcRCirArc, RcRLineSeg};
 use std::collections::HashSet;
 use std::fs;
 
 /// an enum to unify different types in schematic (lines and ellipses)
 #[derive(Debug, Clone)]
 pub enum DesignerElement {
-    Linear(RcRLinear),
+    Linear(RcRLineSeg),
     Port(RcRPort),
     CirArc(RcRCirArc),
     Bounds(RcRBounds),
@@ -604,12 +604,12 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                             if vsp == *ssp0 {
                                 new_ws = None;
                             } else if self.occupies_vsp(vsp) {
-                                self.content.insert(DesignerElement::Linear(RcRLinear::new(
+                                self.content.insert(DesignerElement::Linear(RcRLineSeg::new(
                                     LineSeg::new(*ssp0, vsp),
                                 )));
                                 new_ws = None;
                             } else {
-                                self.content.insert(DesignerElement::Linear(RcRLinear::new(
+                                self.content.insert(DesignerElement::Linear(RcRLineSeg::new(
                                     LineSeg::new(*ssp0, vsp),
                                 )));
                                 new_ws = Some((vsp, vsp));
@@ -686,7 +686,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
                     //build BaseElement
                     self.content
-                        .insert(DesignerElement::Linear(RcRLinear::new(line)));
+                        .insert(DesignerElement::Linear(RcRLineSeg::new(line)));
                 }
                 DesignerElement::CirArc(rcl) => {
                     //unwrap refcell
