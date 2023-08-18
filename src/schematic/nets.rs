@@ -20,7 +20,7 @@ mod label;
 pub use label::NetLabels;
 pub use label::RcRLabel;
 
-use crate::viewport::Drawable;
+use crate::Drawable;
 
 /// This struct facillitates the creation of unique net names
 #[derive(Clone, Debug, Default)]

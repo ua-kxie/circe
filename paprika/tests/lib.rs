@@ -7,8 +7,8 @@ use paprika::*;
 struct Manager {
     sharedres: Arc<RwLock<VecDeque<String>>>,
     quit_flag: bool,
-    vec_char: Vec<String>,
-    vec_stat: Vec<String>,
+    _vec_char: Vec<String>,
+    _vec_stat: Vec<String>,
     vec_pkvecinfoall: Vec<PkVecinfoall>,
     vec_pkvecvalsall: Vec<PkVecvaluesall>,
 }
@@ -17,8 +17,8 @@ impl Manager {
         Manager {
             sharedres: arvs,
             quit_flag: false,
-            vec_char: Vec::<String>::new(),
-            vec_stat: Vec::<String>::new(),
+            _vec_char: Vec::<String>::new(),
+            _vec_stat: Vec::<String>::new(),
             vec_pkvecinfoall: Vec::<PkVecinfoall>::new(),
             vec_pkvecvalsall: Vec::<PkVecvaluesall>::new(),
         }

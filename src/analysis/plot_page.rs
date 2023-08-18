@@ -1,10 +1,11 @@
 //! Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::plot::{ChartElement, Msg as PlotMsg, Plot};
-use crate::transforms::{VCTransformFreeAspect, VSPoint};
-use crate::viewport_free_aspect::Content;
-use crate::{plot, viewport_free_aspect};
+use crate::analysis::plot::{ChartElement, Msg as PlotMsg, Plot};
+use crate::analysis::viewport::Content;
+use crate::analysis::viewport::VCTransformFreeAspect;
+use crate::analysis::{plot, viewport};
+use crate::transforms::VSPoint;
 
 use crate::IcedStruct;
 use iced::widget::row;
@@ -12,14 +13,14 @@ use iced::Element;
 
 #[derive(Debug, Clone)]
 pub enum PlotPageMsg {
-    ViewportEvt(viewport_free_aspect::CompositeMsg<plot::Msg>),
+    ViewportEvt(viewport::CompositeMsg<plot::Msg>),
     Traces(Vec<Vec<VSPoint>>),
 }
 
 /// schematic
 pub struct PlotPage {
     /// viewport
-    viewport: viewport_free_aspect::Viewport<Plot<ChartElement>, plot::Msg>,
+    viewport: viewport::Viewport<Plot<ChartElement>, plot::Msg>,
 }
 impl Default for PlotPage {
     fn default() -> Self {
@@ -27,7 +28,7 @@ impl Default for PlotPage {
             .pre_flip_y()
             .then_scale(10.0, 10.0);
         PlotPage {
-            viewport: viewport_free_aspect::Viewport::new(1.0, f32::EPSILON, f32::MAX, vct),
+            viewport: viewport::Viewport::new(1.0, f32::EPSILON, f32::MAX, vct),
         }
     }
 }

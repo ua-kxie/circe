@@ -1,14 +1,16 @@
 //! Circuit Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
 
-use crate::circuit::{Circuit, CircuitElement, Msg};
 use crate::schematic;
-use crate::transforms::{VCTransformLockedAspect, VSPoint};
-use crate::viewport::CompositeMsg;
+use crate::schematic::circuit::{Circuit, CircuitElement, Msg};
+use crate::schematic::viewport::CompositeMsg;
+use crate::schematic::viewport::VCTransformLockedAspect;
+use crate::transforms::VSPoint;
 
+use crate::schematic::viewport;
+use crate::schematic::viewport::Viewport;
 use crate::schematic::Schematic;
-use crate::viewport::Viewport;
-use crate::{viewport, IcedStruct};
+use crate::IcedStruct;
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::Event;
 use iced::widget::{row, text, text_input, Row, Text};

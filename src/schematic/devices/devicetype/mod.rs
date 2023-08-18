@@ -5,20 +5,19 @@ use iced::{
     Color, Size,
 };
 
+use super::strokes::CirArc;
+use crate::Drawable;
 use crate::{
     schematic::devices::port::Port,
     transforms::{Point, SSBox, VCTransform, VSPoint},
-    viewport::Drawable,
 };
-
-use super::strokes::CirArc;
 
 pub mod c;
 pub mod gnd;
 pub mod i;
 pub mod l;
-pub mod nm;
-pub mod pm;
+pub mod nmos;
+pub mod pmos;
 pub mod r;
 pub mod v;
 
@@ -127,8 +126,8 @@ pub trait DeviceType {
 /// DeviceClass enumerates the various classes of devices. E.g. ground, resistor, voltage source... etc
 #[derive(Debug, Clone)]
 pub enum DeviceClass {
-    Pm(pm::M),
-    Nm(nm::M),
+    Pm(pmos::M),
+    Nm(nmos::M),
     Gnd(gnd::Gnd),
     R(r::R),
     L(l::L),
@@ -141,26 +140,26 @@ impl DeviceClass {
     pub fn set_raw_param(&mut self, new: String) {
         match self {
             DeviceClass::Pm(x) => match &mut x.params {
-                pm::ParamM::Raw(y) => y.set(new),
+                pmos::Param::Raw(y) => y.set(new),
             },
             DeviceClass::Nm(x) => match &mut x.params {
-                nm::ParamM::Raw(y) => y.set(new),
+                nmos::Param::Raw(y) => y.set(new),
             },
             DeviceClass::R(x) => match &mut x.params {
-                r::ParamR::Raw(y) => y.set(new),
+                r::Param::Raw(y) => y.set(new),
             },
             DeviceClass::L(x) => match &mut x.params {
-                l::ParamL::Raw(y) => y.set(new),
+                l::Param::Raw(y) => y.set(new),
             },
             DeviceClass::C(x) => match &mut x.params {
                 c::ParamC::Raw(y) => y.set(new),
             },
             DeviceClass::Gnd(_) => {}
             DeviceClass::V(x) => match &mut x.params {
-                v::ParamV::Raw(y) => y.set(new),
+                v::Param::Raw(y) => y.set(new),
             },
             DeviceClass::I(x) => match &mut x.params {
-                i::ParamI::Raw(y) => y.set(new),
+                i::Param::Raw(y) => y.set(new),
             },
         }
     }
@@ -193,8 +192,8 @@ impl DeviceClass {
     /// returns the id prefix of the device class
     pub fn id_prefix(&self) -> &'static str {
         match self {
-            DeviceClass::Pm(_) => pm::ID_PREFIX,
-            DeviceClass::Nm(_) => nm::ID_PREFIX,
+            DeviceClass::Pm(_) => pmos::ID_PREFIX,
+            DeviceClass::Nm(_) => nmos::ID_PREFIX,
             DeviceClass::Gnd(_) => gnd::ID_PREFIX,
             DeviceClass::R(_) => r::ID_PREFIX,
             DeviceClass::L(_) => l::ID_PREFIX,

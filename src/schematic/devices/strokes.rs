@@ -12,10 +12,10 @@ use iced::{
     Color,
 };
 
+use crate::Drawable;
 use crate::{
     schematic::interactable::{Interactable, Interactive},
     transforms::{Point, SSBox, SSPoint, VCTransform, VSBox, VSPoint},
-    viewport::Drawable,
 };
 
 /// width of the stroke

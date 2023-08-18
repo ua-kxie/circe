@@ -62,9 +62,9 @@ pub struct C {
     pub params: ParamC,
     pub graphics: &'static Graphics,
 }
-impl C {
-    pub fn new() -> C {
-        C {
+impl Default for C {
+    fn default() -> Self {
+        Self {
             params: ParamC::default(),
             graphics: &DEFAULT_GRAPHICS,
         }

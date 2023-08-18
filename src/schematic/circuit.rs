@@ -1,18 +1,16 @@
 //! Circuit
 //! Concrete types for schematic content
 
-use crate::ngmodel::NgModels;
 use crate::schematic::devices::Devices;
+use crate::schematic::models::NgModels;
 use crate::schematic::nets::NetLabels;
 use crate::schematic::nets::{NetEdge, NetVertex, Nets, RcRLabel};
 use crate::schematic::{
     self, interactable::Interactive, RcRDevice, SchematicElement, SchematicMsg,
 };
 use crate::transforms::VSPoint;
-use crate::{
-    transforms::{SSPoint, VCTransform, VSBox, VVTransform},
-    viewport::Drawable,
-};
+use crate::transforms::{SSPoint, VCTransform, VSBox, VVTransform};
+use crate::Drawable;
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::{event::Event, Frame};
 use paprika::PkVecvaluesall;

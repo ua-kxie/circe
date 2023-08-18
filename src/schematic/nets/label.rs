@@ -11,17 +11,16 @@
 
 use std::{cell::RefCell, collections::HashSet, hash::Hasher, rc::Rc};
 
-use iced::{
-    widget::canvas::{self, Frame, Text},
-    Color, Size,
-};
-
+use crate::Drawable;
 use crate::{
     schematic::interactable::{Interactable, Interactive},
     transforms::{
         sst_to_vvt, vvt_to_sst, Point, SSTransform, VCTransform, VSBox, VSPoint, VSVec, VVTransform,
     },
-    viewport::Drawable,
+};
+use iced::{
+    widget::canvas::{self, Frame, Text},
+    Color, Size,
 };
 
 use by_address::ByAddress;

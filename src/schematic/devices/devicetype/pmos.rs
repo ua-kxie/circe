@@ -14,13 +14,14 @@ use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;
 
-pub const ID_PREFIX: &str = "MN";
+pub const ID_PREFIX: &str = "MP";
 
 lazy_static! {
     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
         pts: vec![
+            vec![VSPoint::new(0.50, -1.50), VSPoint::new(1.50, -2.00),],
             vec![VSPoint::new(0.00, 1.50), VSPoint::new(0.00, -1.50),],
-            vec![VSPoint::new(1.00, -1.00), VSPoint::new(2.00, -1.50),],
+            vec![VSPoint::new(0.50, -1.50), VSPoint::new(1.50, -1.00),],
             vec![VSPoint::new(2.00, 3.00), VSPoint::new(2.00, 1.50),],
             vec![VSPoint::new(2.00, -1.50), VSPoint::new(2.00, -3.00),],
             vec![VSPoint::new(0.00, -1.50), VSPoint::new(2.00, -1.50),],
@@ -28,7 +29,6 @@ lazy_static! {
             vec![VSPoint::new(-0.50, 0.00), VSPoint::new(-2.00, 0.00),],
             vec![VSPoint::new(0.00, 0.00), VSPoint::new(2.00, 0.00),],
             vec![VSPoint::new(-0.50, 1.50), VSPoint::new(-0.50, -1.50),],
-            vec![VSPoint::new(2.00, -1.50), VSPoint::new(1.00, -2.00),],
         ],
         cirarcs: vec![],
         ports: vec![
@@ -58,19 +58,19 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone)]
-pub enum ParamM {
+pub enum Param {
     Raw(params::Raw),
 }
-impl Default for ParamM {
+impl Default for Param {
     fn default() -> Self {
-        ParamM::Raw(params::Raw::new(String::from("")))
+        Param::Raw(params::Raw::new(String::from("")))
     }
 }
-impl ParamM {
+impl Param {
     pub fn summary(&self) -> String {
         match self {
-            ParamM::Raw(s) => {
-                format!("mosn {}", s.raw.clone())
+            Param::Raw(s) => {
+                format!("mosp {}", s.raw.clone())
             }
         }
     }
@@ -78,13 +78,13 @@ impl ParamM {
 
 #[derive(Debug, Clone)]
 pub struct M {
-    pub params: ParamM,
+    pub params: Param,
     pub graphics: &'static Graphics,
 }
-impl M {
-    pub fn new() -> M {
-        M {
-            params: ParamM::default(),
+impl Default for M {
+    fn default() -> Self {
+        Self {
+            params: Param::default(),
             graphics: &DEFAULT_GRAPHICS,
         }
     }

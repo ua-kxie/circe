@@ -3,22 +3,13 @@
 
 use std::fmt::Debug;
 
-mod designer;
-mod designer_page;
-mod transforms;
-mod viewport;
-mod viewport_free_aspect;
-
-mod circuit;
-mod circuit_page;
-mod ngmodel;
-mod plot;
-mod plot_page;
+mod analysis;
 mod schematic;
+mod transforms;
 
-use circuit_page::CircuitPage;
-use designer_page::DevicePage;
-use plot_page::{PlotPage, PlotPageMsg};
+use analysis::plot_page::{PlotPage, PlotPageMsg};
+use schematic::circuit_page::CircuitPage;
+use schematic::symbols_page::DevicePage;
 
 // mod designer;
 
@@ -51,9 +42,9 @@ pub struct Circe {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    DesignerMsg(designer_page::DevicePageMsg),
-    SchematicMsg(circuit_page::CircuitPageMsg),
-    PlotViewMsg(plot_page::PlotPageMsg),
+    DesignerMsg(schematic::symbols_page::DevicePageMsg),
+    SchematicMsg(schematic::circuit_page::CircuitPageMsg),
+    PlotViewMsg(analysis::plot_page::PlotPageMsg),
     // Event(Event),
     TabSel(usize),
 }
@@ -124,4 +115,12 @@ impl Application for Circe {
 trait IcedStruct<T> {
     fn update(&mut self, msg: T);
     fn view(&self) -> Element<T>;
+}
+use crate::transforms::VCTransform;
+use iced::widget::canvas::Frame;
+/// trait for element which can be drawn on canvas
+pub trait Drawable {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
 }

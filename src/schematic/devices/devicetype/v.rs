@@ -115,52 +115,33 @@ struct VITranPwl {
 }
 
 #[derive(Debug, Clone)]
-pub enum ParamV {
+pub enum Param {
     Raw(params::Raw),
 }
-impl Default for ParamV {
+impl Default for Param {
     fn default() -> Self {
         // ParamV::Raw(params::Raw::new(String::from("3.3")))
-        ParamV::Raw(params::Raw::new(String::from("AC 1 SIN(3.3 1 2k 0 0)")))
+        Param::Raw(params::Raw::new(String::from("AC 1 SIN(3.3 1 2k 0 0)")))
     }
 }
-impl ParamV {
+impl Param {
     pub fn summary(&self) -> String {
         match self {
-            ParamV::Raw(s) => s.raw.clone(),
+            Param::Raw(s) => s.raw.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct V {
-    pub params: ParamV,
+    pub params: Param,
     pub graphics: &'static Graphics,
 }
-impl V {
-    pub fn new() -> V {
-        V {
-            params: ParamV::default(),
+impl Default for V {
+    fn default() -> Self {
+        Self {
+            params: Param::default(),
             graphics: &DEFAULT_GRAPHICS,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json;
-    #[test]
-    fn it_works() {
-        let out = serde_json::json!(*super::DEFAULT_GRAPHICS);
-        std::fs::write(
-            "src/schematic/devices/devicetype/v.json",
-            serde_json::to_string_pretty(&out).unwrap().as_bytes(),
-        )
-        .expect("Unable to write file");
-    }
-
-    fn parse() {
-        let a = std::fs::read("src/schematic/devices/devicetype/v.json").unwrap();
-        let _b: super::Graphics = serde_json::from_slice(&a).unwrap();
     }
 }

@@ -42,19 +42,19 @@ lazy_static! {
 
 /// Enumerates the different ways to specifify parameters for a resistor
 #[derive(Debug, Clone)]
-pub enum ParamR {
+pub enum Param {
     /// specify the spice line directly (after id and port connections)
     Raw(params::Raw),
 }
-impl Default for ParamR {
+impl Default for Param {
     fn default() -> Self {
-        ParamR::Raw(params::Raw::new(String::from("1000")))
+        Param::Raw(params::Raw::new(String::from("1000")))
     }
 }
-impl ParamR {
+impl Param {
     pub fn summary(&self) -> String {
         match self {
-            ParamR::Raw(s) => s.raw.clone(),
+            Param::Raw(s) => s.raw.clone(),
         }
     }
 }
@@ -63,14 +63,14 @@ impl ParamR {
 #[derive(Debug, Clone)]
 pub struct R {
     /// parameters of the resistor
-    pub params: ParamR,
+    pub params: Param,
     /// graphic representation of the resistor
     pub graphics: &'static Graphics,
 }
-impl R {
-    pub fn new() -> R {
-        R {
-            params: ParamR::default(),
+impl Default for R {
+    fn default() -> Self {
+        Self {
+            params: Param::default(),
             graphics: &DEFAULT_GRAPHICS,
         }
     }

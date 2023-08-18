@@ -9,6 +9,7 @@ use iced::{
     Color,
 };
 
+use crate::Drawable;
 use crate::{
     schematic::interactable::Interactable,
     transforms::{vvt_to_sst, VVTransform},
@@ -16,7 +17,6 @@ use crate::{
 use crate::{
     schematic::{interactable::Interactive, Nets},
     transforms::{sst_to_vvt, Point, SSPoint, SSTransform, VCTransform, VSPoint},
-    viewport::Drawable,
 };
 use std::hash::Hash;
 

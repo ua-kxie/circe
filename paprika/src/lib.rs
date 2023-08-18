@@ -7,10 +7,7 @@
 //! Dot analysis commands like `.tran 10u 10m` in the netlist is executed after `run` or `bg_run` is sent through `NgSpice_Command`.
 //! Safety must assume that callbacks are called from parallel thread after commanding `bg_run`.
 
-use std::{
-    ffi::{OsStr, OsString},
-    sync::Arc,
-};
+use std::{ffi::OsString, sync::Arc};
 
 use libc::*;
 #[cfg(unix)]
@@ -139,46 +136,41 @@ where
     pub fn init(&mut self, manager: Option<Arc<T>>) -> i32 {
         // drop existing manager
         // keep reference to new manager
-        unsafe {
-            match manager {
-                Some(m) => {
-                    let ret1 = (self.api.init)(
-                        Some(cbw_send_char::<T>),
-                        Some(cbw_send_stat::<T>),
-                        Some(cbw_controlled_exit::<T>),
-                        Some(cbw_send_data::<T>),
-                        Some(cbw_send_init_data::<T>),
-                        Some(cbw_bgthread_running::<T>),
-                        &*m as *const _ as *const c_void,
-                    );
-                    self.manager = Some(m); // drop the previous manager, AFTER the new manager is registered
-                    ret1
-                }
-                None => {
-                    let ret1 =
-                        (self.api.init)(None, None, None, None, None, None, std::ptr::null());
-                    self.manager = None; // drop the previous manager, AFTER the new manager is registered
-                    ret1
-                }
+        match manager {
+            Some(m) => {
+                let ret1 = (self.api.init)(
+                    Some(cbw_send_char::<T>),
+                    Some(cbw_send_stat::<T>),
+                    Some(cbw_controlled_exit::<T>),
+                    Some(cbw_send_data::<T>),
+                    Some(cbw_send_init_data::<T>),
+                    Some(cbw_bgthread_running::<T>),
+                    &*m as *const _ as *const c_void,
+                );
+                self.manager = Some(m); // drop the previous manager, AFTER the new manager is registered
+                ret1
+            }
+            None => {
+                let ret1 = (self.api.init)(None, None, None, None, None, None, std::ptr::null());
+                self.manager = None; // drop the previous manager, AFTER the new manager is registered
+                ret1
             }
         }
     }
     /// API function known as ngSpice_Command in Ngspice User's Manual
     /// If cmdstr is an empty string, NULL is sent to ngSpice_Command, which clears the internal control structures.
     pub fn command(&self, cmdstr: &str) -> bool {
-        unsafe {
-            let ret = if cmdstr.is_empty() {
-                (self.api.command)(std::ptr::null())
-            }
-            // have users spawn their own threads instead
-            else if cmdstr.find("bg_") == Some(0) {
-                0
-            } else {
-                let ccmdstr = std::ffi::CString::new(cmdstr).unwrap();
-                (self.api.command)(ccmdstr.as_ptr())
-            };
-            ret != 0
+        let ret = if cmdstr.is_empty() {
+            (self.api.command)(std::ptr::null())
         }
+        // have users spawn their own threads instead
+        else if cmdstr.find("bg_") == Some(0) {
+            0
+        } else {
+            let ccmdstr = std::ffi::CString::new(cmdstr).unwrap();
+            (self.api.command)(ccmdstr.as_ptr())
+        };
+        ret != 0
     }
 
     pub fn get_vec_info(&self, vecname: &str) -> PkVectorinfo {
@@ -215,7 +207,7 @@ where
     }
 
     pub fn is_running(&self) -> bool {
-        unsafe { (self.api.is_running)() }
+        (self.api.is_running)()
     }
 }
 

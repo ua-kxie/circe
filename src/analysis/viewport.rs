@@ -6,7 +6,7 @@
 //! separated from schematic controls - wouldn't want panning or zooming to cancel placing a device, etc.
 
 use crate::transforms::{
-    CSBox, CSPoint, CVTransform, Point, SSPoint, VCTransform, VCTransformFreeAspect, VSBox, VSPoint,
+    CSBox, CSPoint, CSVec, CVTransform, Point, SSPoint, VCTransform, VSBox, VSPoint, VSVec,
 };
 use crate::IcedStruct;
 use iced::keyboard::Modifiers;
@@ -18,6 +18,68 @@ use iced::{
     },
     Color, Length, Rectangle, Size, Theme,
 };
+
+/// viewport to canvas space transform with independent x-y aspect ratios
+#[derive(Debug, Clone, Copy)]
+pub struct VCTransformFreeAspect(VCTransform);
+impl VCTransformFreeAspect {
+    /// returns the scale along the x scale
+    pub fn x_scale(&self) -> f32 {
+        self.0.m11.abs()
+    }
+    /// returns the scale along the y scale
+    pub fn y_scale(&self) -> f32 {
+        self.0.m22.abs()
+    }
+    /// returns the identity transform of this type
+    pub fn identity() -> Self {
+        Self(VCTransform::identity())
+    }
+    /// flip transform along y-axis
+    pub fn pre_flip_y(&self) -> Self {
+        Self(self.0.pre_scale(1.0, -1.0))
+    }
+    /// pre_translate
+    pub fn pre_translate(&self, v: VSVec) -> Self {
+        Self(self.0.pre_translate(v))
+    }
+    /// then_translate
+    pub fn then_translate(&self, v: CSVec) -> Self {
+        Self(self.0.then_translate(v))
+    }
+    /// then scale
+    pub fn then_scale(&self, x_scale: f32, y_scale: f32) -> Self {
+        Self(self.0.then_scale(x_scale, y_scale))
+    }
+    /// transform a point
+    pub fn transform_point(&self, vsp: VSPoint) -> CSPoint {
+        self.0.transform_point(vsp)
+    }
+    /// returns transform and scale such that VSBox (viewport/schematic bounds) fit inside CSBox (canvas bounds)
+    pub fn fit_bounds(csb: CSBox, vsb: VSBox, min_zoom: f32, max_zoom: f32) -> Self {
+        let mut vct = VCTransform::identity();
+
+        let x_scale = (csb.width() / vsb.width()) * 0.9;
+        let y_scale = (csb.height() / vsb.height()) * 0.9;
+        vct = vct.then_scale(
+            x_scale.clamp(min_zoom, max_zoom),
+            -y_scale.clamp(min_zoom, max_zoom),
+        );
+        // vector from vsb center to csb center
+        let v = csb.center() - vct.transform_point(vsb.center());
+        vct = vct.then_translate(v);
+
+        Self(vct)
+    }
+    /// return the underlying transform
+    pub fn transform(&self) -> VCTransform {
+        self.0
+    }
+    /// return the inverse of the underlying transform
+    pub fn inverse_transform(&self) -> CVTransform {
+        self.0.inverse().unwrap()
+    }
+}
 
 /// viewport state
 #[derive(Clone, Debug, Default)]

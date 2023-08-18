@@ -1,17 +1,20 @@
 //! Schematic
 //! Space in which devices and nets live in
 
-pub(crate) mod devices;
-pub mod interactable;
-pub(crate) mod nets;
+mod circuit;
+pub(crate) mod circuit_page;
+mod devices;
+mod interactable;
+mod models;
+mod nets;
+mod symbols;
+pub(crate) mod symbols_page;
+mod viewport;
 
 pub use self::devices::RcRDevice;
+use crate::transforms::{self, CSPoint, Point, SSTransform, VCTransform, VSBox, VSPoint};
 use crate::transforms::{CSVec, VVTransform};
-use crate::viewport;
-use crate::{
-    transforms::{self, CSPoint, Point, SSTransform, VCTransform, VSBox, VSPoint},
-    viewport::Drawable,
-};
+use crate::Drawable;
 
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::{stroke, Path};

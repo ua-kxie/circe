@@ -1,9 +1,9 @@
 //! Ports, where wires go to get attached.
 
+use crate::Drawable;
 use crate::{
     schematic::interactable::{Interactable, Interactive},
     transforms::{vvt_to_sst, Point, SSPoint, VCTransform, VSBox, VSPoint, VSVec, VVTransform},
-    viewport::Drawable,
 };
 use iced::{
     widget::canvas::{self, path::Builder, stroke, LineCap, Stroke},

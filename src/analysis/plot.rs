@@ -1,12 +1,10 @@
 //! plot
 //! Space in which math values form plots
 
+use crate::analysis::viewport;
 use crate::transforms::CSVec;
-use crate::viewport_free_aspect;
-use crate::{
-    transforms::{CSPoint, Point, VCTransform, VSBox, VSPoint},
-    viewport::Drawable,
-};
+use crate::transforms::{CSPoint, Point, VCTransform, VSBox, VSPoint};
+use crate::Drawable;
 use iced::widget::canvas::{stroke, Path};
 use iced::{
     mouse,
@@ -138,7 +136,7 @@ pub enum Msg {
 }
 
 /// implements Msg to be ContentMsg of viewport
-impl viewport_free_aspect::ContentMsg for Msg {
+impl viewport::ContentMsg for Msg {
     // create event to handle iced canvas event
     fn canvas_event_msg(event: Event, curpos_vsp: Option<VSPoint>) -> Self {
         if let Some(vsp) = curpos_vsp {
@@ -182,7 +180,7 @@ where
 }
 
 /// implement Schematic as viewport content
-impl viewport_free_aspect::Content<Msg> for Plot<ChartElement> {
+impl viewport::Content<Msg> for Plot<ChartElement> {
     /// change cursor graphic based on schematic state
     fn mouse_interaction(&self) -> mouse::Interaction {
         match self.state {

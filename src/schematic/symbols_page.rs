@@ -2,13 +2,14 @@
 //! includes paramter editor, toolbar, and the canvas itself
 //! for now, intended only as a dev tool for adding new devices
 
-use crate::designer::{Designer, DesignerElement, Msg};
+use crate::schematic::symbols::{Designer, DesignerElement, Msg};
+use crate::schematic::viewport::VCTransformLockedAspect;
 use crate::schematic::{self, Content};
-use crate::transforms::VCTransformLockedAspect;
 
+use crate::schematic::viewport;
+use crate::schematic::viewport::Viewport;
 use crate::schematic::Schematic;
-use crate::viewport::Viewport;
-use crate::{viewport, IcedStruct};
+use crate::IcedStruct;
 use iced::widget::row;
 use iced::Element;
 

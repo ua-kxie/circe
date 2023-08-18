@@ -50,18 +50,18 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone)]
-pub enum ParamM {
+pub enum Param {
     Raw(params::Raw),
 }
-impl Default for ParamM {
+impl Default for Param {
     fn default() -> Self {
-        ParamM::Raw(params::Raw::new(String::from("")))
+        Param::Raw(params::Raw::new(String::from("")))
     }
 }
-impl ParamM {
+impl Param {
     pub fn summary(&self) -> String {
         match self {
-            ParamM::Raw(s) => {
+            Param::Raw(s) => {
                 format!("bjtn {}", s.raw.clone())
             }
         }
@@ -70,14 +70,12 @@ impl ParamM {
 
 #[derive(Debug, Clone)]
 pub struct M {
-    pub params: ParamM,
+    pub params: Param,
     pub graphics: &'static Graphics,
 }
-impl M {
-    pub fn new() -> M {
-        M {
-            params: ParamM::default(),
-            graphics: &DEFAULT_GRAPHICS,
-        }
+impl Default for M {
+    fn default() -> Self {
+        Self { params: Param::default(), graphics: &DEFAULT_GRAPHICS }
     }
 }
+

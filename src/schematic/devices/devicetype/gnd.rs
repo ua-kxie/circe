@@ -30,16 +30,12 @@ lazy_static! {
     };
 }
 
-#[derive(Debug, Clone)]
-pub enum ParamGnd {
+#[derive(Debug, Default, Clone)]
+pub enum Param {
+    #[default]
     None,
 }
-impl Default for ParamGnd {
-    fn default() -> Self {
-        ParamGnd::None
-    }
-}
-impl ParamGnd {
+impl Param {
     pub fn summary(&self) -> String {
         String::from("0 0")
     }
@@ -47,13 +43,13 @@ impl ParamGnd {
 
 #[derive(Debug, Clone)]
 pub struct Gnd {
-    pub params: ParamGnd,
+    pub params: Param,
     pub graphics: &'static Graphics,
 }
-impl Gnd {
-    pub fn new() -> Gnd {
-        Gnd {
-            params: ParamGnd::default(),
+impl Default for Gnd {
+    fn default() -> Self {
+        Self {
+            params: Param::default(),
             graphics: &DEFAULT_GRAPHICS,
         }
     }

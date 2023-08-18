@@ -1,4 +1,4 @@
-//! Designer
+//! Symbols Designer
 //! Concrete types for schematic content for designing device appearances
 //! intended to eventually allow users to define hierarchical devices
 //! for now, intended only to allow devs to quickly draw up basic device symbols
@@ -7,10 +7,8 @@ use crate::schematic::devices::port::{Port, RcRPort};
 use crate::schematic::interactable::Interactive;
 use crate::schematic::{self, SchematicElement, SchematicMsg};
 use crate::transforms::{Point, SSBox, SSPoint, VSPoint};
-use crate::{
-    transforms::{VCTransform, VSBox, VVTransform},
-    viewport::Drawable,
-};
+use crate::transforms::{VCTransform, VSBox, VVTransform};
+use crate::Drawable;
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::path::Builder;
 use iced::widget::canvas::{event::Event, Frame};
@@ -196,34 +194,6 @@ impl Designer {
         false
     }
     /// create graphics for the current designer and save it.
-    // lazy_static! {
-    //     static ref DEFAULT_GRAPHICS: Graphics = Graphics {
-    //         pts: vec![
-    //             vec![VSPoint::new(0., 3.), VSPoint::new(0., -3.),],
-    //             vec![
-    //                 VSPoint::new(-1., 2.),
-    //                 VSPoint::new(-1., -2.),
-    //                 VSPoint::new(1., -2.),
-    //                 VSPoint::new(1., 2.),
-    //                 VSPoint::new(-1., 2.),
-    //             ],
-    //         ],
-    //         circles: vec![],
-    //         ports: vec![
-    //             Port {
-    //                 name: "+".to_string(),
-    //                 offset: SSPoint::new(0, 3),
-    //                 interactable: Interactable::default(),
-    //             },
-    //             Port {
-    //                 name: "-".to_string(),
-    //                 offset: SSPoint::new(0, -3),
-    //                 interactable: Interactable::default(),
-    //             },
-    //         ],
-    //         bounds: SSBox::new(SSPoint::new(-2, 3), SSPoint::new(2, -3)),
-    //     };
-    // }
     fn graphics(&mut self) {
         let mut graphics = String::from(
             "lazy_static! {\n    static ref DEFAULT_GRAPHICS: Graphics = Graphics {\n",

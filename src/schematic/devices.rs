@@ -7,18 +7,15 @@ mod devicetype;
 mod params;
 pub mod port;
 pub mod strokes;
-
-use crate::{
-    transforms::{self, SSPoint, VCTransform, VSBox, VSPoint},
-    viewport::Drawable,
-};
+use crate::transforms::{self, SSPoint, VCTransform, VSBox, VSPoint};
+use crate::Drawable;
 use deviceinstance::Device;
 use devicetype::{gnd::Gnd, r::R, v::V, DeviceClass};
 
 use by_address::ByAddress;
 use iced::widget::canvas::Frame;
 
-use self::devicetype::{c::C, i::I, l::L, nm, pm};
+use self::devicetype::{c::C, i::I, l::L, nmos, pmos};
 
 use super::interactable::Interactive;
 
@@ -193,43 +190,43 @@ impl Devices {
     }
     /// create a new pmos with unique ID
     pub fn new_pmos(&mut self) -> RcRDevice {
-        let mut d = Device::new_with_ord_class(0, DeviceClass::Pm(pm::M::new()));
+        let mut d = Device::new_with_ord_class(0, DeviceClass::Pm(pmos::M::default()));
         d.transform(transforms::sst_to_vvt(transforms::SST_YMIR));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new nmos with unique ID
     pub fn new_nmos(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::Nm(nm::M::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::Nm(nmos::M::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new resistor with unique ID
     pub fn new_res(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::R(R::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::R(R::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new inductor with unique ID
     pub fn new_ind(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::L(L::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::L(L::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new capacitor with unique ID
     pub fn new_cap(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::C(C::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::C(C::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new gnd with unique ID
     pub fn new_gnd(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::Gnd(Gnd::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new voltage source with unique ID
     pub fn new_vs(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::V(V::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::V(V::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// create a new current source with unique ID
     pub fn new_is(&mut self) -> RcRDevice {
-        let d = Device::new_with_ord_class(0, DeviceClass::I(I::new()));
+        let d = Device::new_with_ord_class(0, DeviceClass::I(I::default()));
         RcRDevice(Rc::new(RefCell::new(d)))
     }
     /// returns a vector of SSPoints of all coordinates occupied by all ports of all devices. A coordinate is returned once for each port on that coordinate

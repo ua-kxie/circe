@@ -74,11 +74,8 @@ pub struct M {
     pub params: ParamM,
     pub graphics: &'static Graphics,
 }
-impl M {
-    pub fn new() -> M {
-        M {
-            params: ParamM::default(),
-            graphics: &DEFAULT_GRAPHICS,
-        }
+impl Default for M {
+    fn default() -> Self {
+        Self { params: Param::default(), graphics: &DEFAULT_GRAPHICS }
     }
 }
