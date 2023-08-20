@@ -1,5 +1,6 @@
 //! Circuit Schematic GUI page
 //! includes paramter editor, toolbar, and the canvas itself
+//! waiting on multiple windows support for new device instance menu
 
 use crate::schematic;
 use crate::schematic::circuit::{Circuit, CircuitElement, Msg};
@@ -13,7 +14,7 @@ use crate::schematic::Schematic;
 use crate::IcedStruct;
 use iced::keyboard::Modifiers;
 use iced::widget::canvas::Event;
-use iced::widget::{row, text, text_input, Row, Text};
+use iced::widget::{row, text, text_input};
 use iced::{Element, Length};
 use std::sync::{Arc, Mutex};
 
@@ -67,7 +68,6 @@ pub enum CircuitPageMsg {
     ViewportEvt(viewport::CompositeMsg<schematic::Msg<Msg, CircuitElement>>),
     ParamChanged(String),
     ParamSubmit,
-    CloseModal,
     HzChanged(String),
     StepChanged(String),
     TranChanged(String),
@@ -88,9 +88,6 @@ pub struct CircuitPage {
     lib: PkSpice<SpManager>,
     /// traces from certain simulations e.g. transient
     pub traces: Option<Vec<Vec<VSPoint>>>,
-
-    /// show new devices modal
-    show_modal: bool,
 
     /// active device - some if only 1 device selected, otherwise is none
     active_element: Option<CircuitElement>,
@@ -155,7 +152,6 @@ impl Default for CircuitPage {
             spmanager,
             lib,
             traces: None,
-            show_modal: false,
             ac_hz: String::from("60"),
             tran_step: String::from("10u"),
             tran_end: String::from("1m"),
@@ -188,15 +184,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
             }
             CircuitPageMsg::ViewportEvt(msgs) => {
                 match msgs.content_msg {
-                    schematic::Msg::Event(
-                        Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                            key_code: iced::keyboard::KeyCode::D,
-                            modifiers: NO_MODIFIER,
-                        }),
-                        _,
-                    ) => {
-                        self.show_modal = !self.show_modal;
-                    }
                     schematic::Msg::Event(
                         Event::Keyboard(iced::keyboard::Event::KeyPressed {
                             key_code: iced::keyboard::KeyCode::Space,
@@ -312,9 +299,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
 
                 self.net_name = self.viewport.content.content.infobarstr.take();
             }
-            CircuitPageMsg::CloseModal => {
-                self.show_modal = false;
-            }
             CircuitPageMsg::HzChanged(s) => self.ac_hz = s,
             CircuitPageMsg::StepChanged(s) => self.tran_step = s,
             CircuitPageMsg::TranChanged(s) => self.tran_end = s,
@@ -370,29 +354,6 @@ impl IcedStruct<CircuitPageMsg> for CircuitPage {
 
         let schematic = iced::widget::column![canvas, infobar, toolbar];
 
-        // schematic.into()
-
-        iced_aw::Modal::new(
-            self.show_modal,
-            schematic,
-            iced_aw::Card::new(
-                Text::new("New Device"),
-                Text::new(
-                    "
-                R: Resistor
-                V: Voltage Source
-                G: Ground
-                P: PMOS
-                N: NMOS
-                ",
-                ),
-            )
-            .foot(Row::new().spacing(10).padding(5).width(Length::Fill))
-            .max_width(300.0)
-            .on_close(CircuitPageMsg::CloseModal),
-        )
-        .backdrop(CircuitPageMsg::CloseModal)
-        .on_esc(CircuitPageMsg::CloseModal)
-        .into()
+        schematic.into()
     }
 }

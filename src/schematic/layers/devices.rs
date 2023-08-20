@@ -2,9 +2,9 @@
 
 use std::collections::HashSet;
 
-// use crate::schematic::elements::Device;
 use crate::schematic::elements::DeviceClass;
 use crate::schematic::elements::RcRDevice;
+use crate::schematic::elements::devicetype::d::D;
 use crate::schematic::interactable::Interactive;
 use crate::transforms::{self, SSPoint, VCTransform, VSBox, VSPoint};
 use crate::Drawable;
@@ -41,6 +41,7 @@ struct DevicesManager {
     c: ClassManager,
     v: ClassManager,
     i: ClassManager,
+    d: ClassManager,
 }
 
 impl Default for DevicesManager {
@@ -54,6 +55,7 @@ impl Default for DevicesManager {
             c: ClassManager::new(),
             v: ClassManager::new(),
             i: ClassManager::new(),
+            d: ClassManager::new(),
         }
     }
 }
@@ -131,6 +133,7 @@ impl Devices {
                 DeviceClass::C(_) => self.manager.c.incr(),
                 DeviceClass::V(_) => self.manager.v.incr(),
                 DeviceClass::I(_) => self.manager.i.incr(),
+                DeviceClass::D(_) => self.manager.d.incr(),
             };
             d.0.borrow_mut().set_wm(ord);
             self.set.insert(d);
@@ -200,6 +203,10 @@ impl Devices {
     /// create a new current source with unique ID
     pub fn new_is(&mut self) -> RcRDevice {
         RcRDevice::new_with_ord_class(0, DeviceClass::I(I::default()))
+    }
+    /// create a new diode with unique ID
+    pub fn new_diode(&mut self) -> RcRDevice {
+        RcRDevice::new_with_ord_class(0, DeviceClass::D(D::default()))
     }
     /// returns a vector of SSPoints of all coordinates occupied by all ports of all devices. A coordinate is returned once for each port on that coordinate
     pub fn ports_ssp(&self) -> Vec<SSPoint> {

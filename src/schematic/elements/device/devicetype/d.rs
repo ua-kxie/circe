@@ -54,7 +54,9 @@ impl Default for Param {
 impl Param {
     pub fn summary(&self) -> String {
         match self {
-            Param::Raw(s) => s.raw.clone(),
+            Param::Raw(s) => {
+                format!("dmod {}", s.raw.clone())
+            }
         }
     }
 }

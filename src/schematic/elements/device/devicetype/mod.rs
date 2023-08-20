@@ -135,6 +135,7 @@ pub enum DeviceClass {
     C(c::C),
     V(v::V),
     I(i::I),
+    D(d::D),
 }
 impl DeviceClass {
     /// sets the raw parameter of the device
@@ -162,6 +163,9 @@ impl DeviceClass {
             DeviceClass::I(x) => match &mut x.params {
                 i::Param::Raw(y) => y.set(new),
             },
+            DeviceClass::D(x) => match &mut x.params {
+                d::Param::Raw(y) => y.set(new),
+            },
         }
     }
     /// returns a reference to the device graphics
@@ -175,6 +179,7 @@ impl DeviceClass {
             DeviceClass::C(x) => x.graphics,
             DeviceClass::V(x) => x.graphics,
             DeviceClass::I(x) => x.graphics,
+            DeviceClass::D(x) => x.graphics,
         }
     }
     /// returns a summary of the device parameter for display on canvas
@@ -188,6 +193,7 @@ impl DeviceClass {
             DeviceClass::C(x) => x.params.summary(),
             DeviceClass::V(x) => x.params.summary(),
             DeviceClass::I(x) => x.params.summary(),
+            DeviceClass::D(x) => x.params.summary(),
         }
     }
     /// returns the id prefix of the device class
@@ -201,6 +207,7 @@ impl DeviceClass {
             DeviceClass::C(_) => c::ID_PREFIX,
             DeviceClass::V(_) => v::ID_PREFIX,
             DeviceClass::I(_) => i::ID_PREFIX,
+            DeviceClass::D(_) => d::ID_PREFIX,
         }
     }
 }
