@@ -20,6 +20,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::{collections::HashSet, fs};
 
+use super::Content;
+
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
     /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
@@ -152,16 +154,31 @@ impl Circuit {
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
         self.curpos_ssp = curpos_vsp.round().cast().cast_unit();
         self.infobarstr = self.nets.net_name_at(self.curpos_ssp);
+        let bounds = self.bounds();
         match &mut self.state {
             CircuitSt::Wiring(Some((nets, ssp_prev))) => {
                 nets.clear();
-                nets.route(*ssp_prev, self.curpos_ssp);
+                nets.route(
+                    &|ssp| {
+                        if ssp == *ssp_prev || ssp == self.curpos_ssp {
+                            false
+                        } else {
+                            self.nets.occupies_ssp(ssp)
+                                || self.devices.occupies_ssp(ssp)
+                                || self.labels.occupies_ssp(ssp)
+                        }
+                    },
+                    *ssp_prev,
+                    self.curpos_ssp,
+                    bounds.cast().cast_unit().inflate(2, 2),
+                );
             }
             CircuitSt::Idle => {}
             _ => {}
         }
     }
 
+    // returns true if the coordinate is electrically significant
     fn occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.nets.occupies_ssp(ssp) || self.devices.any_port_occupy_ssp(ssp)
     }

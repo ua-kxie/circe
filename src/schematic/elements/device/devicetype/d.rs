@@ -48,15 +48,13 @@ pub enum Param {
 }
 impl Default for Param {
     fn default() -> Self {
-        Param::Raw(params::Raw::new(String::from("")))
+        Param::Raw(params::Raw::new(String::from("dmod")))
     }
 }
 impl Param {
     pub fn summary(&self) -> String {
         match self {
-            Param::Raw(s) => {
-                format!("dmod {}", s.raw.clone())
-            }
+            Param::Raw(s) => s.raw.clone(),
         }
     }
 }

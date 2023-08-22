@@ -15,7 +15,6 @@ pub use cirarc::RcRCirArc;
 pub use lineseg::LineSeg;
 pub use lineseg::RcRLineSeg;
 
-// pub use device::deviceinstance::Device;
 pub use device::devicetype;
 pub use device::devicetype::DeviceClass;
 pub use device::RcRDevice;
@@ -26,3 +25,5 @@ pub use nets::{NetEdge, NetVertex};
 
 pub use port::Port;
 pub use port::RcRPort;
+
+pub use nets::PathWeight;

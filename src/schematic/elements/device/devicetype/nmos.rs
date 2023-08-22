@@ -64,15 +64,13 @@ pub enum Param {
 }
 impl Default for Param {
     fn default() -> Self {
-        Param::Raw(params::Raw::new(String::from("")))
+        Param::Raw(params::Raw::new(String::from("mosn")))
     }
 }
 impl Param {
     pub fn summary(&self) -> String {
         match self {
-            Param::Raw(s) => {
-                format!("mosn {}", s.raw.clone())
-            }
+            Param::Raw(s) => s.raw.clone(),
         }
     }
 }

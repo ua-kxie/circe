@@ -55,3 +55,17 @@ circuit
 
 schematic lvl: either self msg, or pass to content and process results
 
+Wiring Pathfinder
+
+https://docs.rs/pathfinding/latest/pathfinding/directed/astar/fn.astar.html
+
+build a graph from bounding box of circuit, plus border to allow connects around outside
+add all vertical/horizontal paths of all lengths to graph
+do not add nodes occupied by devices, net labels, existing nets
+run Pathfinder
+profit???
+
+build a graph from bounding box of net start, current cursor pos
+add all vertical/horizontal paths of all lengths, excluding obstacles
+run Pathfinder
+increase bounding box size and rerun if fail

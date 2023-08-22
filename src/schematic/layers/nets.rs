@@ -5,10 +5,10 @@ use std::rc::Rc;
 
 use crate::{
     schematic::interactable::Interactive,
-    transforms::{SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
+    transforms::{SSBox, SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
 };
-use petgraph::algo::tarjan_scc;
 use petgraph::graphmap::GraphMap;
+use petgraph::{algo::tarjan_scc, visit::EdgeRef};
 
 use crate::schematic::elements::{NetEdge, NetVertex};
 
@@ -313,64 +313,102 @@ impl Nets {
         }
         false
     }
-    /// add net segments to connect src and dst
-    pub fn route(&mut self, src: SSPoint, dst: SSPoint) {
-        // pathfinding?
-        // for now, just force edges to be vertical or horizontal
+    fn basic_route(src: SSPoint, dst: SSPoint) -> Vec<NetVertex> {
+        // just force edges to be vertical or horizontal
         let delta = dst - src;
         match (delta.x, delta.y) {
-            (0, 0) => {}
+            (0, 0) => {
+                vec![]
+            }
             (0, _y) => {
-                let interactable = NetEdge::interactable(src, dst);
-                self.graph.add_edge(
-                    NetVertex(src),
-                    NetVertex(dst),
-                    NetEdge {
-                        src,
-                        dst,
-                        interactable,
-                        ..Default::default()
-                    },
-                );
+                vec![NetVertex(src), NetVertex(dst)]
             }
             (_x, 0) => {
-                let interactable = NetEdge::interactable(src, dst);
-                self.graph.add_edge(
-                    NetVertex(src),
-                    NetVertex(dst),
-                    NetEdge {
-                        src,
-                        dst,
-                        interactable,
-                        ..Default::default()
-                    },
-                );
+                vec![NetVertex(src), NetVertex(dst)]
             }
             (_x, y) => {
                 let corner = SSPoint::new(src.x, src.y + y);
-                let interactable = NetEdge::interactable(src, corner);
-                self.graph.add_edge(
-                    NetVertex(src),
-                    NetVertex(corner),
-                    NetEdge {
-                        src,
-                        dst: corner,
-                        interactable,
-                        ..Default::default()
-                    },
-                );
-                let interactable = NetEdge::interactable(corner, dst);
-                self.graph.add_edge(
-                    NetVertex(corner),
-                    NetVertex(dst),
-                    NetEdge {
-                        src: corner,
-                        dst,
-                        interactable,
-                        ..Default::default()
-                    },
-                );
+                vec![NetVertex(src), NetVertex(corner), NetVertex(dst)]
             }
+        }
+    }
+    /// add net segments to connect src and dst
+    pub fn route(
+        &mut self,
+        is_occupied: &impl Fn(SSPoint) -> bool,
+        src: SSPoint,
+        dst: SSPoint,
+        ssb: SSBox,
+    ) {
+        fn xy_connect(
+            ssp: SSPoint,
+            ssb: SSBox,
+            map: &mut GraphMap<NetVertex, PathWeight, petgraph::Undirected>,
+            is_occupied: &impl Fn(SSPoint) -> bool,
+        ) {
+            for x in (ssp.x + 1)..=ssb.max.x {
+                if is_occupied(SSPoint::new(x, ssp.y)) {
+                    break;
+                } else {
+                    map.add_edge(
+                        NetVertex(ssp),
+                        NetVertex(SSPoint::new(x, ssp.y)),
+                        PathWeight {
+                            cost: f32::ln((x - ssp.x + 1) as f32),
+                        },
+                    );
+                }
+            }
+            for y in (ssp.y + 1)..=ssb.max.y {
+                if is_occupied(SSPoint::new(ssp.x, y)) {
+                    break;
+                } else {
+                    map.add_edge(
+                        NetVertex(ssp),
+                        NetVertex(SSPoint::new(ssp.x, y)),
+                        PathWeight {
+                            cost: f32::ln((y - ssp.y + 1) as f32),
+                        },
+                    );
+                }
+            }
+        }
+        use crate::schematic::elements::PathWeight;
+        // create graph to conduct pathfinding with
+        let mut m: GraphMap<NetVertex, PathWeight, petgraph::Undirected> = GraphMap::new();
+        for i in ssb.min.x..=ssb.max.x {
+            for j in ssb.min.y..=ssb.max.y {
+                // for every point in box:
+                if is_occupied(SSPoint::new(i, j)) {
+                    continue;
+                }
+                xy_connect(SSPoint::new(i, j), ssb, &mut m, is_occupied);
+            }
+        }
+        let path = petgraph::algo::astar(
+            &m,
+            NetVertex(src),
+            |fin| fin.0 == dst,
+            |e| e.weight().cost,
+            |v| ((v.0 - dst).x + (v.0 - dst).y) as f32,
+        );
+        let path = path
+            .or_else(|| Some((0.0, Self::basic_route(src, dst))))
+            .unwrap()
+            .1;
+
+        for i in 1..path.len() {
+            let interactable = NetEdge::interactable(path[i - 1].0, path[i].0);
+            self.graph.add_edge(
+                path[i - 1],
+                path[i],
+                NetEdge {
+                    src: path[i - 1].0,
+                    dst: path[i].0,
+                    interactable,
+                    ..Default::default()
+                },
+            );
         }
     }
     /// merge other into self. extra_vertices are coordinates where net segments should be bisected (device ports)

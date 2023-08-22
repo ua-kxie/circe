@@ -20,7 +20,7 @@ impl Interactable {
     /// returns true if Schematic Space Point intersects with bounds.
     pub fn contains_ssp(&self, ssp: SSPoint) -> bool {
         let vsp = ssp.cast().cast_unit();
-        self.bounds.contains(vsp)
+        self.bounds.inclusive_contains(vsp)
     }
     /// returns true if Viewport Space Point intersects with bounds.
     pub fn contains_vsp(&self, vsp: VSPoint) -> bool {

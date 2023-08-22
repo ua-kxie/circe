@@ -11,7 +11,7 @@
 
 use std::collections::HashSet;
 
-use crate::transforms::{VCTransform, VSBox, VSPoint};
+use crate::transforms::{SSPoint, VCTransform, VSBox, VSPoint};
 use crate::Drawable;
 use iced::widget::canvas::Frame;
 
@@ -95,6 +95,14 @@ impl NetLabels {
     }
     pub fn new_label() -> RcRLabel {
         RcRLabel::default()
+    }
+    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+        for label in self.set.iter() {
+            if label.0.borrow().pos() == ssp {
+                return true;
+            }
+        }
+        false
     }
 }
 

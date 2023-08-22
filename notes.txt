@@ -2,24 +2,23 @@ todo:
 
 - schematic: 
     moving items need to support different snap grids depending on element type - e.g. line vs port in device designer
-    area selection - contains and intersects by selection area is positive/negative
     connect devices with wire if ports overlap
     wire snapping to ports and visual indicator
     ctrl-(shift)-z undo/redo
-    wiring pathfinder
-    gui toolbar
-    grabbing (moves devices while keeping wire connections)
-    click-drag-move for wires (reroute based on new coord)
-    add layers trait (devices layer, nets layer, etc.)
 
 - designer:
     line segment edit - drag/drop end points
     device saving/loading, device libraries
 
 - circuit:
-    custom net labels
+    custom net labels, net highlighting
     circuit add device submenu - d to bring up menu, r/v/g to place respective device
     improved parameters editor
+    gui toolbar
+    wiring pathfinder
+    grabbing (moves devices while keeping wire connections, pending wiring pathfinder)
+    click-drag-move for wires (reroute based on new coord, pending pathfinder)
+    consider adding layers trait (devices layer, nets layer, etc.)
 
 - immediate: 
     zooming during device placement visual bug - maybe selection system not a good fit, or just flag phantom devices to not draw?
@@ -38,9 +37,6 @@ todo:
     schematic checking - mark floating nets, ports
 
 - long term:
-    custom net names
-    nets highlighting/color cycling
-
     bypass iced, tesellate with lyon directly
     drawing/stroke culling (maybe?)
 

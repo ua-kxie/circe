@@ -4,14 +4,15 @@ use std::collections::HashSet;
 
 use crate::schematic::elements::DeviceClass;
 use crate::schematic::elements::RcRDevice;
-use crate::schematic::elements::devicetype::d::D;
 use crate::schematic::interactable::Interactive;
 use crate::transforms::{self, SSPoint, VCTransform, VSBox, VSPoint};
 use crate::Drawable;
 
 use iced::widget::canvas::Frame;
 
-use crate::schematic::elements::devicetype::{c::C, gnd::Gnd, i::I, l::L, nmos, pmos, r::R, v::V};
+use crate::schematic::elements::devicetype::{
+    c::C, d::D, gnd::Gnd, i::I, l::L, nmos, pmos, r::R, v::V,
+};
 
 /// struct to keep track of unique IDs for all devices of a type
 #[derive(Debug, Clone)]
@@ -84,6 +85,14 @@ impl Drawable for Devices {
 }
 
 impl Devices {
+    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+        for d in self.set.iter() {
+            if d.0.borrow().interactable.contains_ssp(ssp) {
+                return true;
+            }
+        }
+        false
+    }
     /// returns the first Device after skip which intersects with curpos_ssp in a BaseElement, if any.
     /// count is updated to track the number of elements skipped over
     pub fn selectable(

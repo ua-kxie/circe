@@ -11,6 +11,7 @@
 
 use std::{cell::RefCell, hash::Hasher, rc::Rc};
 
+use crate::transforms::SSPoint;
 use crate::Drawable;
 use crate::{
     schematic::interactable::{Interactable, Interactive},
@@ -72,6 +73,10 @@ impl NetLabel {
     /// returns the composite of the device's transform and the given vct
     fn compose_transform(&self, vct: VCTransform) -> VCTransform {
         sst_to_vvt(self.transform).then(&vct)
+    }
+
+    pub fn pos(&self) -> SSPoint {
+        self.transform.transform_point(SSPoint::origin())
     }
 }
 

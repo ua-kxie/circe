@@ -22,10 +22,6 @@ pub struct ViewportSpace;
 )]
 pub struct SchematicSpace;
 
-pub trait VSBoxExt {
-    fn inclusive_contains(&self, p: VSPoint) -> bool;
-}
-
 /// CanvasSpace Point
 pub type CSPoint = euclid::Point2D<f32, CanvasSpace>;
 /// ViewportSpace Point
@@ -39,6 +35,10 @@ pub type CSBox = euclid::Box2D<f32, CanvasSpace>;
 pub type VSBox = euclid::Box2D<f32, ViewportSpace>;
 /// SchematicSpace Box
 pub type SSBox = euclid::Box2D<i16, SchematicSpace>;
+
+pub trait VSBoxExt {
+    fn inclusive_contains(&self, p: VSPoint) -> bool;
+}
 
 impl VSBoxExt for VSBox {
     #[inline]

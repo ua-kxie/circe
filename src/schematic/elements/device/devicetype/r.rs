@@ -49,7 +49,7 @@ pub enum Param {
 }
 impl Default for Param {
     fn default() -> Self {
-        Param::Raw(params::Raw::new(String::from("1000")))
+        Param::Raw(params::Raw::new(String::from("1k")))
     }
 }
 impl Param {
