@@ -390,7 +390,7 @@ impl Nets {
             NetVertex(src),
             |fin| fin.0 == dst,
             |e| e.weight().cost,
-            |v| ((v.0 - dst).x + (v.0 - dst).y) as f32,
+            |v| ((v.0 - dst).x.abs() + (v.0 - dst).y.abs()) as f32,
         );
         let path = path
             .or_else(|| Some((0.0, Self::basic_route(src, dst))))
