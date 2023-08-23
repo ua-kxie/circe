@@ -353,7 +353,8 @@ where
                             self.state = SchematicSt::Moving(None);
                         }
                         (
-                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst)))
+                            | SchematicSt::Copying(Some((_ssp0, _ssp1, sst))),
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::R,
                                 modifiers: m,
@@ -366,7 +367,8 @@ where
                             }
                         }
                         (
-                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst)))
+                            | SchematicSt::Copying(Some((_ssp0, _ssp1, sst))),
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::X,
                                 modifiers: NO_MODIFIER,
@@ -375,7 +377,8 @@ where
                             *sst = sst.then(&transforms::SST_XMIR);
                         }
                         (
-                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst))),
+                            SchematicSt::Moving(Some((_ssp0, _ssp1, sst)))
+                            | SchematicSt::Copying(Some((_ssp0, _ssp1, sst))),
                             Event::Keyboard(iced::keyboard::Event::KeyPressed {
                                 key_code: iced::keyboard::KeyCode::Y,
                                 modifiers: NO_MODIFIER,
@@ -544,10 +547,8 @@ where
                 vsb.max = curpos_vsp;
                 self.tentatives_by_vsbox(vsb);
             }
-            SchematicSt::Moving(Some((_ssp0, ssp1, _sst))) => {
-                *ssp1 = curpos_vsp;
-            }
-            SchematicSt::Copying(Some((_ssp0, ssp1, _sst))) => {
+            SchematicSt::Moving(Some((_ssp0, ssp1, _sst)))
+            | SchematicSt::Copying(Some((_ssp0, ssp1, _sst))) => {
                 *ssp1 = curpos_vsp;
             }
             _ => {}

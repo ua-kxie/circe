@@ -15,7 +15,7 @@ todo:
     circuit add device submenu - d to bring up menu, r/v/g to place respective device
     improved parameters editor
     gui toolbar
-    wiring pathfinder
+    wiring pathfinder - needs some work/tuning, optimization, lags on longer/complicated paths. Should allow direct s-b connections on mosfets
     grabbing (moves devices while keeping wire connections, pending wiring pathfinder)
     click-drag-move for wires (reroute based on new coord, pending pathfinder)
     consider adding layers trait (devices layer, nets layer, etc.)
