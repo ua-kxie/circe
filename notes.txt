@@ -2,8 +2,6 @@ todo:
 
 - schematic: 
     moving items need to support different snap grids depending on element type - e.g. line vs port in device designer
-    connect devices with wire if ports overlap
-    wire snapping to ports and visual indicator
     ctrl-(shift)-z undo/redo
 
 - designer:
@@ -11,13 +9,18 @@ todo:
     device saving/loading, device libraries
 
 - circuit:
-    custom net labels, net highlighting
+    - nets/connections:
+        connect devices with wire if ports overlap - just add port locations to graph - vertices without neighbors are floating nets - should play well with grab/drag
+        wire snapping to ports and visual indicator
+        custom net labels
+        net highlighting
+        pathfinding:
+            needs some work/tuning, optimization, lags on longer/complicated paths
+            should allow direct s-b connections on mosfets
+            grabbing (moves devices/wire while keeping wire connections)
     circuit add device submenu - d to bring up menu, r/v/g to place respective device
     improved parameters editor
     gui toolbar
-    wiring pathfinder - needs some work/tuning, optimization, lags on longer/complicated paths. Should allow direct s-b connections on mosfets
-    grabbing (moves devices while keeping wire connections, pending wiring pathfinder)
-    click-drag-move for wires (reroute based on new coord, pending pathfinder)
     consider adding layers trait (devices layer, nets layer, etc.)
 
 - immediate: 

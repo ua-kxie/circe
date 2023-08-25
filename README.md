@@ -9,6 +9,8 @@ Simple op-amp with generic devices
 ### Setup:
 `cargo run`
 
+The binary executable is not working at the moment due to problems finding the sharedspice library.
+
 ### Controls: 
 * left click wires or device to select  
 * mouse wheel to zoom and pan  
@@ -33,7 +35,7 @@ M - move selected
 X/Y - flip horizontal/vertical during move
 ##### Circuit Schematic:
 
-Shift-L - net label (does no thing for now)
+Shift-L - net label (has no effect on net connections atm, is just a comment)
 
 W - draw wire
 
@@ -53,9 +55,9 @@ P - pmos device
 
 Space - run dc op simulation
 
-ctrl-space - run ac simulation
+Ctrl-space - run ac simulation
 
-Shift T - run transient simulation
+Shift-T - run transient simulation
 
 ##### Symbol Designer
 -for now, intended for dev use only-
@@ -75,6 +77,12 @@ B - define device boundary
 
 ### Goals
 Target application is EDA schematic capture
+
+#### Currently Working On:
+* improved wiring pathfinding (petgraph)
+* device/wire drag/grab keeping net connections
+* connect overlapping ports with wiring
+* net labels
 
 ### Contribute:
 Consider using `cargo fmt` & `cargo fix`.
