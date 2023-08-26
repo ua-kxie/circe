@@ -1,14 +1,12 @@
 //! Schematic
 //! Space in which devices and nets live in
 
-mod circuit;
-pub(crate) mod circuit_page;
+pub mod circuit;
 mod elements;
 mod interactable;
 mod layers;
 mod models;
-mod symbols;
-pub(crate) mod symbols_page;
+pub mod symbols;
 mod viewport;
 
 use crate::transforms::{self, CSPoint, Point, SSTransform, VCTransform, VSBox, VSPoint};

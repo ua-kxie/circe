@@ -8,8 +8,8 @@ mod schematic;
 mod transforms;
 
 use analysis::plot_page::{PlotPage, PlotPageMsg};
-use schematic::circuit_page::CircuitPage;
-use schematic::symbols_page::DevicePage;
+use schematic::circuit::CircuitPage;
+use schematic::symbols::DevicePage;
 
 // mod designer;
 
@@ -42,8 +42,8 @@ pub struct Circe {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    DesignerMsg(schematic::symbols_page::DevicePageMsg),
-    SchematicMsg(schematic::circuit_page::CircuitPageMsg),
+    DesignerMsg(schematic::symbols::DevicePageMsg),
+    SchematicMsg(schematic::circuit::CircuitPageMsg),
     PlotViewMsg(analysis::plot_page::PlotPageMsg),
     // Event(Event),
     TabSel(usize),

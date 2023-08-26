@@ -20,6 +20,10 @@ use crate::schematic::elements::{Bounds, CirArc, LineSeg, RcRBounds, RcRCirArc, 
 use std::collections::HashSet;
 use std::fs;
 
+mod gui;
+pub use gui::DevicePage;
+pub use gui::DevicePageMsg;
+
 /// an enum to unify different types in schematic (lines and ellipses)
 #[derive(Debug, Clone)]
 pub enum DesignerElement {

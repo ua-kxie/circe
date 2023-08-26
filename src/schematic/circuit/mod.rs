@@ -18,7 +18,16 @@ use paprika::PkVecvaluesall;
 use send_wrapper::SendWrapper;
 use std::cell::RefCell;
 use std::rc::Rc;
+
 use std::{collections::HashSet, fs};
+
+mod gui;
+pub use gui::CircuitPage;
+pub use gui::CircuitPageMsg;
+
+pub mod pathfinding;
+
+use self::pathfinding::grid_mesh::GridMesh2D;
 
 use super::Content;
 
@@ -142,6 +151,9 @@ pub struct Circuit {
     devices: Devices,
     labels: NetLabels,
 
+    // gridmesh used for pathfinding
+    gridmesh: GridMesh2D,
+
     curpos_ssp: SSPoint,
 
     device_models: NgModels,
@@ -154,23 +166,50 @@ impl Circuit {
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
         self.curpos_ssp = curpos_vsp.round().cast().cast_unit();
         self.infobarstr = self.nets.net_name_at(self.curpos_ssp);
-        let bounds = self.bounds();
         match &mut self.state {
             CircuitSt::Wiring(Some((nets, ssp_prev))) => {
                 nets.clear();
                 nets.route(
-                    &|ssp| {
-                        if ssp == *ssp_prev || ssp == self.curpos_ssp {
-                            false
-                        } else {
-                            self.nets.occupies_ssp(ssp)
-                                || self.devices.occupies_ssp(ssp)
-                                || self.labels.occupies_ssp(ssp)
+                    &self.gridmesh,
+                    &|prev, this, next| {
+                        // do not go over ports at any cost
+                        // do not go over NetVertex at any cost
+                        // do not go over NetLabel at any cost
+                        // do not make turn over NetEdge at any cost
+                        // going straight cost 1
+                        // making turn cost 1
+                        if next == self.curpos_ssp {
+                            return 0.0;
                         }
+                        if self.devices.any_port_occupy_ssp(next) {
+                            // do not go over ports at any cost
+                            return f32::INFINITY;
+                        }
+                        if self.nets.any_vertex_occupy_ssp(next) {
+                            // do not go over NetVertex at any cost
+                            return f32::INFINITY;
+                        }
+                        // if self.labels.any_label_occupy_ssp(next) {
+                        //     // do not go over NetLabel at any cost
+                        //     return f32::INFINITY
+                        // }
+                        let is_turn = (prev.x != next.x) && (prev.y != next.y);
+                        if is_turn && self.nets.occupies_ssp(this) {
+                            // next point is electrically occupied - do not use
+                            return f32::INFINITY;
+                        }
+                        let mut ret = 1.0;
+                        if self.devices.occupies_ssp(next) {
+                            // going through a device's graphical symbol
+                            ret += 10.0;
+                        }
+                        if is_turn {
+                            ret += 30.0;
+                        }
+                        ret
                     },
                     *ssp_prev,
                     self.curpos_ssp,
-                    bounds.cast().cast_unit().inflate(2, 2),
                 );
             }
             CircuitSt::Idle => {}
@@ -179,7 +218,7 @@ impl Circuit {
     }
 
     // returns true if the coordinate is electrically significant
-    fn occupies_ssp(&self, ssp: SSPoint) -> bool {
+    fn electrically_occupies_ssp(&self, ssp: SSPoint) -> bool {
         self.nets.occupies_ssp(ssp) || self.devices.any_port_occupy_ssp(ssp)
     }
 }
@@ -293,7 +332,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                             // subsequent click
                             if ssp == *prev_ssp {
                                 new_ws = None;
-                            } else if self.occupies_ssp(ssp) {
+                            } else if self.electrically_occupies_ssp(ssp) {
                                 self.nets.merge(g.as_ref(), self.devices.ports_ssp());
                                 new_ws = None;
                             } else {

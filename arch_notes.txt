@@ -69,3 +69,34 @@ build a graph from bounding box of net start, current cursor pos
 add all vertical/horizontal paths of all lengths, excluding obstacles
 run Pathfinder
 increase bounding box size and rerun if fail
+
+
+=====================================================================
+
+Circuit/DeviceDesigner
+    - Schematic as component
+    - Viewport as component (later if ever)
+
+selected
+get delete event
+perform callback to mutate parent
+
+selected
+get copy/move event
+perform callback to mutate parent
+
+callbacks:
+delete element
+place element (move if exists, place new if not)
+select by intersection
+select by contains
+
+ -- lots of problems setting up the callbacks with lifetime and whatnot
+
+ schematic just keep tabs on tentatives/selected
+ delete: circuit get selected elements, deletes them
+ place: circuit pass curpos to schematic, get selected elements, place/copy/move elements
+
+-- downside is that some logic will still be repeated in circuit/designer e.g. place/copy/move
+
+selected

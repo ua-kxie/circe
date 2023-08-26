@@ -4,11 +4,17 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::{
-    schematic::interactable::Interactive,
-    transforms::{SSBox, SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
+    schematic::{
+        circuit::pathfinding::{
+            grid_mesh::{GridMesh2D, GridNode},
+            path_to_goal, wiring_pathfinder, DijkstraSt,
+        },
+        interactable::Interactive,
+    },
+    transforms::{SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
 };
+use petgraph::algo::tarjan_scc;
 use petgraph::graphmap::GraphMap;
-use petgraph::{algo::tarjan_scc, visit::EdgeRef};
 
 use crate::schematic::elements::{NetEdge, NetVertex};
 
@@ -313,6 +319,10 @@ impl Nets {
         }
         false
     }
+    /// returns true if any net vertex is on ssp
+    pub fn any_vertex_occupy_ssp(&self, ssp: SSPoint) -> bool {
+        self.graph.nodes().any(|v| v.0 == ssp)
+    }
     fn basic_route(src: SSPoint, dst: SSPoint) -> Vec<NetVertex> {
         // just force edges to be vertical or horizontal
         let delta = dst - src;
@@ -335,76 +345,49 @@ impl Nets {
     /// add net segments to connect src and dst
     pub fn route(
         &mut self,
-        is_occupied: &impl Fn(SSPoint) -> bool,
+        gm: &GridMesh2D,
+        edge_cost: &impl Fn(SSPoint, SSPoint, SSPoint) -> f32,
         src: SSPoint,
         dst: SSPoint,
-        ssb: SSBox,
     ) {
-        fn xy_connect(
-            ssp: SSPoint,
-            ssb: SSBox,
-            map: &mut GraphMap<NetVertex, PathWeight, petgraph::Undirected>,
-            is_occupied: &impl Fn(SSPoint) -> bool,
-        ) {
-            for x in (ssp.x + 1)..=ssb.max.x {
-                if is_occupied(SSPoint::new(x, ssp.y)) {
-                    break;
-                } else {
-                    map.add_edge(
-                        NetVertex(ssp),
-                        NetVertex(SSPoint::new(x, ssp.y)),
-                        PathWeight {
-                            cost: f32::ln((x - ssp.x + 1) as f32),
-                        },
-                    );
-                }
-            }
-            for y in (ssp.y + 1)..=ssb.max.y {
-                if is_occupied(SSPoint::new(ssp.x, y)) {
-                    break;
-                } else {
-                    map.add_edge(
-                        NetVertex(ssp),
-                        NetVertex(SSPoint::new(ssp.x, y)),
-                        PathWeight {
-                            cost: f32::ln((y - ssp.y + 1) as f32),
-                        },
-                    );
-                }
-            }
-        }
-        use crate::schematic::elements::PathWeight;
-        // create graph to conduct pathfinding with
-        let mut m: GraphMap<NetVertex, PathWeight, petgraph::Undirected> = GraphMap::new();
-        for i in ssb.min.x..=ssb.max.x {
-            for j in ssb.min.y..=ssb.max.y {
-                // for every point in box:
-                if is_occupied(SSPoint::new(i, j)) {
-                    continue;
-                }
-                xy_connect(SSPoint::new(i, j), ssb, &mut m, is_occupied);
-            }
-        }
-        let path = petgraph::algo::astar(
-            &m,
-            NetVertex(src),
-            |fin| fin.0 == dst,
-            |e| e.weight().cost,
-            |v| ((v.0 - dst).x.abs() + (v.0 - dst).y.abs()) as f32,
+        let goals = Box::from([GridNode(dst)]);
+        let st = wiring_pathfinder(
+            gm.graph(),
+            &goals,
+            DijkstraSt::new(&gm.graph(), GridNode(src)),
+            |parent, current, next| edge_cost(parent.0, current.0, next.0),
         );
+        let path = path_to_goal(st, &goals).map(|(k, v)| {
+            (
+                k,
+                v.iter().map(|node| NetVertex(node.0)).collect::<Vec<_>>(),
+            )
+        });
         let path = path
             .or_else(|| Some((0.0, Self::basic_route(src, dst))))
             .unwrap()
             .1;
+        if path.is_empty() {
+            return;
+        }
 
-        for i in 1..path.len() {
-            let interactable = NetEdge::interactable(path[i - 1].0, path[i].0);
+        let mut simple_path = Vec::with_capacity(path.capacity());
+        simple_path.push(*path.first().unwrap());
+        for i in 1..path.len() - 1 {
+            if (path[i - 1].0.x != path[i + 1].0.x) && (path[i - 1].0.y != path[i + 1].0.y) {
+                simple_path.push(path[i]);
+            }
+        }
+        simple_path.push(*path.last().unwrap());
+
+        for i in 1..simple_path.len() {
+            let interactable = NetEdge::interactable(simple_path[i - 1].0, simple_path[i].0);
             self.graph.add_edge(
-                path[i - 1],
-                path[i],
+                simple_path[i - 1],
+                simple_path[i],
                 NetEdge {
-                    src: path[i - 1].0,
-                    dst: path[i].0,
+                    src: simple_path[i - 1].0,
+                    dst: simple_path[i].0,
                     interactable,
                     ..Default::default()
                 },
