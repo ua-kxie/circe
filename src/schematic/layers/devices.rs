@@ -218,7 +218,7 @@ impl Devices {
         RcRDevice::new_with_ord_class(0, DeviceClass::D(D::default()))
     }
     /// returns a vector of SSPoints of all coordinates occupied by all ports of all devices. A coordinate is returned once for each port on that coordinate
-    pub fn ports_ssp(&self) -> Vec<SSPoint> {
+    pub fn ports_ssp(&self) -> Box<[SSPoint]> {
         self.set
             .iter()
             .flat_map(|d| d.0.borrow().ports_ssp())

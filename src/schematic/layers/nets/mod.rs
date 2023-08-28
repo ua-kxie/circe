@@ -1,25 +1,26 @@
 //! schematic net/wires
+//! handles pathfinding, self pruning
 
 use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::{
-    schematic::{
-        circuit::pathfinding::{
-            grid_mesh::{GridMesh2D, GridNode},
-            path_to_goal, wiring_pathfinder, DijkstraSt,
-        },
-        interactable::Interactive,
-    },
+    schematic::interactable::Interactive,
     transforms::{SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
 };
-use petgraph::algo::tarjan_scc;
 use petgraph::graphmap::GraphMap;
 
 use crate::schematic::elements::{NetEdge, NetVertex};
 
 use crate::Drawable;
 
+use self::pathfinding::DijkstraSt;
+
+mod pathfinding;
+use crate::schematic::layers::nets::pathfinding::path_to_goal;
+use crate::schematic::layers::nets::pathfinding::wiring_pathfinder;
+
+mod pruning;
 /// This struct facillitates the creation of unique net names
 #[derive(Clone, Debug, Default)]
 struct LabelManager {
@@ -68,10 +69,11 @@ impl LabelManager {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Nets {
     pub graph: Box<GraphMap<NetVertex, NetEdge, petgraph::Undirected>>,
     label_manager: LabelManager,
+    dijkstrast: DijkstraSt,
 }
 
 impl Default for Nets {
@@ -79,11 +81,22 @@ impl Default for Nets {
         Nets {
             graph: Box::new(GraphMap::new()),
             label_manager: LabelManager::default(),
+            dijkstrast: DijkstraSt::new(SSPoint::origin()),
         }
     }
 }
 
 impl Nets {
+    pub fn new(ssp: SSPoint) -> Self {
+        Nets {
+            graph: Box::new(GraphMap::new()),
+            label_manager: LabelManager::default(),
+            dijkstrast: DijkstraSt::new(ssp),
+        }
+    }
+    pub fn dijkstra_start(&self) -> SSPoint {
+        self.dijkstrast.start()
+    }
     pub fn new_floating_label(&mut self) -> String {
         self.label_manager.new_floating_label()
     }
@@ -163,152 +176,10 @@ impl Nets {
         }
         ret
     }
-    /// finds an appropriate net name and assigns it to all edge in edges.
-    fn unify_labels(
-        &mut self,
-        edges: Vec<(NetVertex, NetVertex)>,
-        taken_net_names: &[Rc<String>],
-    ) -> Rc<String> {
-        let mut label = None;
-        // get smallest untaken of existing labels, if any
-        for tup in &edges {
-            if let Some(ew) = self.graph.edge_weight(tup.0, tup.1) {
-                if let Some(label1) = &ew.label {
-                    if taken_net_names.contains(label1) {
-                        continue;
-                    }
-                    if label.is_none() || label1 < label.as_ref().unwrap() {
-                        label = Some(label1.clone());
-                    }
-                }
-            }
-        }
-        // if no edge is labeled, create a new label
-        if label.is_none() {
-            label = Some(self.label_manager.new_label());
-        }
-        // assign label to all edges
-        for tup in edges {
-            if let Some(ew) = self.graph.edge_weight_mut(tup.0, tup.1) {
-                ew.label = label.clone();
-            }
-        }
-        label.unwrap()
-    }
     /// this function is called whenever schematic is changed. Ensures all connected nets have the same net name, overlapping segments are merged, etc.
     /// extra_vertices are coordinates where net segments should be bisected (device ports)
-    pub fn prune(&mut self, extra_vertices: Vec<SSPoint>) {
-        // extra vertices to add, e.g. ports
-        let all_vertices: Vec<NetVertex> = self.graph.nodes().collect();
-        // bisect edges
-        for v in &all_vertices {
-            let mut colliding_edges = vec![];
-            for e in self.graph.all_edges() {
-                if e.2.intersects_ssp(v.0.cast().cast_unit()) {
-                    colliding_edges.push((e.0, e.1, e.2.label.clone()));
-                }
-            }
-            if !colliding_edges.is_empty() {
-                for e in colliding_edges {
-                    self.graph.remove_edge(e.0, e.1);
-                    self.graph.add_edge(
-                        e.0,
-                        *v,
-                        NetEdge {
-                            src: e.0 .0,
-                            dst: v.0,
-                            label: e.2.clone(),
-                            interactable: NetEdge::interactable(e.0 .0, v.0),
-                        },
-                    );
-                    self.graph.add_edge(
-                        e.1,
-                        *v,
-                        NetEdge {
-                            src: e.1 .0,
-                            dst: v.0,
-                            label: e.2,
-                            interactable: NetEdge::interactable(e.1 .0, v.0),
-                        },
-                    );
-                }
-            }
-        }
-        // delete redundant vertices
-        for v in all_vertices {
-            let connected_vertices: Vec<NetVertex> = self.graph.neighbors(v).collect();
-
-            match connected_vertices.len() {
-                0 => {
-                    self.graph.remove_node(v);
-                }
-                2 => {
-                    let delta = connected_vertices[1].0 - connected_vertices[0].0;
-                    match (delta.x, delta.y) {
-                        (0, _y) => {}
-                        (_x, 0) => {}
-                        _ => continue,
-                    }
-                    let first_e = self.graph.edges(v).next().unwrap();
-                    let src = connected_vertices[0];
-                    let dst = connected_vertices[1];
-                    let ew = NetEdge {
-                        src: src.0,
-                        dst: dst.0,
-                        label: first_e.2.label.clone(),
-                        interactable: NetEdge::interactable(src.0, dst.0),
-                    };
-                    if ew.intersects_ssp(v.0) {
-                        self.graph.remove_node(v);
-                        self.graph.add_edge(src, dst, ew);
-                    }
-                }
-                _ => {}
-            }
-        }
-        // bisect edges with ports
-        for v in extra_vertices {
-            let mut colliding_edges = vec![];
-            for e in self.graph.all_edges() {
-                if e.2.intersects_ssp(v) {
-                    colliding_edges.push((e.0, e.1, e.2.label.clone()));
-                }
-            }
-            if !colliding_edges.is_empty() {
-                for e in colliding_edges {
-                    self.graph.remove_edge(e.0, e.1);
-                    self.graph.add_edge(
-                        e.0,
-                        NetVertex(v),
-                        NetEdge {
-                            src: e.0 .0,
-                            dst: v,
-                            label: e.2.clone(),
-                            interactable: NetEdge::interactable(e.0 .0, v),
-                        },
-                    );
-                    self.graph.add_edge(
-                        e.1,
-                        NetVertex(v),
-                        NetEdge {
-                            src: e.1 .0,
-                            dst: v,
-                            label: e.2,
-                            interactable: NetEdge::interactable(e.1 .0, v),
-                        },
-                    );
-                }
-            }
-        }
-        // assign net names
-        // for each subnet
-        // unify labels - give vector of taken labels
-        let subgraph_vertices = tarjan_scc(&*self.graph); // this finds the subnets
-        let mut taken_net_names = vec![];
-        for vertices in subgraph_vertices {
-            let edges = self.nodes_to_edge_nodes(vertices);
-            taken_net_names.push(self.unify_labels(edges, &taken_net_names));
-        }
+    pub fn prune(&mut self, extra_vertices: &[SSPoint]) {
+        pruning::prune(self, extra_vertices);
     }
     /// returns true if any net segment intersects with ssp
     pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
@@ -323,71 +194,46 @@ impl Nets {
     pub fn any_vertex_occupy_ssp(&self, ssp: SSPoint) -> bool {
         self.graph.nodes().any(|v| v.0 == ssp)
     }
-    fn basic_route(src: SSPoint, dst: SSPoint) -> Vec<NetVertex> {
+    fn basic_route(src: SSPoint, dst: SSPoint) -> Box<[SSPoint]> {
         // just force edges to be vertical or horizontal
         let delta = dst - src;
         match (delta.x, delta.y) {
-            (0, 0) => {
-                vec![]
-            }
-            (0, _y) => {
-                vec![NetVertex(src), NetVertex(dst)]
-            }
-            (_x, 0) => {
-                vec![NetVertex(src), NetVertex(dst)]
-            }
+            (0, 0) => Box::new([]),
+            (0, _y) => Box::new([src, dst]),
+            (_x, 0) => Box::new([src, dst]),
             (_x, y) => {
                 let corner = SSPoint::new(src.x, src.y + y);
-                vec![NetVertex(src), NetVertex(corner), NetVertex(dst)]
+                Box::new([src, corner, dst])
             }
         }
     }
     /// add net segments to connect src and dst
-    pub fn route(
-        &mut self,
-        gm: &GridMesh2D,
-        edge_cost: &impl Fn(SSPoint, SSPoint, SSPoint) -> f32,
-        src: SSPoint,
-        dst: SSPoint,
-    ) {
-        let goals = Box::from([GridNode(dst)]);
-        let st = wiring_pathfinder(
-            gm.graph(),
-            &goals,
-            DijkstraSt::new(&gm.graph(), GridNode(src)),
-            |parent, current, next| edge_cost(parent.0, current.0, next.0),
-        );
-        let path = path_to_goal(st, &goals).map(|(k, v)| {
-            (
-                k,
-                v.iter().map(|node| NetVertex(node.0)).collect::<Vec<_>>(),
-            )
-        });
-        let path = path
-            .or_else(|| Some((0.0, Self::basic_route(src, dst))))
-            .unwrap()
-            .1;
+    pub fn route(&mut self, edge_cost: &impl Fn(SSPoint, SSPoint, SSPoint) -> f32, dst: SSPoint) {
+        let goals = Box::from([dst]);
+        wiring_pathfinder(&goals, &mut self.dijkstrast, edge_cost);
+        let path = path_to_goal(&self.dijkstrast, &goals);
+        let path = path.unwrap_or_else(|| Self::basic_route(self.dijkstrast.start(), dst));
         if path.is_empty() {
             return;
         }
 
-        let mut simple_path = Vec::with_capacity(path.capacity());
+        let mut simple_path = Vec::with_capacity(path.len());
         simple_path.push(*path.first().unwrap());
         for i in 1..path.len() - 1 {
-            if (path[i - 1].0.x != path[i + 1].0.x) && (path[i - 1].0.y != path[i + 1].0.y) {
+            if (path[i - 1].x != path[i + 1].x) && (path[i - 1].y != path[i + 1].y) {
                 simple_path.push(path[i]);
             }
         }
         simple_path.push(*path.last().unwrap());
 
         for i in 1..simple_path.len() {
-            let interactable = NetEdge::interactable(simple_path[i - 1].0, simple_path[i].0);
+            let interactable = NetEdge::interactable(simple_path[i - 1], simple_path[i]);
             self.graph.add_edge(
-                simple_path[i - 1],
-                simple_path[i],
+                NetVertex(simple_path[i - 1]),
+                NetVertex(simple_path[i]),
                 NetEdge {
-                    src: simple_path[i - 1].0,
-                    dst: simple_path[i].0,
+                    src: simple_path[i - 1],
+                    dst: simple_path[i],
                     interactable,
                     ..Default::default()
                 },
@@ -395,7 +241,7 @@ impl Nets {
         }
     }
     /// merge other into self. extra_vertices are coordinates where net segments should be bisected (device ports)
-    pub fn merge(&mut self, other: &Nets, extra_vertices: Vec<SSPoint>) {
+    pub fn merge(&mut self, other: &Nets, extra_vertices: &[SSPoint]) {
         for edge in other.graph.all_edges() {
             let mut ew = edge.2.clone();
             ew.interactable = NetEdge::interactable(edge.0 .0, edge.1 .0);

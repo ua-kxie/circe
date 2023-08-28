@@ -27,10 +27,6 @@ pub use gui::CircuitPageMsg;
 
 pub mod pathfinding;
 
-use self::pathfinding::grid_mesh::GridMesh2D;
-
-use super::Content;
-
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
     /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
@@ -133,15 +129,15 @@ impl schematic::ContentMsg for Msg {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub enum CircuitSt {
     #[default]
     Idle,
-    Wiring(Option<(Box<Nets>, SSPoint)>),
+    Wiring(Option<Box<Nets>>),
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Circuit {
     pub infobarstr: Option<String>,
 
@@ -150,9 +146,6 @@ pub struct Circuit {
     nets: Nets,
     devices: Devices,
     labels: NetLabels,
-
-    // gridmesh used for pathfinding
-    gridmesh: GridMesh2D,
 
     curpos_ssp: SSPoint,
 
@@ -167,10 +160,9 @@ impl Circuit {
         self.curpos_ssp = curpos_vsp.round().cast().cast_unit();
         self.infobarstr = self.nets.net_name_at(self.curpos_ssp);
         match &mut self.state {
-            CircuitSt::Wiring(Some((nets, ssp_prev))) => {
+            CircuitSt::Wiring(Some(nets)) => {
                 nets.clear();
                 nets.route(
-                    &self.gridmesh,
                     &|prev, this, next| {
                         // do not go over ports at any cost
                         // do not go over NetVertex at any cost
@@ -208,7 +200,6 @@ impl Circuit {
                         }
                         ret
                     },
-                    *ssp_prev,
                     self.curpos_ssp,
                 );
             }
@@ -236,7 +227,7 @@ impl Drawable for Circuit {
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match &self.state {
-            CircuitSt::Wiring(Some((nets, _))) => {
+            CircuitSt::Wiring(Some(nets)) => {
                 nets.draw_preview(vct, vcscale, frame);
             }
             CircuitSt::Idle => {}
@@ -328,21 +319,21 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let ssp = self.curpos_ssp();
                         let new_ws;
-                        if let Some((g, prev_ssp)) = opt_ws {
+                        if let Some(g) = opt_ws {
                             // subsequent click
-                            if ssp == *prev_ssp {
+                            if ssp == g.dijkstra_start() {
                                 new_ws = None;
                             } else if self.electrically_occupies_ssp(ssp) {
-                                self.nets.merge(g.as_ref(), self.devices.ports_ssp());
+                                self.nets.merge(g.as_ref(), &self.devices.ports_ssp());
                                 new_ws = None;
                             } else {
-                                self.nets.merge(g.as_ref(), self.devices.ports_ssp());
-                                new_ws = Some((Box::<Nets>::default(), ssp));
+                                self.nets.merge(g.as_ref(), &self.devices.ports_ssp());
+                                new_ws = Some(Box::new(Nets::new(ssp)));
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
                         } else {
                             // first click
-                            new_ws = Some((Box::<Nets>::default(), ssp));
+                            new_ws = Some(Box::new(Nets::new(ssp)));
                         }
                         state = CircuitSt::Wiring(new_ws);
                     }
@@ -594,6 +585,6 @@ impl Circuit {
     }
     /// clear up nets graph: merging segments, cleaning up segment net names, etc.
     fn prune(&mut self) {
-        self.nets.prune(self.devices.ports_ssp());
+        self.nets.prune(&self.devices.ports_ssp());
     }
 }

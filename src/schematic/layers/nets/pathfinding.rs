@@ -5,12 +5,9 @@
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use std::hash::Hash;
-
-use petgraph::algo::Measure;
-use petgraph::visit::{EdgeRef, IntoEdges, VisitMap, Visitable};
-
 use std::cmp::Ordering;
+
+use crate::transforms::{SSPoint, SSVec};
 
 /// private struct copied from petgraph
 /// `MinScored<K, T>` holds a score `K` and a scored object `T` in
@@ -65,71 +62,63 @@ impl<K: PartialOrd, T> Ord for MinScored<K, T> {
 }
 
 /// Modified Dijkstra specialized for schematic wiring
-pub fn wiring_pathfinder<G, F, K>(
-    graph: G,
-    goals: &Box<[G::NodeId]>,
-    mut st: DijkstraSt<G, K>,
-    mut edge_cost: F,
-) -> DijkstraSt<G, K>
+pub fn wiring_pathfinder<F>(goals: &[SSPoint], st: &mut DijkstraSt, edge_cost: F) -> bool
 where
-    G: IntoEdges + Visitable,
-    G::NodeId: Eq + Hash,
     // closure to get cost from parent, current, and next node
-    F: FnMut(G::NodeId, G::NodeId, G::NodeId) -> K,
-    K: Measure + Copy,
+    F: Fn(SSPoint, SSPoint, SSPoint) -> f32,
 {
     // first check if given st already includes path to goal
     if goals.iter().any(|n| st.cost_map.contains_key(n)) {
-        return st;
+        return true;
     }
 
     // start visiting frontier nodes
-    while let Some(MinScored(cost, node)) = st.to_visit.pop() {
-        if st.visited.is_visited(&node) {
+    while let Some(MinScored(cost, this)) = st.to_visit.pop() {
+        if st.visited.contains(&this) {
             // was already visited through a lower cost path
             continue;
         }
-        if goals.iter().any(|n| n == &node) {
+        if cost > 1000.0 {
+            // give up once costs get too high
+            break;
+        }
+        if goals.iter().any(|n| n == &this) {
             // goal was reached
             break;
         }
-        let prev = st.cost_map.get(&node).unwrap().1;
-        for edge in graph.edges(node) {
-            let next = edge.target();
-            if st.visited.is_visited(&next) {
+        let prev = st.cost_map.get(&this).unwrap().1;
+        for next in [
+            this + SSVec::new(1, 0),
+            this + SSVec::new(0, 1),
+            this + SSVec::new(-1, 0),
+            this + SSVec::new(0, -1),
+        ] {
+            if st.visited.contains(&next) {
                 // already found a lower cost path to this target
                 continue;
             }
-            let next_score = cost + edge_cost(prev, node, next);
+            let next_score = cost + edge_cost(prev, this, next);
             match st.cost_map.entry(next) {
                 Occupied(value) => {
                     if next_score < value.get().0 {
-                        *value.into_mut() = (next_score, node);
+                        *value.into_mut() = (next_score, this);
                         st.to_visit.push(MinScored(next_score, next));
                     }
                 }
                 Vacant(value) => {
-                    value.insert((next_score, node));
+                    value.insert((next_score, this));
                     st.to_visit.push(MinScored(next_score, next));
                 }
             }
         }
-        st.visited.visit(node);
+        st.visited.insert(this);
     }
-    st
+    true
 }
 
 /// build path to target from pathfinding state
 #[allow(clippy::if_same_then_else)] // to avoid panic in case of None
-pub fn path_to_goal<G, K>(
-    st: DijkstraSt<G, K>,
-    goals: &Box<[G::NodeId]>,
-) -> Option<(K, Vec<G::NodeId>)>
-where
-    G: IntoEdges + Visitable,
-    G::NodeId: Eq + Hash,
-    K: Measure + Copy,
-{
+pub fn path_to_goal(st: &DijkstraSt, goals: &[SSPoint]) -> Option<Box<[SSPoint]>> {
     // find cheapest goal to reach
     let max = goals
         .iter()
@@ -140,7 +129,6 @@ where
     } else if max.unwrap().is_none() {
         return None;
     }
-    let cost = max.unwrap().unwrap().0;
     let goal = max.unwrap().unwrap().1;
 
     // build path to reach goal
@@ -165,40 +153,33 @@ where
             return None;
         }
     }
-    Some((cost, ret))
+    Some(ret.into())
 }
 
-pub struct DijkstraSt<G, K>
-where
-    G: IntoEdges + Visitable,
-    G::NodeId: Eq + Hash,
-    K: Measure + Copy,
-{
+#[derive(Clone)]
+pub struct DijkstraSt {
     // cost map of nodeid to cost and optimal parent
-    cost_map: HashMap<G::NodeId, (K, G::NodeId)>,
-    visited: <G as Visitable>::Map,
-    to_visit: BinaryHeap<MinScored<K, G::NodeId>>,
-    start: G::NodeId,
+    cost_map: HashMap<SSPoint, (f32, SSPoint)>,
+    visited: HashSet<SSPoint>,
+    to_visit: BinaryHeap<MinScored<f32, SSPoint>>,
+    start: SSPoint,
 }
 
-impl<G, K> DijkstraSt<G, K>
-where
-    G: IntoEdges + Visitable,
-    G::NodeId: Eq + Hash,
-    K: Measure + Copy,
-{
-    pub fn new(g: &G, start: G::NodeId) -> Self {
+impl DijkstraSt {
+    pub fn new(start: SSPoint) -> Self {
         let mut cost_map = HashMap::default();
         let mut to_visit = BinaryHeap::new();
 
-        let zerocost = K::default();
-        cost_map.insert(start, (zerocost, start));
-        to_visit.push(MinScored(zerocost, start));
+        cost_map.insert(start, (0.0, start));
+        to_visit.push(MinScored(0.0, start));
         Self {
             cost_map,
-            visited: G::visit_map(g),
+            visited: HashSet::default(),
             to_visit,
             start,
         }
+    }
+    pub fn start(&self) -> SSPoint {
+        self.start
     }
 }
