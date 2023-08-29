@@ -8,10 +8,8 @@ mod schematic;
 mod transforms;
 
 use analysis::plot_page::{PlotPage, PlotPageMsg};
-use schematic::circuit::CircuitPage;
-use schematic::symbols::DevicePage;
-
-// mod designer;
+use schematic::circuit::CircuitSchematicPage;
+use schematic::symbols::SymbolDesignerPage;
 
 use iced::{executor, Application, Command, Element, Settings, Theme};
 
@@ -30,14 +28,15 @@ pub fn main() -> iced::Result {
 
 /// main program
 pub struct Circe {
-    /// schematic
-    schematic: CircuitPage,
-    /// intended for dev use for now, can be recycled for user use to design subcircuit (.model) devices
-    plot_view: PlotPage,
-
     /// active tab index
     active_tab: usize,
-    designer: DevicePage,
+
+    /// unstable - early development - for viewing plots of simulation results
+    plot_view: PlotPage,
+    /// circuits schematic for schematic capture
+    circuit_schematic: CircuitSchematicPage,
+    /// dev use only - for drawing custom devices or new device graphics
+    symbol_designer: SymbolDesignerPage,
 }
 
 #[derive(Debug, Clone)]
@@ -45,7 +44,6 @@ pub enum Msg {
     DesignerMsg(schematic::symbols::DevicePageMsg),
     SchematicMsg(schematic::circuit::CircuitPageMsg),
     PlotViewMsg(analysis::plot_page::PlotPageMsg),
-    // Event(Event),
     TabSel(usize),
 }
 
@@ -58,8 +56,8 @@ impl Application for Circe {
     fn new(_flags: ()) -> (Self, Command<Msg>) {
         (
             Circe {
-                schematic: CircuitPage::default(),
-                designer: DevicePage::default(),
+                circuit_schematic: CircuitSchematicPage::default(),
+                symbol_designer: SymbolDesignerPage::default(),
                 plot_view: PlotPage::default(),
                 active_tab: 1,
             },
@@ -68,7 +66,7 @@ impl Application for Circe {
     }
 
     fn title(&self) -> String {
-        String::from("Schematic Prototyping")
+        String::from("Circe")
     }
 
     fn update(&mut self, message: Msg) -> Command<Msg> {
@@ -76,28 +74,29 @@ impl Application for Circe {
             Msg::TabSel(i) => {
                 self.active_tab = i;
 
-                if let Some(traces) = self.schematic.traces.take() {
+                // transfer simulation results from circuit_schematic to plot
+                if let Some(traces) = self.circuit_schematic.traces.take() {
                     let msg = PlotPageMsg::Traces(traces);
                     self.plot_view.update(msg);
                 }
             }
             Msg::DesignerMsg(device_designer_msg) => {
-                self.designer.update(device_designer_msg);
+                self.symbol_designer.update(device_designer_msg);
             }
             Msg::PlotViewMsg(plot_msg) => {
                 self.plot_view.update(plot_msg);
             }
             Msg::SchematicMsg(schematic_msg) => {
-                self.schematic.update(schematic_msg);
+                self.circuit_schematic.update(schematic_msg);
             }
         }
         Command::none()
     }
 
     fn view(&self) -> Element<Msg> {
-        let schematic = self.schematic.view().map(Msg::SchematicMsg);
+        let schematic = self.circuit_schematic.view().map(Msg::SchematicMsg);
         let plot = self.plot_view.view().map(Msg::PlotViewMsg);
-        let devices = self.designer.view().map(Msg::DesignerMsg);
+        let devices = self.symbol_designer.view().map(Msg::DesignerMsg);
 
         let tabs = Tabs::with_tabs(
             vec![

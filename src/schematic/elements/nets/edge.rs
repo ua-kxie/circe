@@ -84,42 +84,40 @@ fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, st
 }
 
 /// width of the wire segment
-const WIRE_WIDTH: f32 = 0.05;
-/// zoom level below which wire width stops becoming thinner
-const ZOOM_THRESHOLD: f32 = 5.0;
+const WIRE_WIDTH: f32 = 1.0;
 
 impl Drawable for NetEdge {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = self::WIRE_WIDTH;
-        let zoom_thshld = self::ZOOM_THRESHOLD;
+    fn draw_persistent(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {
+        // let wire_width = self::WIRE_WIDTH;
+        // let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (wire_width * vcscale).max(wire_width * zoom_thshld),
+            width: self::WIRE_WIDTH,
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 1.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
         draw_with(self.src, self.dst, vct, frame, wire_stroke);
     }
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = self::WIRE_WIDTH;
-        let zoom_thshld = self::ZOOM_THRESHOLD;
+    fn draw_selected(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {
+        // let wire_width = self::WIRE_WIDTH;
+        // let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (wire_width * vcscale).max(wire_width * zoom_thshld),
+            width: self::WIRE_WIDTH,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
         };
         draw_with(self.src, self.dst, vct, frame, wire_stroke);
     }
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        let wire_width = self::WIRE_WIDTH;
-        let zoom_thshld = self::ZOOM_THRESHOLD;
+    fn draw_preview(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {
+        // let wire_width = self::WIRE_WIDTH;
+        // let zoom_thshld = self::ZOOM_THRESHOLD;
         let wire_stroke = Stroke {
-            width: (wire_width * vcscale).max(wire_width * zoom_thshld),
+            width: self::WIRE_WIDTH,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Butt,
             line_dash: LineDash {
-                segments: &[3. * (wire_width * vcscale).max(wire_width * 2.0)],
+                segments: &[4.0],
                 offset: 0,
             },
             ..Stroke::default()

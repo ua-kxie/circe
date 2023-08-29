@@ -22,10 +22,8 @@ use std::rc::Rc;
 use std::{collections::HashSet, fs};
 
 mod gui;
-pub use gui::CircuitPage;
 pub use gui::CircuitPageMsg;
-
-pub mod pathfinding;
+pub use gui::CircuitSchematicPage;
 
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
@@ -169,10 +167,8 @@ impl Circuit {
                         // do not go over NetLabel at any cost
                         // do not make turn over NetEdge at any cost
                         // going straight cost 1
-                        // making turn cost 1
-                        if next == self.curpos_ssp {
-                            return 0.0;
-                        }
+                        // going over symbol cost 10
+                        // making turn cost 30
                         if self.devices.any_port_occupy_ssp(next) {
                             // do not go over ports at any cost
                             return f32::INFINITY;
@@ -181,10 +177,10 @@ impl Circuit {
                             // do not go over NetVertex at any cost
                             return f32::INFINITY;
                         }
-                        // if self.labels.any_label_occupy_ssp(next) {
-                        //     // do not go over NetLabel at any cost
-                        //     return f32::INFINITY
-                        // }
+                        if self.labels.any_occupy_ssp(next) {
+                            // do not go over NetLabel at any cost
+                            return f32::INFINITY;
+                        }
                         let is_turn = (prev.x != next.x) && (prev.y != next.y);
                         if is_turn && self.nets.occupies_ssp(this) {
                             // next point is electrically occupied - do not use
@@ -484,11 +480,12 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         ret_msg
     }
 
-    fn move_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &VVTransform) {
-        for e in elements {
+    fn move_elements(&mut self, elements: &mut HashSet<CircuitElement>, sst: &VVTransform) {
+        let mut nets = Vec::with_capacity(elements.len());
+        for e in &*elements {
             match e {
-                CircuitElement::NetEdge(e) => {
-                    self.nets.transform(e.clone(), *sst);
+                CircuitElement::NetEdge(seg) => {
+                    nets.push(seg.clone());
                 }
                 CircuitElement::Device(d) => {
                     d.0.borrow_mut().transform(*sst);
@@ -504,42 +501,62 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                 }
             }
         }
+        for n in nets {
+            // remove netedge
+            elements.remove(&CircuitElement::NetEdge(n.clone()));
+            self.nets
+                .graph
+                .remove_edge(NetVertex(n.src), NetVertex(n.dst));
+
+            // transform netedge and add
+            let mut n1 = n.clone();
+            n1.transform(*sst);
+            elements.insert(CircuitElement::NetEdge(n1.clone()));
+            self.nets
+                .graph
+                .add_edge(NetVertex(n1.src), NetVertex(n1.dst), n1);
+        }
         self.prune();
     }
 
-    fn copy_elements(&mut self, elements: &HashSet<CircuitElement>, sst: &VVTransform) {
-        for e in elements {
-            match e {
+    fn copy_elements(&mut self, elements: &mut HashSet<CircuitElement>, sst: &VVTransform) {
+        let vec_ce = elements.clone().into_iter().collect::<Vec<_>>();
+        elements.clear(); // clear the original elements
+        for ce in vec_ce {
+            match ce {
                 CircuitElement::NetEdge(seg) => {
-                    let mut seg = seg.clone();
-                    seg.transform(*sst);
-                    self.nets
-                        .graph
-                        .add_edge(NetVertex(seg.src), NetVertex(seg.dst), seg.clone());
+                    let mut seg1 = seg.clone();
+                    seg1.transform(*sst);
+                    self.nets.graph.add_edge(
+                        NetVertex(seg1.src),
+                        NetVertex(seg1.dst),
+                        seg1.clone(),
+                    );
+                    elements.insert(CircuitElement::NetEdge(seg1));
                 }
                 CircuitElement::Device(rcr) => {
                     //unwrap refcell
-                    let refcell_d = rcr.0.borrow();
-                    let mut device = (*refcell_d).clone();
+                    let mut device = (*rcr.0.borrow()).clone();
                     device.transform(*sst);
 
                     //build BaseElement
                     let d_refcell = RefCell::new(device);
                     let d_rc = Rc::new(d_refcell);
                     let rcr_device = RcRDevice(d_rc);
-                    self.devices.insert(rcr_device);
+                    self.devices.insert(rcr_device.clone());
+                    elements.insert(CircuitElement::Device(rcr_device));
                 }
                 CircuitElement::Label(rcl) => {
                     //unwrap refcell
-                    let refcell_d = rcl.0.borrow();
-                    let mut label = (*refcell_d).clone();
+                    let mut label = (*rcl.0.borrow()).clone();
                     label.transform(*sst);
 
                     //build BaseElement
                     let l_refcell = RefCell::new(label);
                     let l_rc = Rc::new(l_refcell);
                     let rcr_label = RcRLabel(l_rc);
-                    self.labels.insert(rcr_label);
+                    self.labels.insert(rcr_label.clone());
+                    elements.insert(CircuitElement::Label(rcr_label));
                 }
             }
         }

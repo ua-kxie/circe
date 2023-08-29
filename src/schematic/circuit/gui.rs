@@ -74,7 +74,7 @@ pub enum CircuitPageMsg {
 }
 
 /// schematic
-pub struct CircuitPage {
+pub struct CircuitSchematicPage {
     /// viewport
     viewport:
         Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::Msg<Msg, CircuitElement>>,
@@ -100,7 +100,7 @@ pub struct CircuitPage {
     /// tran simulation end time (seconds)
     tran_end: String,
 }
-impl Default for CircuitPage {
+impl Default for CircuitSchematicPage {
     fn default() -> Self {
         let spmanager = Arc::new(SpManager::new());
         let mut lib;
@@ -144,7 +144,7 @@ impl Default for CircuitPage {
         let vct = VCTransformLockedAspect::identity()
             .pre_flip_y()
             .then_scale(10.0);
-        CircuitPage {
+        CircuitSchematicPage {
             viewport: viewport::Viewport::new(1.0, 100.0, vct),
             net_name: Default::default(),
             active_element: Default::default(),
@@ -159,7 +159,7 @@ impl Default for CircuitPage {
     }
 }
 
-impl IcedStruct<CircuitPageMsg> for CircuitPage {
+impl IcedStruct<CircuitPageMsg> for CircuitSchematicPage {
     fn update(&mut self, msg: CircuitPageMsg) {
         const NO_MODIFIER: Modifiers = Modifiers::empty();
         match msg {

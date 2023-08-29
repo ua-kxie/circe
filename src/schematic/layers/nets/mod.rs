@@ -4,10 +4,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::{
-    schematic::interactable::Interactive,
-    transforms::{SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
-};
+use crate::transforms::{SSPoint, VCTransform, VSBox, VSPoint};
 use petgraph::graphmap::GraphMap;
 
 use crate::schematic::elements::{NetEdge, NetVertex};
@@ -136,7 +133,6 @@ impl Nets {
             }
         }
         None
-        // self.label_manager.new_floating_label()
     }
     /// return unique NetEdges intersecting with vsb
     pub fn intersects_vsbox(&mut self, vsb: &VSBox) -> Vec<NetEdge> {
@@ -195,7 +191,7 @@ impl Nets {
         self.graph.nodes().any(|v| v.0 == ssp)
     }
     fn basic_route(src: SSPoint, dst: SSPoint) -> Box<[SSPoint]> {
-        // just force edges to be vertical or horizontal
+        // just force edges to be vertical or horizontal - oblique later
         let delta = dst - src;
         match (delta.x, delta.y) {
             (0, 0) => Box::new([]),
@@ -209,14 +205,19 @@ impl Nets {
     }
     /// add net segments to connect src and dst
     pub fn route(&mut self, edge_cost: &impl Fn(SSPoint, SSPoint, SSPoint) -> f32, dst: SSPoint) {
+        // run pathfinding
         let goals = Box::from([dst]);
         wiring_pathfinder(&goals, &mut self.dijkstrast, edge_cost);
         let path = path_to_goal(&self.dijkstrast, &goals);
+
+        // use fallback incase route failed
         let path = path.unwrap_or_else(|| Self::basic_route(self.dijkstrast.start(), dst));
         if path.is_empty() {
-            return;
+            // if path is empty - src and dst same point
+            return
         }
 
+        // filter redundant nodes - necessary to avoid solder dots where crossing another net segment
         let mut simple_path = Vec::with_capacity(path.len());
         simple_path.push(*path.first().unwrap());
         for i in 1..path.len() - 1 {
@@ -226,6 +227,7 @@ impl Nets {
         }
         simple_path.push(*path.last().unwrap());
 
+        // create the path with NetEdges
         for i in 1..simple_path.len() {
             let interactable = NetEdge::interactable(simple_path[i - 1], simple_path[i]);
             self.graph.add_edge(
@@ -248,12 +250,6 @@ impl Nets {
             self.graph.add_edge(edge.0, edge.1, ew); // adding edges also add nodes if they do not already exist
         }
         self.prune(extra_vertices);
-    }
-    /// applies transformation sst to NetEdge e. Moves an existing edge or adds a new one with the transformation applied.
-    pub fn transform(&mut self, mut e: NetEdge, sst: VVTransform) {
-        self.graph.remove_edge(NetVertex(e.src), NetVertex(e.dst));
-        e.transform(sst);
-        self.graph.add_edge(NetVertex(e.src), NetVertex(e.dst), e);
     }
     /// deletes NetEdge e from self
     pub fn delete_edge(&mut self, e: &NetEdge) {

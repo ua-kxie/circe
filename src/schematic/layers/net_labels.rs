@@ -7,7 +7,7 @@
 // or: every net seg holds a Rc<NetLabel>, the same underlying NetLabel if connected
 // how to handle multiple user defined within a connected graph? should highlight segments
 
-// maybe just do what cadence does
+// maybe do what cadence does and do check only when user asks
 
 use std::collections::HashSet;
 
@@ -96,13 +96,9 @@ impl NetLabels {
     pub fn new_label() -> RcRLabel {
         RcRLabel::default()
     }
-    pub fn occupies_ssp(&self, ssp: SSPoint) -> bool {
-        for label in self.set.iter() {
-            if label.0.borrow().pos() == ssp {
-                return true;
-            }
-        }
-        false
+    /// returns true if any label is on ssp
+    pub fn any_occupy_ssp(&self, ssp: SSPoint) -> bool {
+        self.set.iter().any(|label| label.0.borrow().pos() == ssp)
     }
 }
 

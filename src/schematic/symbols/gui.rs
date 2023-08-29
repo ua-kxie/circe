@@ -19,24 +19,24 @@ pub enum DevicePageMsg {
 }
 
 /// schematic
-pub struct DevicePage {
+pub struct SymbolDesignerPage {
     /// viewport
     viewport:
         Viewport<Schematic<Designer, DesignerElement, Msg>, schematic::Msg<Msg, DesignerElement>>,
 }
 
-impl Default for DevicePage {
+impl Default for SymbolDesignerPage {
     fn default() -> Self {
         let vct = VCTransformLockedAspect::identity()
             .pre_flip_y()
             .then_scale(10.0);
-        DevicePage {
+        SymbolDesignerPage {
             viewport: viewport::Viewport::new(1.0, 100.0, vct),
         }
     }
 }
 
-impl IcedStruct<DevicePageMsg> for DevicePage {
+impl IcedStruct<DevicePageMsg> for SymbolDesignerPage {
     fn update(&mut self, msg: DevicePageMsg) {
         match msg {
             DevicePageMsg::ViewportEvt(msgs) => {

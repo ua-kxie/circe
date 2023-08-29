@@ -82,10 +82,6 @@ where
             // give up once costs get too high
             break;
         }
-        if goals.iter().any(|n| n == &this) {
-            // goal was reached
-            break;
-        }
         let prev = st.cost_map.get(&this).unwrap().1;
         for next in [
             this + SSVec::new(1, 0),
@@ -112,6 +108,10 @@ where
             }
         }
         st.visited.insert(this);
+        if goals.iter().any(|n| n == &this) {
+            // goal was reached
+            break;
+        }
     }
     true
 }

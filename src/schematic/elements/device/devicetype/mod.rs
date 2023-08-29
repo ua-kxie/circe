@@ -18,11 +18,11 @@ pub mod r;
 
 pub mod d;
 pub mod nmos;
-pub mod npn;
+// pub mod npn;
 pub mod pmos;
-pub mod pnp;
+// pub mod pnp;
 
-const STROKE_WIDTH: f32 = 0.1;
+const STROKE_WIDTH: f32 = 1.0;
 
 /// graphical representation for devices
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -78,7 +78,7 @@ impl Graphics {
 impl Drawable for Graphics {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0),
+            width: STROKE_WIDTH,
             style: stroke::Style::Solid(Color::from_rgb(0.0, 0.8, 0.0)),
             line_cap: LineCap::Square,
             ..Stroke::default()
@@ -90,7 +90,7 @@ impl Drawable for Graphics {
     }
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.) / 2.0,
+            width: STROKE_WIDTH,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 0.8, 0.0)),
             line_cap: LineCap::Round,
             ..Stroke::default()
@@ -103,11 +103,11 @@ impl Drawable for Graphics {
     }
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         let stroke = Stroke {
-            width: (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 1.) / 2.0,
+            width: STROKE_WIDTH,
             style: stroke::Style::Solid(Color::from_rgb(1.0, 1.0, 0.5)),
             line_cap: LineCap::Butt,
             line_dash: LineDash {
-                segments: &[3. * (STROKE_WIDTH * vcscale).max(STROKE_WIDTH * 2.0)],
+                segments: &[4.0],
                 offset: 0,
             },
             ..Stroke::default()

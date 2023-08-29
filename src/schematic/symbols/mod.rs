@@ -21,8 +21,8 @@ use std::collections::HashSet;
 use std::fs;
 
 mod gui;
-pub use gui::DevicePage;
 pub use gui::DevicePageMsg;
+pub use gui::SymbolDesignerPage;
 
 /// an enum to unify different types in schematic (lines and ellipses)
 #[derive(Debug, Clone)]
@@ -489,7 +489,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
     }
 
     fn update(&mut self, msg: Msg) -> SchematicMsg<DesignerElement> {
-        let ret_msg = match msg {
+        match msg {
             Msg::CanvasEvent(event) => {
                 let mut state = self.state.clone();
                 let mut ret_msg_tmp = SchematicMsg::None;
@@ -644,12 +644,11 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                 self.state = DesignerSt::Line(None);
                 SchematicMsg::None
             }
-        };
-        ret_msg
+        }
     }
 
-    fn move_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &VVTransform) {
-        for e in elements {
+    fn move_elements(&mut self, elements: &mut HashSet<DesignerElement>, sst: &VVTransform) {
+        for e in &*elements {
             match e {
                 DesignerElement::Linear(l) => {
                     l.0.borrow_mut().transform(*sst);
@@ -679,8 +678,8 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         }
     }
 
-    fn copy_elements(&mut self, elements: &HashSet<DesignerElement>, sst: &VVTransform) {
-        for e in elements {
+    fn copy_elements(&mut self, elements: &mut HashSet<DesignerElement>, sst: &VVTransform) {
+        for e in &*elements {
             match e {
                 DesignerElement::Linear(rcl) => {
                     //unwrap refcell
