@@ -72,6 +72,7 @@ where
         return true;
     }
 
+    let mut i: u8 = 0;
     // start visiting frontier nodes
     while let Some(MinScored(cost, this)) = st.to_visit.pop() {
         // if this == SSPoint::new(0, 2) {
@@ -82,9 +83,12 @@ where
             // was already visited through a lower cost path
             continue;
         }
-        if cost > 1000.0 {
-            // give up once costs get too high
-            break;
+        
+        if i == u8::MAX {
+            // give up after set iterations
+            return false;
+        } else {
+            i = i.saturating_add(1);
         }
         let prev = st.cost_map.get(&this).unwrap().1;
         for next in [
@@ -121,7 +125,7 @@ where
         }
         st.visited.insert(this);
     }
-    true
+    false
 }
 
 /// build path to target from pathfinding state
