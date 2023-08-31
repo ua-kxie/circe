@@ -23,6 +23,7 @@ grab move keep connections:
             inconsistent paths - lower priority
             regression tests
             grabbing (moves devices/wire while keeping wire connections)
+    draw nets above symbol but below ports
     circuit add device submenu - d to bring up menu, r/v/g to place respective device
     improved parameters editor
     gui toolbar

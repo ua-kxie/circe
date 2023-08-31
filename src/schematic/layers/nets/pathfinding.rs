@@ -74,6 +74,10 @@ where
 
     // start visiting frontier nodes
     while let Some(MinScored(cost, this)) = st.to_visit.pop() {
+        // if this == SSPoint::new(0, 2) {
+        //     // debug helper
+        //     dbg!("kek");
+        // }
         if st.visited.contains(&this) {
             // was already visited through a lower cost path
             continue;
@@ -89,6 +93,10 @@ where
             this + SSVec::new(-1, 0),
             this + SSVec::new(0, -1),
         ] {
+            // if next == SSPoint::new(0, 3) {
+            //     // debug helper
+            //     dbg!("kek");
+            // }
             if st.visited.contains(&next) {
                 // already found a lower cost path to this target
                 continue;
@@ -106,12 +114,12 @@ where
                     st.to_visit.push(MinScored(next_score, next));
                 }
             }
+            if goals.iter().any(|n| n == &next) {
+                // goal was reached
+                return true;
+            }
         }
         st.visited.insert(this);
-        if goals.iter().any(|n| n == &this) {
-            // goal was reached
-            break;
-        }
     }
     true
 }
