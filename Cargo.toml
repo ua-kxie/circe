@@ -21,6 +21,7 @@ serde_json = "1.0.97"
 serde = {version="1.0.164", features = ["derive"]}
 send_wrapper = "0.6.0"
 num = "0.4.1"
+enum_dispatch = "0.3.12"
 
 [workspace]
 members = [

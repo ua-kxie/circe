@@ -3,8 +3,11 @@
 use std::rc::Rc;
 
 use crate::{
-    schematic::interactable::{Interactable, Interactive},
-    transforms::{vvt_to_sst, SSPoint, VCTransform, VSBox, VVTransform},
+    schematic::{
+        interactable::{Interactable, Interactive},
+        SchematicAtom,
+    },
+    transforms::{vvt_to_sst, SSPoint, VCTransform, VSBox, VSPoint, VVTransform},
     Drawable,
 };
 
@@ -33,6 +36,8 @@ impl PartialEq for NetEdge {
         self.src == other.src && self.dst == other.dst
     }
 }
+
+impl Eq for NetEdge {}
 
 /// hash based on the source and destination points
 impl std::hash::Hash for NetEdge {
@@ -123,5 +128,14 @@ impl Drawable for NetEdge {
             ..Stroke::default()
         };
         draw_with(self.src, self.dst, vct, frame, wire_stroke);
+    }
+}
+
+impl SchematicAtom for NetEdge {
+    fn contains_vsp(&self, vsp: VSPoint) -> bool {
+        self.interactable.contains_vsp(vsp)
+    }
+    fn bounding_box(&self) -> crate::transforms::VSBox {
+        self.interactable.bounds
     }
 }

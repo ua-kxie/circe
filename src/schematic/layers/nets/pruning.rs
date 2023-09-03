@@ -7,7 +7,7 @@ use std::rc::Rc;
 use petgraph::algo::tarjan_scc;
 
 use crate::{
-    schematic::elements::{NetEdge, NetVertex},
+    schematic::atoms::{NetEdge, NetVertex},
     transforms::SSPoint,
 };
 

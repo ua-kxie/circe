@@ -1,14 +1,14 @@
 //! Circuit
 //! Concrete types for schematic content
 
-use crate::schematic::elements::RcRDevice;
-use crate::schematic::elements::RcRLabel;
-use crate::schematic::elements::{NetEdge, NetVertex};
+use crate::schematic::atoms::NetVertex;
+use crate::schematic::atoms::RcRDevice;
+use crate::schematic::atoms::RcRLabel;
 use crate::schematic::layers::Devices;
 use crate::schematic::layers::NetLabels;
 use crate::schematic::layers::Nets;
 use crate::schematic::models::NgModels;
-use crate::schematic::{self, interactable::Interactive, SchematicElement, SchematicMsg};
+use crate::schematic::{self, interactable::Interactive, SchematicMsg};
 use crate::transforms::VSPoint;
 use crate::transforms::{SSPoint, VCTransform, VSBox, VVTransform};
 use crate::Drawable;
@@ -25,6 +25,9 @@ mod gui;
 pub use gui::CircuitPageMsg;
 pub use gui::CircuitSchematicPage;
 
+mod atoms;
+pub use atoms::CircuitAtom;
+
 /// trait for a type of element in schematic. e.g. nets or devices
 pub trait SchematicSet {
     /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
@@ -35,81 +38,10 @@ pub trait SchematicSet {
         curpos_ssp: SSPoint,
         skip: &mut usize,
         count: &mut usize,
-    ) -> Option<CircuitElement>;
+    ) -> Option<CircuitAtom>;
 
     /// returns the bounding box of all contained elements
     fn bounding_box(&self) -> VSBox;
-}
-
-/// an enum to unify different types in schematic (nets and devices)
-#[derive(Debug, Clone)]
-pub enum CircuitElement {
-    NetEdge(NetEdge),
-    Device(RcRDevice),
-    Label(RcRLabel),
-}
-
-impl PartialEq for CircuitElement {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::NetEdge(l0), Self::NetEdge(r0)) => *l0 == *r0,
-            (Self::Device(l0), Self::Device(r0)) => {
-                by_address::ByAddress(l0) == by_address::ByAddress(r0)
-            }
-            (Self::Label(l0), Self::Label(r0)) => {
-                by_address::ByAddress(l0) == by_address::ByAddress(r0)
-            }
-            _ => false,
-        }
-    }
-}
-
-impl Eq for CircuitElement {}
-
-impl std::hash::Hash for CircuitElement {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            CircuitElement::NetEdge(e) => e.hash(state),
-            CircuitElement::Device(d) => by_address::ByAddress(d).hash(state),
-            CircuitElement::Label(l) => by_address::ByAddress(l).hash(state),
-        }
-    }
-}
-
-impl Drawable for CircuitElement {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        match self {
-            CircuitElement::NetEdge(e) => e.draw_persistent(vct, vcscale, frame),
-            CircuitElement::Device(d) => d.draw_persistent(vct, vcscale, frame),
-            CircuitElement::Label(l) => l.draw_persistent(vct, vcscale, frame),
-        }
-    }
-
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        match self {
-            CircuitElement::NetEdge(e) => e.draw_selected(vct, vcscale, frame),
-            CircuitElement::Device(d) => d.draw_selected(vct, vcscale, frame),
-            CircuitElement::Label(l) => l.draw_selected(vct, vcscale, frame),
-        }
-    }
-
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        match self {
-            CircuitElement::NetEdge(e) => e.draw_preview(vct, vcscale, frame),
-            CircuitElement::Device(d) => d.draw_preview(vct, vcscale, frame),
-            CircuitElement::Label(l) => l.draw_preview(vct, vcscale, frame),
-        }
-    }
-}
-
-impl SchematicElement for CircuitElement {
-    fn contains_vsp(&self, vsp: VSPoint) -> bool {
-        match self {
-            CircuitElement::NetEdge(e) => e.interactable.contains_vsp(vsp),
-            CircuitElement::Device(d) => d.0.borrow().interactable.contains_vsp(vsp),
-            CircuitElement::Label(l) => l.0.borrow().interactable.contains_vsp(vsp),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -232,7 +164,7 @@ impl Drawable for Circuit {
     }
 }
 
-impl schematic::Content<CircuitElement, Msg> for Circuit {
+impl schematic::Content<CircuitAtom, Msg> for Circuit {
     fn curpos_update(&mut self, vsp: VSPoint) {
         self.update_cursor_vsp(vsp);
     }
@@ -245,54 +177,49 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         let bbl = self.labels.bounding_box();
         bbn.union(&bbi).union(&bbl)
     }
-    fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<CircuitElement> {
+    fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<CircuitAtom> {
         let mut ret = HashSet::new();
         for seg in self.nets.intersects_vsbox(&vsb) {
-            ret.insert(CircuitElement::NetEdge(seg));
+            ret.insert(CircuitAtom::NetEdge(seg));
         }
         for rcrd in self.devices.intersects_vsb(&vsb) {
-            ret.insert(CircuitElement::Device(rcrd));
+            ret.insert(CircuitAtom::RcRDevice(rcrd));
         }
         for rcrl in self.labels.intersects_vsb(&vsb) {
-            ret.insert(CircuitElement::Label(rcrl));
+            ret.insert(CircuitAtom::RcRLabel(rcrl));
         }
         ret
     }
-    fn contained_by(&mut self, vsb: VSBox) -> HashSet<CircuitElement> {
+    fn contained_by(&mut self, vsb: VSBox) -> HashSet<CircuitAtom> {
         let mut ret = HashSet::new();
         for seg in self.nets.contained_by(&vsb) {
-            ret.insert(CircuitElement::NetEdge(seg));
+            ret.insert(CircuitAtom::NetEdge(seg));
         }
         for rcrd in self.devices.contained_by(&vsb) {
-            ret.insert(CircuitElement::Device(rcrd));
+            ret.insert(CircuitAtom::RcRDevice(rcrd));
         }
         for rcrl in self.labels.contained_by(&vsb) {
-            ret.insert(CircuitElement::Label(rcrl));
+            ret.insert(CircuitAtom::RcRLabel(rcrl));
         }
         ret
     }
 
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
     /// count is updated to track the number of elements skipped over
-    fn selectable(
-        &mut self,
-        vsp: VSPoint,
-        skip: usize,
-        count: &mut usize,
-    ) -> Option<CircuitElement> {
+    fn selectable(&mut self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<CircuitAtom> {
         if let Some(l) = self.labels.selectable(vsp, skip, count) {
-            return Some(CircuitElement::Label(l));
+            return Some(CircuitAtom::RcRLabel(l));
         }
         if let Some(e) = self.nets.selectable(vsp, skip, count) {
-            return Some(CircuitElement::NetEdge(e));
+            return Some(CircuitAtom::NetEdge(e));
         }
         if let Some(d) = self.devices.selectable(vsp, skip, count) {
-            return Some(CircuitElement::Device(d));
+            return Some(CircuitAtom::RcRDevice(d));
         }
         None
     }
 
-    fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitElement> {
+    fn update(&mut self, msg: Msg) -> SchematicMsg<CircuitAtom> {
         let ret_msg = match msg {
             Msg::CanvasEvent(event) => {
                 let mut state = self.state.clone();
@@ -343,7 +270,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let l = NetLabels::new_label();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Label(l)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRLabel(l)));
                     }
                     // device placement
                     (
@@ -355,7 +282,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_cap();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -366,7 +293,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_ind();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -377,7 +304,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_pmos();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -388,7 +315,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_nmos();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -399,7 +326,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_res();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -410,7 +337,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_gnd();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -421,7 +348,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_vs();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -432,7 +359,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_is();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     (
                         CircuitSt::Idle,
@@ -443,7 +370,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     ) => {
                         let d = self.devices.new_diode();
                         ret_msg_tmp =
-                            SchematicMsg::NewElement(SendWrapper::new(CircuitElement::Device(d)));
+                            SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
                     // state reset
                     (
@@ -480,20 +407,20 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         ret_msg
     }
 
-    fn move_elements(&mut self, elements: &mut HashSet<CircuitElement>, sst: &VVTransform) {
+    fn move_elements(&mut self, elements: &mut HashSet<CircuitAtom>, sst: &VVTransform) {
         let mut nets = Vec::with_capacity(elements.len());
         for e in &*elements {
             match e {
-                CircuitElement::NetEdge(seg) => {
+                CircuitAtom::NetEdge(seg) => {
                     nets.push(seg.clone());
                 }
-                CircuitElement::Device(d) => {
+                CircuitAtom::RcRDevice(d) => {
                     d.0.borrow_mut().transform(*sst);
                     // if moving an existing device, does nothing
                     // inserts the device if placing a new device
                     self.devices.insert(d.clone());
                 }
-                CircuitElement::Label(l) => {
+                CircuitAtom::RcRLabel(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing label, does nothing
                     // inserts the label if placing a new label
@@ -503,7 +430,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         }
         for n in nets {
             // remove netedge
-            elements.remove(&CircuitElement::NetEdge(n.clone()));
+            elements.remove(&CircuitAtom::NetEdge(n.clone()));
             self.nets
                 .graph
                 .remove_edge(NetVertex(n.src), NetVertex(n.dst));
@@ -511,7 +438,7 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
             // transform netedge and add
             let mut n1 = n.clone();
             n1.transform(*sst);
-            elements.insert(CircuitElement::NetEdge(n1.clone()));
+            elements.insert(CircuitAtom::NetEdge(n1.clone()));
             self.nets
                 .graph
                 .add_edge(NetVertex(n1.src), NetVertex(n1.dst), n1);
@@ -519,12 +446,12 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
         self.prune();
     }
 
-    fn copy_elements(&mut self, elements: &mut HashSet<CircuitElement>, sst: &VVTransform) {
+    fn copy_elements(&mut self, elements: &mut HashSet<CircuitAtom>, sst: &VVTransform) {
         let vec_ce = elements.clone().into_iter().collect::<Vec<_>>();
         elements.clear(); // clear the original elements
         for ce in vec_ce {
             match ce {
-                CircuitElement::NetEdge(seg) => {
+                CircuitAtom::NetEdge(seg) => {
                     let mut seg1 = seg.clone();
                     seg1.transform(*sst);
                     self.nets.graph.add_edge(
@@ -532,9 +459,9 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                         NetVertex(seg1.dst),
                         seg1.clone(),
                     );
-                    elements.insert(CircuitElement::NetEdge(seg1));
+                    elements.insert(CircuitAtom::NetEdge(seg1));
                 }
-                CircuitElement::Device(rcr) => {
+                CircuitAtom::RcRDevice(rcr) => {
                     //unwrap refcell
                     let mut device = (*rcr.0.borrow()).clone();
                     device.transform(*sst);
@@ -544,9 +471,9 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     let d_rc = Rc::new(d_refcell);
                     let rcr_device = RcRDevice(d_rc);
                     self.devices.insert(rcr_device.clone());
-                    elements.insert(CircuitElement::Device(rcr_device));
+                    elements.insert(CircuitAtom::RcRDevice(rcr_device));
                 }
-                CircuitElement::Label(rcl) => {
+                CircuitAtom::RcRLabel(rcl) => {
                     //unwrap refcell
                     let mut label = (*rcl.0.borrow()).clone();
                     label.transform(*sst);
@@ -556,22 +483,22 @@ impl schematic::Content<CircuitElement, Msg> for Circuit {
                     let l_rc = Rc::new(l_refcell);
                     let rcr_label = RcRLabel(l_rc);
                     self.labels.insert(rcr_label.clone());
-                    elements.insert(CircuitElement::Label(rcr_label));
+                    elements.insert(CircuitAtom::RcRLabel(rcr_label));
                 }
             }
         }
     }
 
-    fn delete_elements(&mut self, elements: &HashSet<CircuitElement>) {
+    fn delete_elements(&mut self, elements: &HashSet<CircuitAtom>) {
         for e in elements {
             match e {
-                CircuitElement::NetEdge(e) => {
+                CircuitAtom::NetEdge(e) => {
                     self.nets.delete_edge(e);
                 }
-                CircuitElement::Device(d) => {
+                CircuitAtom::RcRDevice(d) => {
                     self.devices.delete_item(d);
                 }
-                CircuitElement::Label(l) => {
+                CircuitAtom::RcRLabel(l) => {
                     self.labels.delete_item(l);
                 }
             }

@@ -10,6 +10,8 @@ use deviceinstance::Device;
 
 use by_address::ByAddress;
 
+use crate::{schematic::SchematicAtom, transforms::VSPoint};
+
 use super::DeviceClass;
 
 /// newtype wrapper for `Rc<RefCell<Device>>`. Hashes by memory address.
@@ -31,5 +33,14 @@ impl std::hash::Hash for RcRDevice {
 impl RcRDevice {
     pub fn new_with_ord_class(wm: usize, class: DeviceClass) -> Self {
         RcRDevice(Rc::new(RefCell::new(Device::new_with_ord_class(wm, class))))
+    }
+}
+
+impl SchematicAtom for RcRDevice {
+    fn contains_vsp(&self, vsp: VSPoint) -> bool {
+        self.0.borrow().interactable.contains_vsp(vsp)
+    }
+    fn bounding_box(&self) -> crate::transforms::VSBox {
+        self.0.borrow().interactable.bounds
     }
 }

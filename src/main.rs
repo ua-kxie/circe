@@ -8,12 +8,16 @@ mod schematic;
 mod transforms;
 
 use analysis::plot_page::{PlotPage, PlotPageMsg};
+use enum_dispatch::enum_dispatch;
 use schematic::circuit::CircuitSchematicPage;
 use schematic::symbols::SymbolDesignerPage;
 
 use iced::{executor, Application, Command, Element, Settings, Theme};
 
 use iced_aw::{TabLabel, Tabs};
+
+use schematic::circuit::CircuitAtom;
+use schematic::symbols::DesignerElement;
 
 pub fn main() -> iced::Result {
     Circe::run(Settings {
@@ -118,6 +122,7 @@ trait IcedStruct<T> {
 use crate::transforms::VCTransform;
 use iced::widget::canvas::Frame;
 /// trait for element which can be drawn on canvas
+#[enum_dispatch]
 pub trait Drawable {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);
     fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame);

@@ -11,6 +11,7 @@
 
 use std::{cell::RefCell, hash::Hasher, rc::Rc};
 
+use crate::schematic::SchematicAtom;
 use crate::transforms::SSPoint;
 use crate::Drawable;
 use crate::{
@@ -200,5 +201,14 @@ impl Drawable for RcRLabel {
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         self.0.borrow().draw_preview(vct, vcscale, frame);
+    }
+}
+
+impl SchematicAtom for RcRLabel {
+    fn contains_vsp(&self, vsp: VSPoint) -> bool {
+        self.0.borrow().interactable.contains_vsp(vsp)
+    }
+    fn bounding_box(&self) -> crate::transforms::VSBox {
+        self.0.borrow().interactable.bounds
     }
 }

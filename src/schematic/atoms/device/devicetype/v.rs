@@ -6,8 +6,8 @@
 // VCC 10 0 DC 6 AC 1 PULSE(-1 1 2 NS 2 NS 2 NS 50 NS 100 NS 5)
 // uses transient time zero value for DC if DC value not spec'd
 
-use crate::schematic::elements::CirArc;
-use crate::schematic::elements::Port;
+use crate::schematic::atoms::CirArc;
+use crate::schematic::atoms::Port;
 use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 

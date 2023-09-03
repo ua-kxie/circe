@@ -83,7 +83,7 @@ where
             // was already visited through a lower cost path
             continue;
         }
-        
+
         if i == u8::MAX {
             // give up after set iterations
             return false;

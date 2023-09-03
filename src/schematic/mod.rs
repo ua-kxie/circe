@@ -1,8 +1,8 @@
 //! Schematic
 //! Space in which devices and nets live in
 
+mod atoms;
 pub mod circuit;
-mod elements;
 mod interactable;
 mod layers;
 mod models;
@@ -22,18 +22,14 @@ use iced::{
 };
 use send_wrapper::SendWrapper;
 use std::collections::HashSet;
-use std::hash::Hash;
 
-pub trait SchematicElement: Hash + Eq + Drawable + Clone {
-    /// returns true if self contains ssp
-    fn contains_vsp(&self, vsp: VSPoint) -> bool;
-}
+use atoms::SchematicAtom;
 
 /// Internal Schematic Message
 #[derive(Debug, Clone)]
 pub enum SchematicMsg<E>
 where
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     /// do nothing
     None,
@@ -55,7 +51,7 @@ pub trait ContentMsg {
 pub enum Msg<M, E>
 where
     M: ContentMsg,
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     /// iced canvas event, along with cursor position inside canvas bounds
     Event(Event, Option<VSPoint>),
@@ -69,7 +65,7 @@ where
 impl<M, E> viewport::ContentMsg for Msg<M, E>
 where
     M: ContentMsg,
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     // create event to handle iced canvas event
     fn canvas_event_msg(event: Event, curpos_vsp: Option<VSPoint>) -> Self {
@@ -103,7 +99,7 @@ impl SchematicSt {
 
 pub trait Content<E, M>: Drawable + Default
 where
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     /// return true if content is in its default/idle state
     fn is_idle(&self) -> bool;
@@ -134,7 +130,7 @@ where
 pub struct Schematic<C, E, M>
 where
     C: Content<E, M>,
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     /// schematic state
     state: SchematicSt,
@@ -158,7 +154,7 @@ where
 impl<C, E, M> Default for Schematic<C, E, M>
 where
     C: Content<E, M>,
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     fn default() -> Self {
         Self {
@@ -179,7 +175,7 @@ impl<C, E, M> viewport::Content<Msg<M, E>> for Schematic<C, E, M>
 where
     M: ContentMsg,
     C: Content<E, M>,
-    E: SchematicElement,
+    E: SchematicAtom,
 {
     /// change cursor graphic based on schematic state
     fn mouse_interaction(&self) -> mouse::Interaction {
@@ -521,17 +517,8 @@ where
 impl<C, E, M> Schematic<C, E, M>
 where
     C: Content<E, M>,
-    E: SchematicElement,
+    E: SchematicAtom,
 {
-    // /// returns `Some<E>` if there is exactly 1 element in selected, otherwise returns none
-    // pub fn active_element(&self) -> Option<&E> {
-    //     let mut v: Vec<_> = self.selected.iter().collect();
-    //     if v.len() == 1 {
-    //         v.pop()
-    //     } else {
-    //         None
-    //     }
-    // }
     /// update schematic cursor position
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
         self.curpos_vsp = curpos_vsp;

@@ -1,8 +1,9 @@
 //! device strokes in device designer
 //!
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, hash::Hasher, rc::Rc};
 
+use by_address::ByAddress;
 use iced::{
     widget::canvas::{path::Builder, stroke, Frame, LineCap, LineDash, Stroke},
     Color,
@@ -14,6 +15,8 @@ use crate::{
     transforms::{Point, VCTransform, VSBox, VSPoint},
 };
 
+use super::SchematicAtom;
+
 /// width of the stroke
 const STROKE_WIDTH: f32 = 0.1;
 
@@ -24,6 +27,41 @@ pub struct RcRLineSeg(pub Rc<RefCell<LineSeg>>);
 impl RcRLineSeg {
     pub fn new(l: LineSeg) -> Self {
         Self(Rc::new(RefCell::new(l)))
+    }
+}
+
+impl PartialEq for RcRLineSeg {
+    fn eq(&self, other: &Self) -> bool {
+        ByAddress(self.0.clone()) == ByAddress(other.0.clone())
+    }
+}
+impl Eq for RcRLineSeg {}
+impl std::hash::Hash for RcRLineSeg {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        ByAddress(self.0.clone()).hash(state);
+    }
+}
+
+impl Drawable for RcRLineSeg {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.0.borrow().draw_persistent(vct, vcscale, frame);
+    }
+
+    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.0.borrow().draw_selected(vct, vcscale, frame);
+    }
+
+    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        self.0.borrow().draw_preview(vct, vcscale, frame);
+    }
+}
+
+impl SchematicAtom for RcRLineSeg {
+    fn contains_vsp(&self, vsp: VSPoint) -> bool {
+        self.0.borrow().interactable.contains_vsp(vsp)
+    }
+    fn bounding_box(&self) -> crate::transforms::VSBox {
+        self.0.borrow().interactable.bounds
     }
 }
 

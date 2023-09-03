@@ -7,7 +7,7 @@ use std::rc::Rc;
 use crate::transforms::{SSPoint, VCTransform, VSBox, VSPoint};
 use petgraph::graphmap::GraphMap;
 
-use crate::schematic::elements::{NetEdge, NetVertex};
+use crate::schematic::atoms::{NetEdge, NetVertex};
 
 use crate::Drawable;
 
@@ -214,7 +214,7 @@ impl Nets {
         let path = path.unwrap_or_else(|| Self::basic_route(self.dijkstrast.start(), dst));
         if path.is_empty() {
             // if path is empty - src and dst same point
-            return
+            return;
         }
 
         // filter redundant nodes - necessary to avoid solder dots where crossing another net segment

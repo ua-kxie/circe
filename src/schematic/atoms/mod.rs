@@ -27,3 +27,19 @@ pub use port::Port;
 pub use port::RcRPort;
 
 pub use nets::PathWeight;
+
+use crate::transforms::VSBox;
+use crate::transforms::VSPoint;
+
+use crate::Drawable;
+
+use enum_dispatch::enum_dispatch;
+
+use std::hash::Hash;
+
+#[enum_dispatch]
+pub trait SchematicAtom: Hash + Eq + Drawable + Clone {
+    /// returns true if self contains ssp
+    fn contains_vsp(&self, vsp: VSPoint) -> bool;
+    fn bounding_box(&self) -> VSBox;
+}

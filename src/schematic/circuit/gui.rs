@@ -3,7 +3,7 @@
 //! waiting on multiple windows support for new device instance menu
 
 use crate::schematic;
-use crate::schematic::circuit::{Circuit, CircuitElement, Msg};
+use crate::schematic::circuit::{Circuit, CircuitAtom, Msg};
 use crate::schematic::viewport::CompositeMsg;
 use crate::schematic::viewport::VCTransformLockedAspect;
 use crate::transforms::VSPoint;
@@ -65,7 +65,7 @@ impl paprika::PkSpiceManager for SpManager {
 
 #[derive(Debug, Clone)]
 pub enum CircuitPageMsg {
-    ViewportEvt(viewport::CompositeMsg<schematic::Msg<Msg, CircuitElement>>),
+    ViewportEvt(viewport::CompositeMsg<schematic::Msg<Msg, CircuitAtom>>),
     ParamChanged(String),
     ParamSubmit,
     HzChanged(String),
@@ -76,8 +76,7 @@ pub enum CircuitPageMsg {
 /// schematic
 pub struct CircuitSchematicPage {
     /// viewport
-    viewport:
-        Viewport<Schematic<Circuit, CircuitElement, Msg>, schematic::Msg<Msg, CircuitElement>>,
+    viewport: Viewport<Schematic<Circuit, CircuitAtom, Msg>, schematic::Msg<Msg, CircuitAtom>>,
 
     /// tentative net name, used only for display in the infobar
     net_name: Option<String>,
@@ -90,7 +89,7 @@ pub struct CircuitSchematicPage {
     pub traces: Option<Vec<Vec<VSPoint>>>,
 
     /// active device - some if only 1 device selected, otherwise is none
-    active_element: Option<CircuitElement>,
+    active_element: Option<CircuitAtom>,
     /// parameter editor text
     param: String,
     /// ac simulation frequency (hertz)
@@ -169,13 +168,13 @@ impl IcedStruct<CircuitPageMsg> for CircuitSchematicPage {
             CircuitPageMsg::ParamSubmit => {
                 if let Some(ad) = &self.active_element {
                     match ad {
-                        CircuitElement::NetEdge(_) => {}
-                        CircuitElement::Device(d) => {
+                        CircuitAtom::NetEdge(_) => {}
+                        CircuitAtom::RcRDevice(d) => {
                             d.0.borrow_mut()
                                 .class_mut()
                                 .set_raw_param(self.param.clone());
                         }
-                        CircuitElement::Label(l) => {
+                        CircuitAtom::RcRLabel(l) => {
                             l.0.borrow_mut().set_name(self.param.clone());
                         }
                     }
@@ -285,11 +284,11 @@ impl IcedStruct<CircuitPageMsg> for CircuitSchematicPage {
                     Some(ae) => {
                         self.active_element = Some(ae.clone());
                         match ae {
-                            CircuitElement::NetEdge(_) => {}
-                            CircuitElement::Device(d) => {
+                            CircuitAtom::NetEdge(_) => {}
+                            CircuitAtom::RcRDevice(d) => {
                                 self.param = d.0.borrow().class().param_summary();
                             }
-                            CircuitElement::Label(l) => {
+                            CircuitAtom::RcRLabel(l) => {
                                 self.param = l.0.borrow().read().to_string();
                             }
                         }

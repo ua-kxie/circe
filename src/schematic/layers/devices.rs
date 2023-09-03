@@ -2,15 +2,15 @@
 
 use std::collections::HashSet;
 
-use crate::schematic::elements::DeviceClass;
-use crate::schematic::elements::RcRDevice;
+use crate::schematic::atoms::DeviceClass;
+use crate::schematic::atoms::RcRDevice;
 use crate::schematic::interactable::Interactive;
 use crate::transforms::{self, SSPoint, VCTransform, VSBox, VSPoint};
 use crate::Drawable;
 
 use iced::widget::canvas::Frame;
 
-use crate::schematic::elements::devicetype::{
+use crate::schematic::atoms::devicetype::{
     c::C, d::D, gnd::Gnd, i::I, l::L, nmos, pmos, r::R, v::V,
 };
 

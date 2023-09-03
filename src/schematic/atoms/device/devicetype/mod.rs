@@ -1,8 +1,8 @@
 //! device type. Resistors are a distinct type from capacitors, etc.
 
-use crate::schematic::elements::Port;
+use crate::schematic::atoms::Port;
 use crate::transforms::{Point, SSBox, VCTransform, VSPoint};
-use crate::{schematic::elements::CirArc, Drawable};
+use crate::{schematic::atoms::CirArc, Drawable};
 use iced::{
     widget::canvas::{path::Builder, stroke, Frame, LineCap, LineDash, Stroke},
     Color, Size,

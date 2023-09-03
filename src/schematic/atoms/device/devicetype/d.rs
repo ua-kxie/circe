@@ -5,7 +5,7 @@
 // + < ic = vd > < temp = val > < dtemp = val >
 // + < lm = val > < wm = val > < lp = val > < wp = val >
 
-use crate::schematic::elements::Port;
+use crate::schematic::atoms::Port;
 use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 

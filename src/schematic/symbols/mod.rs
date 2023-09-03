@@ -3,9 +3,9 @@
 //! intended to eventually allow users to define hierarchical devices
 //! for now, intended only to allow devs to quickly draw up basic device symbols
 
-use crate::schematic::elements::{Port, RcRPort};
+use crate::schematic::atoms::{Port, RcRPort};
 use crate::schematic::interactable::Interactive;
-use crate::schematic::{self, SchematicElement, SchematicMsg};
+use crate::schematic::{self, SchematicAtom, SchematicMsg};
 use crate::transforms::{Point, SSBox, SSPoint, VSPoint};
 use crate::transforms::{VCTransform, VSBox, VVTransform};
 use crate::Drawable;
@@ -16,7 +16,7 @@ use iced::widget::canvas::{stroke, LineCap, Stroke};
 use iced::Color;
 use send_wrapper::SendWrapper;
 
-use crate::schematic::elements::{Bounds, CirArc, LineSeg, RcRBounds, RcRCirArc, RcRLineSeg};
+use crate::schematic::atoms::{Bounds, CirArc, LineSeg, RcRBounds, RcRCirArc, RcRLineSeg};
 use std::collections::HashSet;
 use std::fs;
 
@@ -24,98 +24,8 @@ mod gui;
 pub use gui::DevicePageMsg;
 pub use gui::SymbolDesignerPage;
 
-/// an enum to unify different types in schematic (lines and ellipses)
-#[derive(Debug, Clone)]
-pub enum DesignerElement {
-    Linear(RcRLineSeg),
-    Port(RcRPort),
-    CirArc(RcRCirArc),
-    Bounds(RcRBounds),
-}
-
-impl PartialEq for DesignerElement {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Linear(l0), Self::Linear(r0)) => {
-                by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
-            }
-            (Self::CirArc(l0), Self::CirArc(r0)) => {
-                by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
-            }
-            (Self::Port(l0), Self::Port(r0)) => {
-                by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
-            }
-            (Self::Bounds(l0), Self::Bounds(r0)) => {
-                by_address::ByAddress(l0.0.clone()) == by_address::ByAddress(r0.0.clone())
-            }
-            _ => false,
-        }
-    }
-}
-
-impl Eq for DesignerElement {}
-
-impl std::hash::Hash for DesignerElement {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            DesignerElement::Linear(rcrl) => by_address::ByAddress(rcrl.0.clone()).hash(state),
-            DesignerElement::CirArc(rcrl) => by_address::ByAddress(rcrl.0.clone()).hash(state),
-            DesignerElement::Port(rcrp) => by_address::ByAddress(rcrp.0.clone()).hash(state),
-            DesignerElement::Bounds(rcrb) => by_address::ByAddress(rcrb.0.clone()).hash(state),
-        }
-    }
-}
-
-impl Drawable for DesignerElement {
-    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        match self {
-            DesignerElement::Linear(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
-            DesignerElement::CirArc(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
-            DesignerElement::Port(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
-            DesignerElement::Bounds(l) => l.0.borrow().draw_persistent(vct, vcscale, frame),
-        }
-    }
-
-    fn draw_selected(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        match self {
-            DesignerElement::Linear(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
-            DesignerElement::CirArc(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
-            DesignerElement::Port(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
-            DesignerElement::Bounds(l) => l.0.borrow().draw_selected(vct, vcscale, frame),
-        }
-    }
-
-    fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        match self {
-            DesignerElement::Linear(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
-            DesignerElement::CirArc(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
-            DesignerElement::Port(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
-            DesignerElement::Bounds(l) => l.0.borrow().draw_preview(vct, vcscale, frame),
-        }
-    }
-}
-
-impl SchematicElement for DesignerElement {
-    fn contains_vsp(&self, vsp: VSPoint) -> bool {
-        match self {
-            DesignerElement::Linear(l) => l.0.borrow().interactable.contains_vsp(vsp),
-            DesignerElement::CirArc(l) => l.0.borrow().interactable.contains_vsp(vsp),
-            DesignerElement::Port(l) => l.0.borrow().interactable.contains_vsp(vsp),
-            DesignerElement::Bounds(l) => l.0.borrow().interactable.contains_vsp(vsp),
-        }
-    }
-}
-
-impl DesignerElement {
-    fn bounding_box(&self) -> VSBox {
-        match self {
-            DesignerElement::Linear(l) => l.0.borrow().interactable.bounds,
-            DesignerElement::CirArc(l) => l.0.borrow().interactable.bounds,
-            DesignerElement::Port(p) => p.0.borrow().interactable.bounds,
-            DesignerElement::Bounds(p) => p.0.borrow().interactable.bounds,
-        }
-    }
-}
+mod atoms;
+pub use atoms::DesignerElement;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -206,7 +116,7 @@ impl Designer {
             .content
             .iter()
             .filter_map(|x| {
-                if let DesignerElement::Linear(l) = x {
+                if let DesignerElement::RcRLineSeg(l) = x {
                     Some(l)
                 } else {
                     None
@@ -217,7 +127,7 @@ impl Designer {
             .content
             .iter()
             .filter_map(|x| {
-                if let DesignerElement::CirArc(l) = x {
+                if let DesignerElement::RcRCirArc(l) = x {
                     Some(l)
                 } else {
                     None
@@ -228,7 +138,7 @@ impl Designer {
             .content
             .iter()
             .filter_map(|x| {
-                if let DesignerElement::Port(p) = x {
+                if let DesignerElement::RcRPort(p) = x {
                     Some(p)
                 } else {
                     None
@@ -239,7 +149,7 @@ impl Designer {
             .content
             .iter()
             .filter_map(|x| {
-                if let DesignerElement::Bounds(b) = x {
+                if let DesignerElement::RcRBounds(b) = x {
                     Some(b)
                 } else {
                     None
@@ -381,24 +291,24 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         let mut ret = HashSet::new();
         for d in &self.content {
             match d {
-                DesignerElement::Linear(l) => {
+                DesignerElement::RcRLineSeg(l) => {
                     if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
-                        ret.insert(DesignerElement::Linear(l.clone()));
+                        ret.insert(DesignerElement::RcRLineSeg(l.clone()));
                     }
                 }
-                DesignerElement::CirArc(l) => {
+                DesignerElement::RcRCirArc(l) => {
                     if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
-                        ret.insert(DesignerElement::CirArc(l.clone()));
+                        ret.insert(DesignerElement::RcRCirArc(l.clone()));
                     }
                 }
-                DesignerElement::Port(l) => {
+                DesignerElement::RcRPort(l) => {
                     if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
-                        ret.insert(DesignerElement::Port(l.clone()));
+                        ret.insert(DesignerElement::RcRPort(l.clone()));
                     }
                 }
-                DesignerElement::Bounds(l) => {
+                DesignerElement::RcRBounds(l) => {
                     if l.0.borrow_mut().interactable.intersects_vsb(&vsb) {
-                        ret.insert(DesignerElement::Bounds(l.clone()));
+                        ret.insert(DesignerElement::RcRBounds(l.clone()));
                     }
                 }
             }
@@ -409,24 +319,24 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
         let mut ret = HashSet::new();
         for d in &self.content {
             match d {
-                DesignerElement::Linear(l) => {
+                DesignerElement::RcRLineSeg(l) => {
                     if l.0.borrow_mut().interactable.contained_by(&vsb) {
-                        ret.insert(DesignerElement::Linear(l.clone()));
+                        ret.insert(DesignerElement::RcRLineSeg(l.clone()));
                     }
                 }
-                DesignerElement::CirArc(l) => {
+                DesignerElement::RcRCirArc(l) => {
                     if l.0.borrow_mut().interactable.contained_by(&vsb) {
-                        ret.insert(DesignerElement::CirArc(l.clone()));
+                        ret.insert(DesignerElement::RcRCirArc(l.clone()));
                     }
                 }
-                DesignerElement::Port(l) => {
+                DesignerElement::RcRPort(l) => {
                     if l.0.borrow_mut().interactable.contained_by(&vsb) {
-                        ret.insert(DesignerElement::Port(l.clone()));
+                        ret.insert(DesignerElement::RcRPort(l.clone()));
                     }
                 }
-                DesignerElement::Bounds(l) => {
+                DesignerElement::RcRBounds(l) => {
                     if l.0.borrow_mut().interactable.contained_by(&vsb) {
-                        ret.insert(DesignerElement::Bounds(l.clone()));
+                        ret.insert(DesignerElement::RcRBounds(l.clone()));
                     }
                 }
             }
@@ -443,7 +353,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
     ) -> Option<DesignerElement> {
         for d in &self.content {
             match d {
-                DesignerElement::Linear(l) => {
+                DesignerElement::RcRLineSeg(l) => {
                     if l.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
@@ -453,7 +363,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         }
                     }
                 }
-                DesignerElement::CirArc(l) => {
+                DesignerElement::RcRCirArc(l) => {
                     if l.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
@@ -463,7 +373,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         }
                     }
                 }
-                DesignerElement::Port(l) => {
+                DesignerElement::RcRPort(l) => {
                     if l.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
@@ -473,7 +383,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         }
                     }
                 }
-                DesignerElement::Bounds(b) => {
+                DesignerElement::RcRBounds(b) => {
                     if b.0.borrow_mut().interactable.contains_vsp(vsp) {
                         if *count == skip {
                             // skipped just enough
@@ -515,9 +425,13 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                                     *wmi += 1;
                                 }
                                 1 => {
-                                    self.content.insert(DesignerElement::CirArc(RcRCirArc::new(
-                                        CirArc::from_triplet(*vsp_center, *vsp0, *vsp1),
-                                    )));
+                                    self.content.insert(DesignerElement::RcRCirArc(
+                                        RcRCirArc::new(CirArc::from_triplet(
+                                            *vsp_center,
+                                            *vsp0,
+                                            *vsp1,
+                                        )),
+                                    ));
                                     state = DesignerSt::Idle;
                                 }
                                 _ => {
@@ -562,9 +476,10 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                             if self.curpos_vsp.round().cast().cast_unit() == *ssp0 {
                                 new_st = DesignerSt::Idle; // zero size bounds: do not make
                             } else {
-                                self.content.insert(DesignerElement::Bounds(RcRBounds::new(
-                                    Bounds::new(SSBox::from_points([ssp0, ssp1])),
-                                )));
+                                self.content
+                                    .insert(DesignerElement::RcRBounds(RcRBounds::new(
+                                        Bounds::new(SSBox::from_points([ssp0, ssp1])),
+                                    )));
                                 new_st = DesignerSt::Idle; // created a valid bound: return to idle state
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
@@ -584,7 +499,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                         }),
                     ) => {
                         ret_msg_tmp = SchematicMsg::NewElement(SendWrapper::new(
-                            DesignerElement::Port(RcRPort::new(Port::default())),
+                            DesignerElement::RcRPort(RcRPort::new(Port::default())),
                         ));
                     }
                     // line placement
@@ -608,14 +523,16 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
                             if vsp == *ssp0 {
                                 new_ws = None;
                             } else if self.occupies_vsp(vsp) {
-                                self.content.insert(DesignerElement::Linear(RcRLineSeg::new(
-                                    LineSeg::new(*ssp0, vsp),
-                                )));
+                                self.content
+                                    .insert(DesignerElement::RcRLineSeg(RcRLineSeg::new(
+                                        LineSeg::new(*ssp0, vsp),
+                                    )));
                                 new_ws = None;
                             } else {
-                                self.content.insert(DesignerElement::Linear(RcRLineSeg::new(
-                                    LineSeg::new(*ssp0, vsp),
-                                )));
+                                self.content
+                                    .insert(DesignerElement::RcRLineSeg(RcRLineSeg::new(
+                                        LineSeg::new(*ssp0, vsp),
+                                    )));
                                 new_ws = Some((vsp, vsp));
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
@@ -650,29 +567,29 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
     fn move_elements(&mut self, elements: &mut HashSet<DesignerElement>, sst: &VVTransform) {
         for e in &*elements {
             match e {
-                DesignerElement::Linear(l) => {
+                DesignerElement::RcRLineSeg(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing line, does nothing
                     // inserts the line if placing a new line
-                    self.content.insert(DesignerElement::Linear(l.clone()));
+                    self.content.insert(DesignerElement::RcRLineSeg(l.clone()));
                 }
-                DesignerElement::CirArc(l) => {
+                DesignerElement::RcRCirArc(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing line, does nothing
                     // inserts the line if placing a new line
-                    self.content.insert(DesignerElement::CirArc(l.clone()));
+                    self.content.insert(DesignerElement::RcRCirArc(l.clone()));
                 }
-                DesignerElement::Port(l) => {
+                DesignerElement::RcRPort(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing line, does nothing
                     // inserts the line if placing a new line
-                    self.content.insert(DesignerElement::Port(l.clone()));
+                    self.content.insert(DesignerElement::RcRPort(l.clone()));
                 }
-                DesignerElement::Bounds(l) => {
+                DesignerElement::RcRBounds(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing line, does nothing
                     // inserts the line if placing a new line
-                    self.content.insert(DesignerElement::Bounds(l.clone()));
+                    self.content.insert(DesignerElement::RcRBounds(l.clone()));
                 }
             }
         }
@@ -681,7 +598,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
     fn copy_elements(&mut self, elements: &mut HashSet<DesignerElement>, sst: &VVTransform) {
         for e in &*elements {
             match e {
-                DesignerElement::Linear(rcl) => {
+                DesignerElement::RcRLineSeg(rcl) => {
                     //unwrap refcell
                     let refcell_d = rcl.0.borrow();
                     let mut line = (*refcell_d).clone();
@@ -689,9 +606,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
                     //build BaseElement
                     self.content
-                        .insert(DesignerElement::Linear(RcRLineSeg::new(line)));
+                        .insert(DesignerElement::RcRLineSeg(RcRLineSeg::new(line)));
                 }
-                DesignerElement::CirArc(rcl) => {
+                DesignerElement::RcRCirArc(rcl) => {
                     //unwrap refcell
                     let refcell_d = rcl.0.borrow();
                     let mut cirarc = (*refcell_d).clone();
@@ -699,9 +616,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
                     //build BaseElement
                     self.content
-                        .insert(DesignerElement::CirArc(RcRCirArc::new(cirarc)));
+                        .insert(DesignerElement::RcRCirArc(RcRCirArc::new(cirarc)));
                 }
-                DesignerElement::Port(rcl) => {
+                DesignerElement::RcRPort(rcl) => {
                     //unwrap refcell
                     let refcell_d = rcl.0.borrow();
                     let mut port = (*refcell_d).clone();
@@ -709,9 +626,9 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
                     //build BaseElement
                     self.content
-                        .insert(DesignerElement::Port(RcRPort::new(port)));
+                        .insert(DesignerElement::RcRPort(RcRPort::new(port)));
                 }
-                DesignerElement::Bounds(rcl) => {
+                DesignerElement::RcRBounds(rcl) => {
                     //unwrap refcell
                     let refcell_d = rcl.0.borrow();
                     let mut bounds = (*refcell_d).clone();
@@ -719,7 +636,7 @@ impl schematic::Content<DesignerElement, Msg> for Designer {
 
                     //build BaseElement
                     self.content
-                        .insert(DesignerElement::Bounds(RcRBounds::new(bounds)));
+                        .insert(DesignerElement::RcRBounds(RcRBounds::new(bounds)));
                 }
             }
         }

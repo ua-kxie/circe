@@ -3,8 +3,8 @@
 // IYYYYYYY N + N - <<DC > DC / TRAN VALUE > < AC < ACMAG < ACPHASE > > >
 // + < DISTOF1 < F1MAG < F1PHASE > > > < DISTOF2 < F2MAG < F2PHASE > > >
 
-use crate::schematic::elements::CirArc;
-use crate::schematic::elements::Port;
+use crate::schematic::atoms::CirArc;
+use crate::schematic::atoms::Port;
 use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 

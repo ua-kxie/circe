@@ -15,7 +15,7 @@ use crate::transforms::{SSPoint, VCTransform, VSBox, VSPoint};
 use crate::Drawable;
 use iced::widget::canvas::Frame;
 
-use crate::schematic::elements::RcRLabel;
+use crate::schematic::atoms::RcRLabel;
 
 /// struct containing all devices in schematic
 #[derive(Debug, Default, Clone)]

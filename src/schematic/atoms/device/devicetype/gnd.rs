@@ -1,7 +1,7 @@
 //! device definition for ground, implemented as a 0-volt voltage source
 
 use super::Graphics;
-use crate::schematic::elements::Port;
+use crate::schematic::atoms::Port;
 use crate::{
     schematic::interactable::Interactable,
     transforms::{SSBox, SSPoint, VSPoint},

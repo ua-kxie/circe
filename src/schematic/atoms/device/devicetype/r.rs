@@ -2,7 +2,7 @@
 
 use super::super::params;
 use super::Graphics;
-use crate::schematic::elements::Port;
+use crate::schematic::atoms::Port;
 use crate::schematic::interactable::Interactable;
 use crate::transforms::{SSBox, SSPoint, VSPoint};
 use lazy_static::lazy_static;
