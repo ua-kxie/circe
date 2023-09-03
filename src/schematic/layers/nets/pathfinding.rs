@@ -122,7 +122,6 @@ where
             if goals.iter().any(|n| n == &next) {
                 // goal was reached
                 goal_flag = true;
-                return true;
             }
         }
         st.visited.insert(this);
