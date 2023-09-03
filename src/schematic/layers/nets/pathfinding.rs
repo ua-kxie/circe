@@ -73,6 +73,7 @@ where
     }
 
     let mut i: u8 = 0;
+    let mut goal_flag = false;
     // start visiting frontier nodes
     while let Some(MinScored(cost, this)) = st.to_visit.pop() {
         // if this == SSPoint::new(0, 2) {
@@ -120,10 +121,12 @@ where
             }
             if goals.iter().any(|n| n == &next) {
                 // goal was reached
+                goal_flag = true;
                 return true;
             }
         }
         st.visited.insert(this);
+        if goal_flag { return true }
     }
     false
 }
