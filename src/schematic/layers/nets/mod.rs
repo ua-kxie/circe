@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use crate::transforms::{SSPoint, VCTransform, VSBox, VSPoint};
+use iced::widget::canvas::Frame;
 use petgraph::graphmap::GraphMap;
 
 use crate::schematic::atoms::{NetEdge, NetVertex};
@@ -21,8 +22,6 @@ mod pruning;
 /// This struct facillitates the creation of unique net names
 #[derive(Clone, Debug, Default)]
 struct LabelManager {
-    /// watermark for floating nets
-    float_wm: usize,
     /// watermark for net names
     wm: usize,
     /// set of labels already in use
@@ -42,27 +41,92 @@ impl LabelManager {
             }
         }
     }
-    /// returns a String, guaranteed to be unique from all labels already registered with LabelManager.
-    /// The returned String is not registered but will not be returned again until floating nets is reset.
-    /// intended for generating unique net names for devices which port(s) is left unconnected.
-    fn new_floating_label(&mut self) -> String {
-        loop {
-            let l = format!("fn_{}", self.float_wm);
-            self.float_wm += 1;
-            if !self.labels.contains(&l) {
-                break l;
-            }
-        }
-    }
-    /// sets float_wm to 0. Intended to be called everytime a netlist is generated.
-    /// I.e. no need for net names to be unique between multiple netlists.
-    fn rst_floating_nets(&mut self) {
-        self.float_wm = 0;
-    }
     /// register a new label
     #[allow(dead_code)]
     fn register(&mut self, label: Rc<String>) {
         self.labels.insert(label);
+    }
+}
+
+pub type NetsLayer = Box<Nets>;
+
+impl super::SchematicLayerTrait<NetEdge> for NetsLayer {
+    #[doc = " draws self\\'s contents on frame"]
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        for (_, _, edge) in self.graph.all_edges() {
+            edge.draw_persistent(vct, vcscale, frame)
+        }
+        for vertex in self.graph.nodes() {
+            vertex.draw_persistent(vct, vcscale, frame)
+        }
+    }
+
+    #[doc = " returns bounding box containing all atoms in layer"]
+    fn bounds(&self) -> VSBox {
+        VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
+    }
+
+    #[doc = " increments count for every atom over vsp, returns Some(atom) once count == skip"]
+    fn selectable(&self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<NetEdge> {
+        for e in self.graph.all_edges() {
+            if e.2.interactable.contains_vsp(vsp) {
+                if *count == skip {
+                    // has skipped enough elements
+                    return Some(e.2.clone());
+                } else {
+                    *count += 1;
+                }
+            }
+        }
+        None
+    }
+
+    #[doc = " returns slice of all atoms in layer which intersect with closed area defined by vsb"]
+    fn intersect(&self, vsb: &VSBox) -> Box<[NetEdge]> {
+        // let mut ret = vec![];
+        // for e in self.graph.all_edges() {
+        //     if e.2.interactable.bounds.intersects(vsb) {
+        //         ret.push(e.2.clone());
+        //     }
+        // }
+        self.graph
+            .all_edges()
+            .into_iter()
+            .filter_map(|e| {
+                if e.2.interactable.bounds.intersects(vsb) {
+                    Some(e.2.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    #[doc = " returns slice of all atoms in layer which fit in open area defined by vsb"]
+    fn contained(&self, vsb: &VSBox) -> Box<[NetEdge]> {
+        self.graph
+            .all_edges()
+            .into_iter()
+            .filter_map(|e| {
+                if vsb.contains_box(&e.2.interactable.bounds) {
+                    Some(e.2.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    #[doc = " place the device in layer - replace existing if atom equates to existing, or adds new if not"]
+    // should nets implement this differently?
+    fn place(&mut self, _atom: NetEdge) {
+        todo!()
+    }
+
+    #[doc = " delete the specified atom if it exists"]
+    fn delete(&mut self, atom: &NetEdge) {
+        self.graph
+            .remove_edge(NetVertex(atom.src), NetVertex(atom.dst));
     }
 }
 
@@ -94,18 +158,15 @@ impl Nets {
     pub fn dijkstra_start(&self) -> SSPoint {
         self.dijkstrast.start()
     }
-    pub fn new_floating_label(&mut self) -> String {
-        self.label_manager.new_floating_label()
-    }
     /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
     /// count is updated to track the number of elements skipped over
     pub fn selectable(
-        &mut self,
+        &self,
         curpos_vsp: VSPoint,
         skip: usize,
         count: &mut usize,
     ) -> Option<NetEdge> {
-        for e in self.graph.all_edges_mut() {
+        for e in self.graph.all_edges() {
             if e.2.interactable.contains_vsp(curpos_vsp) {
                 if *count == skip {
                     // has skipped enough elements
@@ -120,13 +181,8 @@ impl Nets {
     pub fn bounding_box(&self) -> crate::transforms::VSBox {
         VSBox::from_points(self.graph.nodes().map(|x| x.0.cast().cast_unit()))
     }
-    /// this function is called before netlisting
-    pub fn pre_netlist(&mut self) {
-        // reset floating nets - new netlists generated with same floating net names, no need for floating net names to be unique across different netlists
-        self.label_manager.rst_floating_nets();
-    }
     /// returns the netname at coordinate ssp. If no net at ssp, returns a unique net name not used anywhere else (floating net)
-    pub fn net_name_at(&mut self, ssp: SSPoint) -> Option<String> {
+    pub fn net_name_at(&self, ssp: SSPoint) -> Option<String> {
         for e in self.graph.all_edges() {
             if e.2.interactable.contains_ssp(ssp) {
                 return Some(e.2.label.as_ref().unwrap().to_string());

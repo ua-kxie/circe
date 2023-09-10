@@ -17,6 +17,84 @@ use iced::widget::canvas::Frame;
 
 use crate::schematic::atoms::RcRLabel;
 
+use super::SchematicLayerTrait;
+
+pub type NetLabelsLayer = Box<NetLabels>;
+
+impl SchematicLayerTrait<RcRLabel> for NetLabelsLayer {
+    #[doc = " draws self\\'s contents on frame"]
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        for d in &self.set {
+            d.0.borrow().draw_persistent(vct, vcscale, frame);
+        }
+    }
+
+    #[doc = " returns bounding box containing all atoms in layer"]
+    fn bounds(&self) -> VSBox {
+        let pts = self.set.iter().flat_map(|l| {
+            [
+                l.0.borrow().interactable.bounds.min,
+                l.0.borrow().interactable.bounds.max,
+            ]
+            .into_iter()
+        });
+        VSBox::from_points(pts).cast().cast_unit()
+    }
+
+    #[doc = " increments count for every atom over vsp, returns Some(atom) once count == skip"]
+    fn selectable(&self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<RcRLabel> {
+        for l in &self.set {
+            if l.0.borrow_mut().interactable.contains_vsp(vsp) {
+                if *count == skip {
+                    // skipped just enough
+                    return Some(l.clone());
+                } else {
+                    *count += 1;
+                }
+            }
+        }
+        None
+    }
+
+    #[doc = " returns slice of all atoms in layer which intersect with closed area defined by vsb"]
+    fn intersect(&self, vsb: &VSBox) -> Box<[RcRLabel]> {
+        self.set
+            .iter()
+            .filter_map(|l| {
+                if l.0.borrow_mut().interactable.intersects_vsb(vsb) {
+                    Some(l.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    #[doc = " returns slice of all atoms in layer which fit in open area defined by vsb"]
+    fn contained(&self, vsb: &VSBox) -> Box<[RcRLabel]> {
+        self.set
+            .iter()
+            .filter_map(|l| {
+                if l.0.borrow_mut().interactable.contained_by(vsb) {
+                    Some(l.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    #[doc = " place the device in layer - replace existing if atom equates to existing, or adds new if not"]
+    fn place(&mut self, atom: RcRLabel) {
+        self.set.insert(atom);
+    }
+
+    #[doc = " delete the specified atom if it exists"]
+    fn delete(&mut self, atom: &RcRLabel) {
+        self.set.remove(atom);
+    }
+}
+
 /// struct containing all devices in schematic
 #[derive(Debug, Default, Clone)]
 pub struct NetLabels {

@@ -48,6 +48,10 @@ impl std::hash::Hash for NetEdge {
 }
 
 impl NetEdge {
+    /// create a new net edge from src and dst
+    pub fn new_from_pts(src: SSPoint, dst: SSPoint) -> Self {
+        NetEdge { src, dst, interactable: Self::interactable(src, dst), label: None }
+    }
     /// creates an interactable based on source and destination points, with settable 'tentative' flag
     pub fn interactable(src: SSPoint, dst: SSPoint) -> Interactable {
         Interactable {
@@ -89,7 +93,7 @@ fn draw_with(src: SSPoint, dst: SSPoint, vct: VCTransform, frame: &mut Frame, st
 }
 
 /// width of the wire segment
-const WIRE_WIDTH: f32 = 1.0;
+const WIRE_WIDTH: f32 = 3.0;
 
 impl Drawable for NetEdge {
     fn draw_persistent(&self, vct: VCTransform, _vcscale: f32, frame: &mut Frame) {

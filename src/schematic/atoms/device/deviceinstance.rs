@@ -147,7 +147,7 @@ impl Device {
             .cast_unit();
     }
     /// returns the device's spice netlist line
-    pub fn spice_line(&mut self, nets: &mut Nets) -> String {
+    pub fn spice_line(&mut self, nets: &Nets) -> String {
         self.connected_nets.clear();
         let mut sline = self.id.ng_id();
         sline.push(' ');
@@ -157,7 +157,7 @@ impl Device {
             if let Some(nn) = nets.net_name_at(pt) {
                 net_name = nn;
             } else {
-                net_name = nets.new_floating_label();
+                panic!("no net found at port location");
             }
             sline.push_str(&net_name);
             sline.push(' ');

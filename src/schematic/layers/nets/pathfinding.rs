@@ -125,7 +125,9 @@ where
             }
         }
         st.visited.insert(this);
-        if goal_flag { return true }
+        if goal_flag {
+            return true;
+        }
     }
     false
 }

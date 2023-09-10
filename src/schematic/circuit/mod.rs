@@ -28,21 +28,10 @@ pub use gui::CircuitSchematicPage;
 mod atoms;
 pub use atoms::CircuitAtom;
 
-/// trait for a type of element in schematic. e.g. nets or devices
-pub trait SchematicSet {
-    /// returns the first element after skip which intersects with curpos_ssp in a BaseElement, if any.
-    /// count is incremented by 1 for every element skipped over
-    /// skip is updated if an element is returned, equal to count
-    fn selectable(
-        &mut self,
-        curpos_ssp: SSPoint,
-        skip: &mut usize,
-        count: &mut usize,
-    ) -> Option<CircuitAtom>;
-
-    /// returns the bounding box of all contained elements
-    fn bounding_box(&self) -> VSBox;
-}
+use super::layers::DevicesLayer;
+use super::layers::NetLabelsLayer;
+use super::layers::NetsLayer;
+use super::layers::SchematicLayerEnum;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -67,31 +56,95 @@ pub enum CircuitSt {
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Circuit {
     pub infobarstr: Option<String>,
 
     state: CircuitSt,
 
-    nets: Nets,
-    devices: Devices,
-    labels: NetLabels,
+    // nets: Nets,
+    // devices: Devices,
+    // labels: NetLabels,
+
+    layers: Box<[SchematicLayerEnum]>,
 
     curpos_ssp: SSPoint,
 
     device_models: NgModels,
 }
 
+impl Default for Circuit {
+    fn default() -> Self {
+        Self {
+            infobarstr: Default::default(),
+            state: Default::default(),
+            // nets: Default::default(),
+            // devices: Default::default(),
+            // labels: Default::default(),
+            layers: Box::new([
+                SchematicLayerEnum::NetsLayer(NetsLayer::default()),
+                SchematicLayerEnum::DevicesLayer(DevicesLayer::default()),
+                SchematicLayerEnum::NetLabelsLayer(NetLabelsLayer::default()),
+            ]),
+            curpos_ssp: Default::default(),
+            device_models: Default::default(),
+        }
+    }
+}
+
 impl Circuit {
+    fn nets_layer_mut(&mut self) -> &mut Nets {
+        if let SchematicLayerEnum::NetsLayer(nets) = &mut self.layers[0] {
+            &mut *nets
+        } else {
+            panic!("nets layer should be in index 0");
+        }
+    }
+    fn devices_layer_mut(&mut self) -> &mut Devices {
+        if let SchematicLayerEnum::DevicesLayer(devices) = &mut self.layers[1] {
+            &mut *devices
+        } else {
+            panic!("devices layer should be in index 1");
+        }
+    }
+    fn labels_layer_mut(&mut self) -> &mut NetLabels {
+        if let SchematicLayerEnum::NetLabelsLayer(labels) = &mut self.layers[2] {
+            &mut *labels
+        } else {
+            panic!("labels layer should be in index 2");
+        }
+    }
+    fn nets_layer(&self) -> &Nets {
+        if let SchematicLayerEnum::NetsLayer(nets) = &self.layers[0] {
+            &*nets
+        } else {
+            panic!("nets layer should be in index 0");
+        }
+    }
+    fn devices_layer(&self) -> &Devices {
+        if let SchematicLayerEnum::DevicesLayer(devices) = &self.layers[1] {
+            &*devices
+        } else {
+            panic!("devices layer should be in index 1");
+        }
+    }
+    fn labels_layer(&self) -> &NetLabels {
+        if let SchematicLayerEnum::NetLabelsLayer(labels) = &self.layers[2] {
+            &*labels
+        } else {
+            panic!("labels layer should be in index 2");
+        }
+    }
     pub fn curpos_ssp(&self) -> SSPoint {
         self.curpos_ssp
     }
     fn update_cursor_vsp(&mut self, curpos_vsp: VSPoint) {
         self.curpos_ssp = curpos_vsp.round().cast().cast_unit();
-        self.infobarstr = self.nets.net_name_at(self.curpos_ssp);
-        match &mut self.state {
-            CircuitSt::Wiring(Some(nets)) => {
-                nets.clear();
+        self.infobarstr = self.nets_layer().net_name_at(self.curpos_ssp);
+        let mut ns = self.state.clone();
+        match &self.state {
+            CircuitSt::Wiring(Some(nets_og)) => {
+                let mut nets = Nets::new(nets_og.dijkstra_start());
                 nets.route(
                     &|prev, this, next| {
                         // do not go over ports at any cost
@@ -101,25 +154,25 @@ impl Circuit {
                         // going straight cost 1
                         // going over symbol cost 10
                         // making turn cost 30
-                        if self.devices.any_port_occupy_ssp(next) {
+                        if self.devices_layer().any_port_occupy_ssp(next) {
                             // do not go over ports at any cost
                             return f32::INFINITY;
                         }
-                        if self.nets.any_vertex_occupy_ssp(next) {
+                        if self.nets_layer().any_vertex_occupy_ssp(next) {
                             // do not go over NetVertex at any cost
                             return f32::INFINITY;
                         }
-                        if self.labels.any_occupy_ssp(next) {
+                        if self.labels_layer().any_occupy_ssp(next) {
                             // do not go over NetLabel at any cost
                             return f32::INFINITY;
                         }
                         let is_turn = (prev.x != next.x) && (prev.y != next.y);
-                        if is_turn && self.nets.occupies_ssp(this) {
+                        if is_turn && self.nets_layer().occupies_ssp(this) {
                             // next point is electrically occupied - do not use
                             return f32::INFINITY;
                         }
                         let mut ret = 1.0;
-                        if self.devices.occupies_ssp(next) {
+                        if self.devices_layer().occupies_ssp(next) {
                             // going through a device's graphical symbol
                             ret += 10.0;
                         }
@@ -130,23 +183,25 @@ impl Circuit {
                     },
                     self.curpos_ssp,
                 );
+                ns = CircuitSt::Wiring(Some(Box::new(nets)));
             }
             CircuitSt::Idle => {}
             _ => {}
         }
+        self.state = ns;
     }
 
     // returns true if the coordinate is electrically significant
     fn electrically_occupies_ssp(&self, ssp: SSPoint) -> bool {
-        self.nets.occupies_ssp(ssp) || self.devices.any_port_occupy_ssp(ssp)
+        self.nets_layer().occupies_ssp(ssp) || self.devices_layer().any_port_occupy_ssp(ssp)
     }
 }
 
 impl Drawable for Circuit {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
-        self.nets.draw_persistent(vct, vcscale, frame);
-        self.devices.draw_persistent(vct, vcscale, frame);
-        self.labels.draw_persistent(vct, vcscale, frame);
+        self.nets_layer().draw_persistent(vct, vcscale, frame);
+        self.devices_layer().draw_persistent(vct, vcscale, frame);
+        self.labels_layer().draw_persistent(vct, vcscale, frame);
     }
 
     fn draw_selected(&self, _vct: VCTransform, _vcscale: f32, _frame: &mut Frame) {
@@ -172,33 +227,33 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
         self.curpos_ssp.cast().cast_unit()
     }
     fn bounds(&self) -> VSBox {
-        let bbn = self.nets.bounding_box();
-        let bbi = self.devices.bounding_box();
-        let bbl = self.labels.bounding_box();
+        let bbn = self.nets_layer().bounding_box();
+        let bbi = self.devices_layer().bounding_box();
+        let bbl = self.labels_layer().bounding_box();
         bbn.union(&bbi).union(&bbl)
     }
     fn intersects_vsb(&mut self, vsb: VSBox) -> HashSet<CircuitAtom> {
         let mut ret = HashSet::new();
-        for seg in self.nets.intersects_vsbox(&vsb) {
+        for seg in self.nets_layer_mut().intersects_vsbox(&vsb) {
             ret.insert(CircuitAtom::NetEdge(seg));
         }
-        for rcrd in self.devices.intersects_vsb(&vsb) {
+        for rcrd in self.devices_layer().intersects_vsb(&vsb) {
             ret.insert(CircuitAtom::RcRDevice(rcrd));
         }
-        for rcrl in self.labels.intersects_vsb(&vsb) {
+        for rcrl in self.labels_layer().intersects_vsb(&vsb) {
             ret.insert(CircuitAtom::RcRLabel(rcrl));
         }
         ret
     }
     fn contained_by(&mut self, vsb: VSBox) -> HashSet<CircuitAtom> {
         let mut ret = HashSet::new();
-        for seg in self.nets.contained_by(&vsb) {
+        for seg in self.nets_layer_mut().contained_by(&vsb) {
             ret.insert(CircuitAtom::NetEdge(seg));
         }
-        for rcrd in self.devices.contained_by(&vsb) {
+        for rcrd in self.devices_layer().contained_by(&vsb) {
             ret.insert(CircuitAtom::RcRDevice(rcrd));
         }
-        for rcrl in self.labels.contained_by(&vsb) {
+        for rcrl in self.labels_layer().contained_by(&vsb) {
             ret.insert(CircuitAtom::RcRLabel(rcrl));
         }
         ret
@@ -207,13 +262,13 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
     /// returns the first CircuitElement after skip which intersects with curpos_ssp, if any.
     /// count is updated to track the number of elements skipped over
     fn selectable(&mut self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<CircuitAtom> {
-        if let Some(l) = self.labels.selectable(vsp, skip, count) {
+        if let Some(l) = self.labels_layer_mut().selectable(vsp, skip, count) {
             return Some(CircuitAtom::RcRLabel(l));
         }
-        if let Some(e) = self.nets.selectable(vsp, skip, count) {
+        if let Some(e) = self.nets_layer().selectable(vsp, skip, count) {
             return Some(CircuitAtom::NetEdge(e));
         }
-        if let Some(d) = self.devices.selectable(vsp, skip, count) {
+        if let Some(d) = self.devices_layer_mut().selectable(vsp, skip, count) {
             return Some(CircuitAtom::RcRDevice(d));
         }
         None
@@ -247,10 +302,12 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             if ssp == g.dijkstra_start() {
                                 new_ws = None;
                             } else if self.electrically_occupies_ssp(ssp) {
-                                self.nets.merge(g.as_ref(), &self.devices.ports_ssp());
+                                let extra_vertices = self.devices_layer().ports_ssp();
+                                self.nets_layer_mut().merge(g.as_ref(), &extra_vertices);
                                 new_ws = None;
                             } else {
-                                self.nets.merge(g.as_ref(), &self.devices.ports_ssp());
+                                let extra_vertices = self.devices_layer().ports_ssp();
+                                self.nets_layer_mut().merge(g.as_ref(), &extra_vertices);
                                 new_ws = Some(Box::new(Nets::new(ssp)));
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
@@ -280,7 +337,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_cap();
+                        let d = self.devices_layer_mut().new_cap();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -291,7 +348,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_ind();
+                        let d = self.devices_layer_mut().new_ind();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -302,7 +359,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_pmos();
+                        let d = self.devices_layer_mut().new_pmos();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -313,7 +370,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_nmos();
+                        let d = self.devices_layer_mut().new_nmos();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -324,7 +381,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_res();
+                        let d = self.devices_layer_mut().new_res();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -335,7 +392,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_gnd();
+                        let d = self.devices_layer_mut().new_gnd();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -346,7 +403,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_vs();
+                        let d = self.devices_layer_mut().new_vs();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -357,7 +414,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_is();
+                        let d = self.devices_layer_mut().new_is();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -368,7 +425,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             modifiers: NO_MODIFIER,
                         }),
                     ) => {
-                        let d = self.devices.new_diode();
+                        let d = self.devices_layer_mut().new_diode();
                         ret_msg_tmp =
                             SchematicMsg::NewElement(SendWrapper::new(CircuitAtom::RcRDevice(d)));
                     }
@@ -396,11 +453,11 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                 SchematicMsg::None
             }
             Msg::DcOp(pkvecvaluesall) => {
-                self.devices.op(&pkvecvaluesall);
+                self.devices_layer_mut().op(&pkvecvaluesall);
                 SchematicMsg::ClearPassive
             }
             Msg::Ac(pkvecvaluesall) => {
-                self.devices.op(&pkvecvaluesall);
+                self.devices_layer_mut().op(&pkvecvaluesall);
                 SchematicMsg::ClearPassive
             }
         };
@@ -418,20 +475,20 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                     d.0.borrow_mut().transform(*sst);
                     // if moving an existing device, does nothing
                     // inserts the device if placing a new device
-                    self.devices.insert(d.clone());
+                    self.devices_layer_mut().insert(d.clone());
                 }
                 CircuitAtom::RcRLabel(l) => {
                     l.0.borrow_mut().transform(*sst);
                     // if moving an existing label, does nothing
                     // inserts the label if placing a new label
-                    self.labels.insert(l.clone());
+                    self.labels_layer_mut().insert(l.clone());
                 }
             }
         }
         for n in nets {
             // remove netedge
             elements.remove(&CircuitAtom::NetEdge(n.clone()));
-            self.nets
+            self.nets_layer_mut()
                 .graph
                 .remove_edge(NetVertex(n.src), NetVertex(n.dst));
 
@@ -439,7 +496,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
             let mut n1 = n.clone();
             n1.transform(*sst);
             elements.insert(CircuitAtom::NetEdge(n1.clone()));
-            self.nets
+            self.nets_layer_mut()
                 .graph
                 .add_edge(NetVertex(n1.src), NetVertex(n1.dst), n1);
         }
@@ -454,7 +511,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                 CircuitAtom::NetEdge(seg) => {
                     let mut seg1 = seg.clone();
                     seg1.transform(*sst);
-                    self.nets.graph.add_edge(
+                    self.nets_layer_mut().graph.add_edge(
                         NetVertex(seg1.src),
                         NetVertex(seg1.dst),
                         seg1.clone(),
@@ -470,7 +527,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                     let d_refcell = RefCell::new(device);
                     let d_rc = Rc::new(d_refcell);
                     let rcr_device = RcRDevice(d_rc);
-                    self.devices.insert(rcr_device.clone());
+                    self.devices_layer_mut().insert(rcr_device.clone());
                     elements.insert(CircuitAtom::RcRDevice(rcr_device));
                 }
                 CircuitAtom::RcRLabel(rcl) => {
@@ -482,7 +539,7 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                     let l_refcell = RefCell::new(label);
                     let l_rc = Rc::new(l_refcell);
                     let rcr_label = RcRLabel(l_rc);
-                    self.labels.insert(rcr_label.clone());
+                    self.labels_layer_mut().insert(rcr_label.clone());
                     elements.insert(CircuitAtom::RcRLabel(rcr_label));
                 }
             }
@@ -493,13 +550,13 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
         for e in elements {
             match e {
                 CircuitAtom::NetEdge(e) => {
-                    self.nets.delete_edge(e);
+                    self.nets_layer_mut().delete_edge(e);
                 }
                 CircuitAtom::RcRDevice(d) => {
-                    self.devices.delete_item(d);
+                    self.devices_layer_mut().delete_item(d);
                 }
                 CircuitAtom::RcRLabel(l) => {
-                    self.labels.delete_item(l);
+                    self.labels_layer_mut().delete_item(l);
                 }
             }
         }
@@ -514,21 +571,24 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
 impl Circuit {
     /// create netlist for the current schematic and save it.
     pub fn netlist(&mut self) {
-        self.nets.pre_netlist();
         let mut netlist = String::from("Netlist Created by Circe\n");
         netlist.push_str(&self.device_models.model_definitions());
-        if self.devices.get_set().is_empty() {
+        if self.devices_layer().get_set().is_empty() {
             // empty netlist
             netlist.push_str("V_0 0 n1 0"); // give it something so spice doesnt hang
+            return
         }
-        for d in self.devices.get_set() {
-            netlist.push_str(&d.0.borrow_mut().spice_line(&mut self.nets));
+
+        self.prune();
+        for d in self.devices_layer().get_set() {
+            netlist.push_str(&d.0.borrow_mut().spice_line(self.nets_layer()));
         }
         netlist.push('\n');
         fs::write("netlist.cir", netlist.as_bytes()).expect("Unable to write file");
     }
     /// clear up nets graph: merging segments, cleaning up segment net names, etc.
     fn prune(&mut self) {
-        self.nets.prune(&self.devices.ports_ssp());
+        let extra_vertices = self.devices_layer().ports_ssp();
+        self.nets_layer_mut().prune(&extra_vertices);
     }
 }

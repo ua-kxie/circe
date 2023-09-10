@@ -70,6 +70,79 @@ pub struct Devices {
     manager: DevicesManager,
 }
 
+pub type DevicesLayer = Box<Devices>;
+
+impl super::SchematicLayerTrait<RcRDevice> for DevicesLayer {
+    fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
+        for d in &self.set {
+            d.0.borrow().draw_persistent(vct, vcscale, frame);
+        }
+    }
+
+    fn bounds(&self) -> VSBox {
+        let pts = self.set.iter().flat_map(|d| {
+            [
+                d.0.borrow().interactable.bounds.min,
+                d.0.borrow().interactable.bounds.max,
+            ]
+            .into_iter()
+        });
+        VSBox::from_points(pts)
+    }
+
+    fn selectable(&self, vsp: VSPoint, skip: usize, count: &mut usize) -> Option<RcRDevice> {
+        for d in &self.set {
+            if d.0.borrow_mut().interactable.contains_vsp(vsp) {
+                if *count == skip {
+                    // skipped just enough
+                    return Some(d.clone());
+                } else {
+                    *count += 1;
+                }
+            }
+        }
+        None
+    }
+
+    fn intersect(&self, vsb: &VSBox) -> Box<[RcRDevice]> {
+        let ret = self
+            .set
+            .iter()
+            .filter_map(|d| {
+                if d.0.borrow_mut().interactable.intersects_vsb(vsb) {
+                    Some(d.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        ret
+    }
+
+    fn contained(&self, vsb: &VSBox) -> Box<[RcRDevice]> {
+        let ret = self
+            .set
+            .iter()
+            .filter_map(|d| {
+                if d.0.borrow_mut().interactable.contained_by(vsb) {
+                    Some(d.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        ret
+    }
+
+    fn place(&mut self, atom: RcRDevice) {
+        self.insert(atom);
+    }
+
+    fn delete(&mut self, atom: &RcRDevice) {
+        self.delete_item(atom)
+    }
+}
+
 impl Drawable for Devices {
     fn draw_persistent(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         for d in &self.set {

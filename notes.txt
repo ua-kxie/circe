@@ -6,6 +6,9 @@ grab move keep connections:
  - delete edges between A-B
  - run pathfinding from A to Net(B) (multiple goals per start)
 
+ - nets graph rework: put a net at every floating port (vertex, fixes devices with overlapping ports not connected, spice line without mut borrow), 
+    (during nets prune, for every port ssp, add vertex with unique name if not already exists)
+
 - schematic: 
     ctrl-(shift)-z undo/redo - all commands need to have undo/redo - command trait? what counts as a command?
 
