@@ -155,7 +155,8 @@ pub fn prune(nets: &mut Nets, port_coords: &[SSPoint]) {
 
     // add vertices at port coords if not already in graph - insufficient, need to add edge to itself, but maybe breaking?
     for p in port_coords {
-        nets.graph.add_edge(NetVertex(*p), NetVertex(*p), NetEdge::new_from_pts(*p, *p));
+        nets.graph
+            .add_edge(NetVertex(*p), NetVertex(*p), NetEdge::new_from_pts(*p, *p));
     }
 
     // assign net names

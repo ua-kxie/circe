@@ -50,7 +50,12 @@ impl std::hash::Hash for NetEdge {
 impl NetEdge {
     /// create a new net edge from src and dst
     pub fn new_from_pts(src: SSPoint, dst: SSPoint) -> Self {
-        NetEdge { src, dst, interactable: Self::interactable(src, dst), label: None }
+        NetEdge {
+            src,
+            dst,
+            interactable: Self::interactable(src, dst),
+            label: None,
+        }
     }
     /// creates an interactable based on source and destination points, with settable 'tentative' flag
     pub fn interactable(src: SSPoint, dst: SSPoint) -> Interactable {

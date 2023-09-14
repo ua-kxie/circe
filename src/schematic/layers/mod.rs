@@ -25,7 +25,7 @@ use super::atoms::SchematicAtom;
 
 // render ports on a separate layer so wires can be drawn under ports but above device symbols
 
-#[enum_dispatch(SchematicLayerTrait)]
+#[enum_dispatch]
 #[derive(Clone)]
 pub enum SchematicLayerEnum {
     NetsLayer,
@@ -37,7 +37,7 @@ pub enum SchematicLayerEnum {
     // Bounds,
 }
 
-#[enum_dispatch]
+// #[enum_dispatch]
 pub trait SchematicLayerTrait<Atom>
 where
     Atom: SchematicAtom,

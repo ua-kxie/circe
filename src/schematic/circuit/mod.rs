@@ -65,7 +65,6 @@ pub struct Circuit {
     // nets: Nets,
     // devices: Devices,
     // labels: NetLabels,
-
     layers: Box<[SchematicLayerEnum]>,
 
     curpos_ssp: SSPoint,
@@ -576,7 +575,7 @@ impl Circuit {
         if self.devices_layer().get_set().is_empty() {
             // empty netlist
             netlist.push_str("V_0 0 n1 0"); // give it something so spice doesnt hang
-            return
+            return;
         }
 
         self.prune();
