@@ -6,6 +6,23 @@
 //! after loading the netlist.
 //! Dot analysis commands like `.tran 10u 10m` in the netlist is executed after `run` or `bg_run` is sent through `NgSpice_Command`.
 //! Safety must assume that callbacks are called from parallel thread after commanding `bg_run`.
+//! 
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn startup() {
+        unsafe {
+            // ngSpice_Init(printfcn, statfcn, ngexit, sdata, sinitdata, bgtrun, userData)
+        }
+    }
+}
 
 use std::{ffi::OsString, sync::Arc};
 

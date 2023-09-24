@@ -9,6 +9,9 @@ edition = "2021"
 name = "paprika"
 path = "src/lib.rs"
 
+[build-dependencies]
+bindgen = "0.65.1"
+
 [dependencies]
 libloading = "0.7"
 libc = "0.2"
