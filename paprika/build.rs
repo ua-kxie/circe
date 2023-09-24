@@ -3,11 +3,11 @@ use std::path::PathBuf;
 
 fn main() {
     // Tell cargo to look for shared libraries in the specified directory
-    println!("cargo:rustc-link-search=/");
+    println!("cargo:rustc-link-search=clib/");
 
     // Tell cargo to tell rustc to link the system bzip2
     // shared library.
-    // println!("cargo:rustc-link-lib=ngspice");
+    println!("cargo:rustc-link-lib=dylib=ngspice");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=src/wrapper.h");

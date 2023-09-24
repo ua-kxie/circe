@@ -60,12 +60,31 @@ mod tests {
             println!("bgt_state {}; {};", is_fin, id);
         }
     }
+
+    fn command(cmdstr: &str) -> bool {
+        unsafe {
+            let ret = if cmdstr.is_empty() {
+                ngSpice_Command(core::ptr::null_mut())
+            }
+            // have users spawn their own threads instead
+            else if cmdstr.find("bg_") == Some(0) {
+                0
+            } else {
+                let ccmdstr = std::ffi::CString::new(cmdstr).unwrap().into_raw();
+                let ret0 = ngSpice_Command(ccmdstr);
+                let _ = std::ffi::CString::from_raw(ccmdstr);
+                ret0
+            };
+            ret != 0
+        }
+    }
+
     #[test]
     fn startup() {
         unsafe {
             let manager = Arc::new(Manager::new());
             ngSpice_Init(
-                Some(ngspice::cbw_send_char::<Manager>), 
+                Some(cbw_send_char::<Manager>), 
                 Some(cbw_send_stat::<Manager>), 
                 Some(cbw_controlled_exit::<Manager>), 
                 None, 
@@ -73,6 +92,7 @@ mod tests {
                 Some(cbw_bgthread_running::<Manager>),
                 &*manager as *const _ as *mut c_void,
             );
+            command("echo echo command");
         }
     }
 }
@@ -88,7 +108,7 @@ use libloading::Library;
 mod structs;
 pub use structs::*;
 mod ngspice;
-use ngspice::*;
+pub use ngspice::*;
 
 #[derive(Debug)]
 pub enum PkSpiceError {
