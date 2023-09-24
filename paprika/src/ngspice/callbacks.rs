@@ -3,9 +3,9 @@ use crate::PkSpiceManager;
 use libc::*;
 
 pub unsafe extern "C" fn cbw_send_char<T>(
-    msg: *const c_char,
+    msg: *mut c_char,
     id: c_int,
-    user: *const c_void,
+    user: *mut c_void,
 ) -> c_int
 where
     T: PkSpiceManager,
@@ -20,9 +20,9 @@ where
     0
 }
 pub unsafe extern "C" fn cbw_send_stat<T>(
-    msg: *const c_char,
+    msg: *mut c_char,
     id: c_int,
-    user: *const c_void,
+    user: *mut c_void,
 ) -> c_int
 where
     T: PkSpiceManager,
@@ -41,7 +41,7 @@ pub unsafe extern "C" fn cbw_controlled_exit<T>(
     immediate: bool,
     exit_on_quit: bool,
     id: c_int,
-    user: *const c_void,
+    user: *mut c_void,
 ) -> c_int
 where
     T: PkSpiceManager,
@@ -58,10 +58,10 @@ where
     0
 }
 pub unsafe extern "C" fn cbw_send_data<T>(
-    pvecvaluesall: *const NgVecvaluesall,
+    pvecvaluesall: *mut NgVecvaluesall,
     count: c_int,
     id: c_int,
-    user: *const c_void,
+    user: *mut c_void,
 ) -> c_int
 where
     T: PkSpiceManager,
@@ -75,9 +75,9 @@ where
     0
 }
 pub unsafe extern "C" fn cbw_send_init_data<T>(
-    pvecinfoall: *const NgVecinfoall,
+    pvecinfoall: *mut NgVecinfoall,
     id: c_int,
-    user: *const c_void,
+    user: *mut c_void,
 ) -> c_int
 where
     T: PkSpiceManager,
@@ -93,7 +93,7 @@ where
 pub unsafe extern "C" fn cbw_bgthread_running<T>(
     finished: bool,
     id: c_int,
-    user: *const c_void,
+    user: *mut c_void,
 ) -> c_int
 where
     T: PkSpiceManager,

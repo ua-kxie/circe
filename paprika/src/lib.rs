@@ -15,11 +15,64 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use colored::Colorize;
+    
+    #[allow(dead_code)]
+    struct Manager {
+    }
+    impl Manager {
+        fn new() -> Manager {
+            Manager {
+            }
+        }
+    }
+    #[allow(unused_variables)]
+    impl PkSpiceManager for Manager {
+        fn cb_send_char(&mut self, msg: String, id: i32) {
+            let opt = msg.split_once(' ');
+            let (token, msgs) = match opt {
+                Some(tup) => (tup.0, tup.1),
+                None => (msg.as_str(), msg.as_str()),
+            };
+            let msgc = match token {
+                "stdout" => msgs.green(),
+                "stderr" => msgs.red(),
+                _ => msg.magenta().strikethrough(),
+            };
+            println!("{}", msgc);
+        }
+        fn cb_send_stat(&mut self, msg: String, id: i32) {
+            println!("{}", msg.blue());
+        }
+        fn cb_ctrldexit(&mut self, status: i32, is_immediate: bool, is_quit: bool, id: i32) {
+            println!(
+                "ctrldexit {}; {}; {}; {};",
+                status, is_immediate, is_quit, id
+            );
+        }
+        fn cb_send_init(&mut self, pkvecinfoall: PkVecinfoall, id: i32) {
+            
+        }
+        fn cb_send_data(&mut self, pkvecvaluesall: PkVecvaluesall, count: i32, id: i32) {
+            
+        }
+        fn cb_bgt_state(&mut self, is_fin: bool, id: i32) {
+            println!("bgt_state {}; {};", is_fin, id);
+        }
+    }
     #[test]
     fn startup() {
         unsafe {
-            // ngSpice_Init(printfcn, statfcn, ngexit, sdata, sinitdata, bgtrun, userData)
+            let manager = Arc::new(Manager::new());
+            ngSpice_Init(
+                Some(ngspice::cbw_send_char::<Manager>), 
+                Some(cbw_send_stat::<Manager>), 
+                Some(cbw_controlled_exit::<Manager>), 
+                None, 
+                None,
+                Some(cbw_bgthread_running::<Manager>),
+                &*manager as *const _ as *mut c_void,
+            );
         }
     }
 }
@@ -44,15 +97,15 @@ pub enum PkSpiceError {
 }
 
 type NgSpiceInit = extern "C" fn(
-    Option<unsafe extern "C" fn(*const c_char, c_int, *const c_void) -> c_int>,
-    Option<unsafe extern "C" fn(*const c_char, c_int, *const c_void) -> c_int>,
-    Option<unsafe extern "C" fn(c_int, bool, bool, c_int, *const c_void) -> c_int>,
+    Option<unsafe extern "C" fn(*mut c_char, c_int, *mut c_void) -> c_int>,
+    Option<unsafe extern "C" fn(*mut c_char, c_int, *mut c_void) -> c_int>,
+    Option<unsafe extern "C" fn(c_int, bool, bool, c_int, *mut c_void) -> c_int>,
     Option<
-        unsafe extern "C" fn(*const ngspice::NgVecvaluesall, c_int, c_int, *const c_void) -> c_int,
+        unsafe extern "C" fn(*mut ngspice::NgVecvaluesall, c_int, c_int, *mut c_void) -> c_int,
     >,
-    Option<unsafe extern "C" fn(*const ngspice::NgVecinfoall, c_int, *const c_void) -> c_int>,
-    Option<unsafe extern "C" fn(bool, c_int, *const c_void) -> c_int>,
-    *const c_void,
+    Option<unsafe extern "C" fn(*mut ngspice::NgVecinfoall, c_int, *mut c_void) -> c_int>,
+    Option<unsafe extern "C" fn(bool, c_int, *mut c_void) -> c_int>,
+    *mut c_void,
 ) -> c_int;
 type NgSpiceCommand = extern "C" fn(*const c_char) -> c_int;
 type NgSpiceVecInfo = extern "C" fn(*const c_char) -> *const NgVectorinfo;
@@ -162,13 +215,13 @@ where
                     Some(cbw_send_data::<T>),
                     Some(cbw_send_init_data::<T>),
                     Some(cbw_bgthread_running::<T>),
-                    &*m as *const _ as *const c_void,
+                    &*m as *const _ as *mut c_void,
                 );
                 self.manager = Some(m); // drop the previous manager, AFTER the new manager is registered
                 ret1
             }
             None => {
-                let ret1 = (self.api.init)(None, None, None, None, None, None, std::ptr::null());
+                let ret1 = (self.api.init)(None, None, None, None, None, None, core::ptr::null_mut());
                 self.manager = None; // drop the previous manager, AFTER the new manager is registered
                 ret1
             }
