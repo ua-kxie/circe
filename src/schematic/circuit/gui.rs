@@ -105,7 +105,7 @@ impl Default for CircuitSchematicPage {
         let mut lib;
         #[cfg(target_family = "windows")]
         {
-            lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("paprika/ngspice.dll")).unwrap();
+            lib = PkSpice::<SpManager>::new(std::ffi::OsStr::new("ngspice.dll")).unwrap();
         }
         #[cfg(target_os = "macos")]
         {

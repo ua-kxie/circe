@@ -7,9 +7,9 @@ Simple op-amp with generic devices
 ![Screenshot 2023-08-14 205401](https://github.com/ua-kxie/circe/assets/56177821/24db33c0-69f5-4187-8e41-38a495a6aecc)
 
 ### Setup:
-`cargo run`
+Clone the repo, followed by `cargo run`.
 
-The binary executable is not working at the moment due to problems finding the sharedspice library.
+To run the binary executable on windows, place a copy of `ngspice.dll` in the same directory as `circe.exe`.
 
 ### Controls: 
 * left click wires or device to select  
