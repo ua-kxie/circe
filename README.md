@@ -3,13 +3,19 @@ Circe: Prototyping for 2D CAD drawn with Iced canvas
 Soliciting experienced help and/or advice with architecture and gui
 
 ### Preview:
-Simple op-amp with generic devices
-![Screenshot 2023-08-14 205401](https://github.com/ua-kxie/circe/assets/56177821/24db33c0-69f5-4187-8e41-38a495a6aecc)
+Dcop simulation\
+![dcop](https://github.com/ua-kxie/circe/assets/56177821/299fc8ec-ba04-4618-b9f5-94dac25142cb)
+
+Ac simulation\
+![ac](https://github.com/ua-kxie/circe/assets/56177821/2488e5b8-d226-4820-91ae-603ab274efda)
+
+Simple op-amp with generic devices\
+![simple opa](https://github.com/ua-kxie/circe/assets/56177821/c196f999-93ed-4a55-af42-5cdd73d2c706)
 
 ### Setup:
-`cargo run`
+Clone the repo, followed by `cargo run`.
 
-The binary executable is not working at the moment due to problems finding the sharedspice library.
+To run the binary executable on windows, place a copy of `ngspice.dll` in the directory root (next to `circe.exe`).
 
 ### Controls: 
 * left click wires or device to select  
