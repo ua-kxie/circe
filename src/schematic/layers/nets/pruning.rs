@@ -60,7 +60,12 @@ where
     I: IntoIterator<Item = SSPoint>,
 {
     for this in coords {
-        let neighbor_vertices: Box<[NetVertex]> = nets.graph.neighbors(NetVertex(this)).collect();
+        let this_vertex = NetVertex(this);
+        let neighbor_vertices: Box<[NetVertex]> = nets
+            .graph
+            .neighbors(this_vertex)
+            .filter(|&neighbor| neighbor != this_vertex) // ignore connections to self
+            .collect();
 
         match neighbor_vertices.len() {
             0 => {
@@ -138,22 +143,15 @@ fn unify_labels(
 /// this function is called whenever schematic is changed. Ensures all connected nets have the same net name, overlapping segments are merged, etc.
 /// extra_vertices are coordinates where net segments should be bisected (device ports)
 pub fn prune(nets: &mut Nets, port_coords: &[SSPoint]) {
-    // extra vertices to add, e.g. ports
     let net_vertices: Box<[SSPoint]> = nets.graph.nodes().map(|nv| nv.0).collect();
 
     // bisect/merge edges
     bisect_merge(nets, net_vertices.iter().chain(port_coords.iter()).copied());
 
     // remove non-corner vertices, leave vertices on ports alone
-    cull_redundant_vertices(
-        nets,
-        net_vertices
-            .iter()
-            .copied()
-            .filter(|nv| !port_coords.iter().any(|pc| pc == nv)),
-    );
+    cull_redundant_vertices(nets, net_vertices.iter().copied());
 
-    // add vertices at port coords if not already in graph - insufficient, need to add edge to itself, but maybe breaking?
+    // add vertices at port coords if not already in graph - need to add edge to itself so netlisting connects overlapping ports
     for p in port_coords {
         nets.graph
             .add_edge(NetVertex(*p), NetVertex(*p), NetEdge::new_from_pts(*p, *p));

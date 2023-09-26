@@ -1,6 +1,4 @@
 todo:
-bugs:
-net vertex not pruned after deleting device
 
 grab move keep connections:
  - every selected vertex (A) is kept with transformation
