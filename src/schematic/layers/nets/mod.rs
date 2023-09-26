@@ -12,7 +12,7 @@ use crate::schematic::atoms::{NetEdge, NetVertex};
 
 use crate::Drawable;
 
-use self::pathfinding::DijkstraSt;
+pub use self::pathfinding::DijkstraSt;
 
 mod pathfinding;
 use crate::schematic::layers::nets::pathfinding::path_to_goal;
@@ -91,7 +91,6 @@ impl super::SchematicLayerTrait<NetEdge> for NetsLayer {
         // }
         self.graph
             .all_edges()
-            .into_iter()
             .filter_map(|e| {
                 if e.2.interactable.bounds.intersects(vsb) {
                     Some(e.2.clone())
@@ -106,7 +105,6 @@ impl super::SchematicLayerTrait<NetEdge> for NetsLayer {
     fn contained(&self, vsb: &VSBox) -> Box<[NetEdge]> {
         self.graph
             .all_edges()
-            .into_iter()
             .filter_map(|e| {
                 if vsb.contains_box(&e.2.interactable.bounds) {
                     Some(e.2.clone())
@@ -134,7 +132,6 @@ impl super::SchematicLayerTrait<NetEdge> for NetsLayer {
 pub struct Nets {
     pub graph: Box<GraphMap<NetVertex, NetEdge, petgraph::Undirected>>,
     label_manager: LabelManager,
-    dijkstrast: DijkstraSt,
 }
 
 impl Default for Nets {
@@ -142,21 +139,16 @@ impl Default for Nets {
         Nets {
             graph: Box::new(GraphMap::new()),
             label_manager: LabelManager::default(),
-            dijkstrast: DijkstraSt::new(SSPoint::origin()),
         }
     }
 }
 
 impl Nets {
-    pub fn new(ssp: SSPoint) -> Self {
+    pub fn new() -> Self {
         Nets {
             graph: Box::new(GraphMap::new()),
             label_manager: LabelManager::default(),
-            dijkstrast: DijkstraSt::new(ssp),
         }
-    }
-    pub fn dijkstra_start(&self) -> SSPoint {
-        self.dijkstrast.start()
     }
     /// returns the first NetEdge after skip which intersects with curpos_ssp in a BaseElement, if any.
     /// count is updated to track the number of elements skipped over
@@ -260,14 +252,19 @@ impl Nets {
         }
     }
     /// add net segments to connect src and dst
-    pub fn route(&mut self, edge_cost: &impl Fn(SSPoint, SSPoint, SSPoint) -> f32, dst: SSPoint) {
+    pub fn route(
+        &mut self,
+        dijkst: &mut DijkstraSt,
+        edge_cost: &impl Fn(SSPoint, SSPoint, SSPoint) -> f32,
+        dst: SSPoint,
+    ) {
         // run pathfinding
         let goals = Box::from([dst]);
-        wiring_pathfinder(&goals, &mut self.dijkstrast, edge_cost);
-        let path = path_to_goal(&self.dijkstrast, &goals);
+        wiring_pathfinder(&goals, dijkst, edge_cost);
+        let path = path_to_goal(&dijkst, &goals);
 
         // use fallback incase route failed
-        let path = path.unwrap_or_else(|| Self::basic_route(self.dijkstrast.start(), dst));
+        let path = path.unwrap_or_else(|| Self::basic_route(dijkst.start(), dst));
         if path.is_empty() {
             // if path is empty - src and dst same point
             return;

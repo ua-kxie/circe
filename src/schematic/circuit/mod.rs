@@ -29,6 +29,7 @@ mod atoms;
 pub use atoms::CircuitAtom;
 
 use super::layers::DevicesLayer;
+use super::layers::DijkstraSt;
 use super::layers::NetLabelsLayer;
 use super::layers::NetsLayer;
 use super::layers::SchematicLayerEnum;
@@ -52,7 +53,7 @@ impl schematic::ContentMsg for Msg {
 pub enum CircuitSt {
     #[default]
     Idle,
-    Wiring(Option<Box<Nets>>),
+    Wiring(Option<(Box<Nets>, DijkstraSt)>),
 }
 
 /// struct holding schematic state (nets, devices, and their locations)
@@ -115,21 +116,21 @@ impl Circuit {
     }
     fn nets_layer(&self) -> &Nets {
         if let SchematicLayerEnum::NetsLayer(nets) = &self.layers[0] {
-            &*nets
+            nets
         } else {
             panic!("nets layer should be in index 0");
         }
     }
     fn devices_layer(&self) -> &Devices {
         if let SchematicLayerEnum::DevicesLayer(devices) = &self.layers[1] {
-            &*devices
+            devices
         } else {
             panic!("devices layer should be in index 1");
         }
     }
     fn labels_layer(&self) -> &NetLabels {
         if let SchematicLayerEnum::NetLabelsLayer(labels) = &self.layers[2] {
-            &*labels
+            labels
         } else {
             panic!("labels layer should be in index 2");
         }
@@ -142,9 +143,11 @@ impl Circuit {
         self.infobarstr = self.nets_layer().net_name_at(self.curpos_ssp);
         let mut ns = self.state.clone();
         match &self.state {
-            CircuitSt::Wiring(Some(nets_og)) => {
-                let mut nets = Nets::new(nets_og.dijkstra_start());
+            CircuitSt::Wiring(Some((_nets_og, dijkstrast))) => {
+                let mut nets = Nets::new();
+                let mut dijkstrast_new = dijkstrast.clone();
                 nets.route(
+                    &mut dijkstrast_new,
                     &|prev, this, next| {
                         // do not go over ports at any cost
                         // do not go over NetVertex at any cost
@@ -182,7 +185,7 @@ impl Circuit {
                     },
                     self.curpos_ssp,
                 );
-                ns = CircuitSt::Wiring(Some(Box::new(nets)));
+                ns = CircuitSt::Wiring(Some((Box::new(nets), dijkstrast_new)));
             }
             CircuitSt::Idle => {}
             _ => {}
@@ -209,7 +212,7 @@ impl Drawable for Circuit {
 
     fn draw_preview(&self, vct: VCTransform, vcscale: f32, frame: &mut Frame) {
         match &self.state {
-            CircuitSt::Wiring(Some(nets)) => {
+            CircuitSt::Wiring(Some((nets, _dijkst))) => {
                 nets.draw_preview(vct, vcscale, frame);
             }
             CircuitSt::Idle => {}
@@ -296,9 +299,9 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                     ) => {
                         let ssp = self.curpos_ssp();
                         let new_ws;
-                        if let Some(g) = opt_ws {
+                        if let Some((g, dijkst)) = opt_ws {
                             // subsequent click
-                            if ssp == g.dijkstra_start() {
+                            if ssp == dijkst.start() {
                                 new_ws = None;
                             } else if self.electrically_occupies_ssp(ssp) {
                                 let extra_vertices = self.devices_layer().ports_ssp();
@@ -307,12 +310,12 @@ impl schematic::Content<CircuitAtom, Msg> for Circuit {
                             } else {
                                 let extra_vertices = self.devices_layer().ports_ssp();
                                 self.nets_layer_mut().merge(g.as_ref(), &extra_vertices);
-                                new_ws = Some(Box::new(Nets::new(ssp)));
+                                new_ws = Some((Box::new(Nets::new()), DijkstraSt::new(ssp)));
                             }
                             ret_msg_tmp = SchematicMsg::ClearPassive;
                         } else {
                             // first click
-                            new_ws = Some(Box::new(Nets::new(ssp)));
+                            new_ws = Some((Box::new(Nets::new()), DijkstraSt::new(ssp)));
                         }
                         state = CircuitSt::Wiring(new_ws);
                     }

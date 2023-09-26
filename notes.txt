@@ -1,8 +1,11 @@
 todo:
+bugs:
+net vertex not pruned after deleting device
+
 grab move keep connections:
- - keep all non-selected vertices, except 1 in contact with selected if non-essential
- - keep all selected vertices after transform
- - every selected vertex (A) that is connected to a non-selected vertex (B) is a connection to be routed
+ - every selected vertex (A) is kept with transformation
+ - every non selected vertex (C) is kept without transformation
+ - for every selected vertex, down every connection, find first connected, non-selected node with more than 2 connections (B)
  - delete edges between A-B
  - run pathfinding from A to Net(B) (multiple goals per start)
 

@@ -81,6 +81,8 @@ pub enum SchematicSt {
     Idle,
     /// left click-drag area selection
     AreaSelect(VSBox),
+    /// moving, but keep wiring connections
+    Grabbing(Option<(VSPoint, VSPoint, SSTransform)>),
     /// selected elements preview follow mouse cursor - move, new device,
     Moving(Option<(VSPoint, VSPoint, SSTransform)>),
     /// identical to `Moving` state but signals content to make copy of elements instead of move
@@ -184,6 +186,7 @@ where
             SchematicSt::AreaSelect(_) => mouse::Interaction::Crosshair,
             SchematicSt::Moving(_) => mouse::Interaction::Grabbing,
             SchematicSt::Copying(_) => mouse::Interaction::Grabbing,
+            SchematicSt::Grabbing(_) => mouse::Interaction::Grabbing,
         }
     }
 

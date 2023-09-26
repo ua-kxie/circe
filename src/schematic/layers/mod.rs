@@ -13,6 +13,7 @@ use iced::widget::canvas::Frame;
 
 pub use self::devices::DevicesLayer;
 pub use self::net_labels::NetLabelsLayer;
+pub use self::nets::DijkstraSt;
 pub use self::nets::NetsLayer;
 
 use super::atoms::SchematicAtom;
