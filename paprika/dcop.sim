@@ -1,0 +1,4 @@
+.control
+op
+*write dcop.raw
+.endc

@@ -1,0 +1,29 @@
+[package]
+name = "circe"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+iced = {version="0.10", features = ["canvas", "lazy"]}
+iced_lazy = "0.6.1"
+iced_aw = {version="0.6", features = ["tabs", "card", "modal"]}
+euclid = {version="0.22.9", features = ["serde"]}
+lyon = "1.0"
+petgraph = "0.6.3"
+flagset = "0.4.3"
+by_address = "1.1.0"
+lazy_static = "1.4.0"
+paprika = { path = "./paprika", features = ["serde"] }
+colored = "2.0"
+serde_json = "1.0.97"
+serde = {version="1.0.164", features = ["derive"]}
+send_wrapper = "0.6.0"
+num = "0.4.1"
+enum_dispatch = "0.3.12"
+
+[workspace]
+members = [
+    "paprika",
+]

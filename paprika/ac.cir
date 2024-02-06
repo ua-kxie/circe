@@ -1,0 +1,16 @@
+.title dual rc ladder
+* file name rcrcac.cir
+R1 int in 10k
+V1 in 0 dc 0 ac 1 PULSE (0 5 1u 1u 1u 1 1)
+R2 out int 1k
+C1 int 0 1u
+C2 out 0 100n
+
+*.control
+*ac dec 10 1 100k
+*write ac.raw
+*plot vdb(out)
+*plot ph(out)
+*.endc
+
+.end
