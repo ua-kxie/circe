@@ -1,4 +1,4 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{input::mouse::MouseMotion, prelude::*, sprite::MaterialMesh2dBundle};
 
 #[derive(Component)]
 struct MyCameraMarker;
@@ -27,10 +27,25 @@ fn setup(
     });
 }
 
+fn camera_transform(
+    mb: Res<Input<MouseButton>>,
+    mut mm: EventReader<MouseMotion>,
+    mut camera: Query<(&mut Transform, &MyCameraMarker)>
+) {
+    if mb.pressed(MouseButton::Middle) {
+        if let Ok(mut a) = camera.get_single_mut() {
+            for m in mm.read() {
+                a.0.translation += Vec3::new(-m.delta.x, m.delta.y, 0.0);
+            }
+        }
+    }
+}
+
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, (setup_camera, setup))
+        .add_systems(Update, camera_transform)
         .run();
 }
