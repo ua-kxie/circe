@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use bevy::{input::mouse::MouseMotion, prelude::*, sprite::MaterialMesh2dBundle};
 
 #[derive(Component)]
@@ -34,9 +36,12 @@ fn camera_transform(
 ) {
     if mb.pressed(MouseButton::Middle) {
         if let Ok(mut a) = camera.get_single_mut() {
+            let mut pan = Vec3::ZERO;
             for m in mm.read() {
-                a.0.translation += Vec3::new(-m.delta.x, m.delta.y, 0.0);
+                pan += Vec3::new(-m.delta.x, m.delta.y, 0.0);
             }
+            let t = a.0.scale.mul(pan);
+            a.0.translation += t;
         }
     }
 }
