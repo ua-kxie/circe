@@ -10,7 +10,7 @@ edition = "2021"
 opt-level = 3
 
 [dependencies]
-bevy = "0.12.1"
+bevy = { git = "https://github.com/ua-kxie/bevy.git" }
 
 [workspace]
 members = [
