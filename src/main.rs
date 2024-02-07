@@ -22,7 +22,7 @@ fn setup(
 ) {
     // Circle
     commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::new(50.).into()).into(),
+        mesh: meshes.add(shape::Circle::new(50.)).into(),
         material: materials.add(ColorMaterial::from(Color::PURPLE)),
         transform: Transform::from_translation(Vec3::new(-150., 0., 0.)),
         ..default()
@@ -30,7 +30,7 @@ fn setup(
 }
 
 fn camera_transform(
-    mb: Res<Input<MouseButton>>,
+    mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<MouseMotion>,
     mut camera: Query<(&mut Transform, &MyCameraMarker)>
 ) {
