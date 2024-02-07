@@ -1,9 +1,71 @@
 use std::ops::Mul;
-
+use bevy::window::PrimaryWindow;
 use bevy::{input::mouse::MouseWheel, prelude::*, sprite::MaterialMesh2dBundle};
+use euclid::{Box2D, Point2D};
+
+/// PhantomData tag used to denote the i16 space in which the schematic exists
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct WorldSpace;
 
 #[derive(Component)]
 struct MyCameraMarker;
+
+/// We will store the world position of the mouse cursor here.
+#[derive(Resource, Default)]
+struct CursorWorldCoords(Vec2);
+
+/// We will store the world position of the viewport bounding rect here.
+#[derive(Resource, Default)]
+struct VisibleWorldRect(Option<Box2D<f32, WorldSpace>>);
+
+fn cursor_to_world(
+    mut schematic_coords: ResMut<CursorWorldCoords>,
+    // query to get the window (so we can read the current cursor position)
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    // query to get camera transform
+    q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
+) {
+    if let Ok((camera, cam_transform)) = q_camera.get_single() {
+        if let Ok(window) = q_window.get_single() {
+            if let Some(coords) = window.cursor_position()
+            .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor)) {
+                schematic_coords.0 = coords;
+            }
+        }
+    }
+}
+
+fn window_to_world(
+    mut visible_coords: ResMut<VisibleWorldRect>,
+    // query to get the window (so we can read the current cursor position)
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    // query to get camera transform
+    q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
+) {
+    if let Ok((camera, cam_transform)) = q_camera.get_single() {
+        if let Ok(window) = q_window.get_single() {
+            // 0  1
+            // 2  3
+            let corners = [
+                Vec2::ZERO,
+                Vec2::new(window.width(), 0.),
+                Vec2::new(0., window.height()),
+                Vec2::new(window.width(), window.height()),
+            ];
+            let bb = corners.iter().filter_map(|p| camera.viewport_to_world_2d(cam_transform, *p).map(|v| Point2D::new(v.x, v.y)));
+            // .map(|p| camera.viewport_to_world_2d(cam_transform, p));
+        visible_coords.0 = Some(Box2D::from_points(bb));
+        return
+        }
+    }
+    visible_coords.0 = None  // if theres any problem, assume camera doesnt see anything
+}
+
+fn bounding_box(pts: Vec<euclid::Point2D<f32, WorldSpace>>) -> Box2D<f32, WorldSpace> {
+    Box2D::from_points(pts)
+}
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
