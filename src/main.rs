@@ -33,9 +33,9 @@ fn camera_transform(
     mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<CursorMoved>,
     mut mw: EventReader<MouseWheel>,
-    mut camera: Query<(&mut Transform, &MyCameraMarker)>
+    mut camera: Query<(&mut Transform, &MyCameraMarker)>,
 ) {
-    if let Ok(mut a) = camera.get_single_mut() {
+    if let Ok(mut cam) = camera.get_single_mut() {
         if mb.pressed(MouseButton::Middle) {
             let mut pan = Vec3::ZERO;
             for m in mm.read() {
@@ -43,15 +43,14 @@ fn camera_transform(
                     pan += Vec3::new(-d.x, d.y, 0.0);
                 }
             }
-            let t = a.0.scale.mul(pan);
-            a.0.translation += t;
+            let t = cam.0.scale.mul(pan);
+            cam.0.translation += t;
         }
         for mwe in mw.read() {
-            a.0.scale *= 1. - mwe.y / 10.
+            cam.0.scale *= 1. - mwe.y / 10.
         }
     }
 }
-
 
 fn main() {
     App::new()
