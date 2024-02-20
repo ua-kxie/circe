@@ -84,11 +84,13 @@ fn setup(
 ) {
     // Circle
     commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::new(50.)).into(),
+        mesh: meshes.add(bevy::math::primitives::Circle::new(50.)).into(),
         material: materials.add(ColorMaterial::from(Color::PURPLE)),
         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
         ..default()
     });
+    commands.init_resource::<CursorWorldCoords>();
+    commands.init_resource::<VisibleWorldRect>();
 }
 
 fn camera_transform(

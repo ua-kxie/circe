@@ -10,7 +10,7 @@ edition = "2021"
 opt-level = 3
 
 [dependencies]
-bevy = { git = "https://github.com/ua-kxie/bevy" }
+bevy = {version="0.13"}
 euclid = {version="0.22.9"}
 
 [workspace]
