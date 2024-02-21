@@ -76,9 +76,10 @@ fn window_to_world(
 }
 
 fn setup_camera(mut commands: Commands) {
+    let scale = 0.1;
     commands.spawn((
         Camera2dBundle {
-            transform: Transform::from_xyz(100.0, 200.0, 1.0),
+            transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 { x: scale, y: scale, z: scale }),
             projection: OrthographicProjection::default(),
             ..default()
         },
@@ -93,7 +94,7 @@ fn setup(
 ) {
     // Circle
     commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(bevy::math::primitives::Circle::new(50.)).into(),
+        mesh: meshes.add(bevy::math::primitives::Circle::new(1.)).into(),
         material: materials.add(ColorMaterial::from(Color::PURPLE)),
         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
         ..default()
@@ -101,9 +102,18 @@ fn setup(
     // Grid
     commands.spawn((
         MaterialMesh2dBundle {
-            mesh: meshes.add(bevy::math::primitives::Rectangle::new(50., 50.)).into(),
+            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
             material: materials.add(ColorMaterial::from(Color::RED)),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+            ..default()
+        },
+        Grid,
+    ));
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
+            material: materials.add(ColorMaterial::from(Color::RED)),
+            transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
             ..default()
         },
         Grid,
