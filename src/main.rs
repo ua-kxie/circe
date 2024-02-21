@@ -41,7 +41,7 @@ fn cursor_to_world(
 }
 
 fn window_to_world(
-    mut commands: Commands,
+    mut q_grid: Query<&mut Transform, With<Grid>>,
     mut visible_coords: ResMut<VisibleWorldRect>,
     // query to get the window (so we can read the current cursor position)
     q_window: Query<&Window, With<PrimaryWindow>>,
@@ -65,6 +65,10 @@ fn window_to_world(
             });
             let b = Box2D::from_points(bb);
             visible_coords.0 = Some(b);
+            if let Ok(mut grid) = q_grid.get_single_mut() {
+                grid.translation.x = b.center().x;
+                grid.translation.y = b.center().y;
+            }
             return;
         }
     }
