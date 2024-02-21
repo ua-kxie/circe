@@ -10,6 +10,9 @@ pub struct WorldSpace;
 #[derive(Component)]
 struct MyCameraMarker;
 
+#[derive(Component)]
+struct Grid;
+
 /// We will store the world position of the mouse cursor here.
 #[derive(Resource, Default)]
 struct CursorWorldCoords(Vec2);
@@ -38,6 +41,7 @@ fn cursor_to_world(
 }
 
 fn window_to_world(
+    mut commands: Commands,
     mut visible_coords: ResMut<VisibleWorldRect>,
     // query to get the window (so we can read the current cursor position)
     q_window: Query<&Window, With<PrimaryWindow>>,
@@ -59,8 +63,8 @@ fn window_to_world(
                     .viewport_to_world_2d(cam_transform, *p)
                     .map(|v| Point2D::new(v.x, v.y))
             });
-            // .map(|p| camera.viewport_to_world_2d(cam_transform, p));
-            visible_coords.0 = Some(Box2D::from_points(bb));
+            let b = Box2D::from_points(bb);
+            visible_coords.0 = Some(b);
             return;
         }
     }
@@ -70,7 +74,8 @@ fn window_to_world(
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera2dBundle {
-            transform: Transform::from_xyz(100.0, 200.0, 0.0),
+            transform: Transform::from_xyz(100.0, 200.0, 1.0),
+            projection: OrthographicProjection::default(),
             ..default()
         },
         MyCameraMarker,
@@ -89,6 +94,16 @@ fn setup(
         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
         ..default()
     });
+    // Grid
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes.add(bevy::math::primitives::Rectangle::new(50., 50.)).into(),
+            material: materials.add(ColorMaterial::from(Color::RED)),
+            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+            ..default()
+        },
+        Grid,
+    ));
     commands.init_resource::<CursorWorldCoords>();
     commands.init_resource::<VisibleWorldRect>();
 }
@@ -120,7 +135,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, (setup_camera, setup))
-        .add_systems(Update, camera_transform)
-        .add_systems(Update, window_to_world)
+        .add_systems(Update, (camera_transform, window_to_world))
         .run();
 }
