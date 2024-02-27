@@ -13,6 +13,9 @@ struct MyCameraMarker;
 #[derive(Component)]
 struct Grid;
 
+#[derive(Component)]
+struct Test;
+
 /// We will store the world position of the mouse cursor here.
 #[derive(Resource, Default)]
 struct CursorWorldCoords(Vec2);
@@ -41,7 +44,7 @@ fn cursor_to_world(
 }
 
 fn window_to_world(
-    mut q_grid: Query<&mut Transform, With<Grid>>,
+    mut q_grid: Query<&mut Transform, With<Test>>,
     mut visible_coords: ResMut<VisibleWorldRect>,
     // query to get the window (so we can read the current cursor position)
     q_window: Query<&Window, With<PrimaryWindow>>,
@@ -65,9 +68,9 @@ fn window_to_world(
             });
             let b = Box2D::from_points(bb);
             visible_coords.0 = Some(b);
-            if let Ok(mut grid) = q_grid.get_single_mut() {
-                grid.translation.x = b.center().x;
-                grid.translation.y = b.center().y;
+            if let Ok(mut test) = q_grid.get_single_mut() {
+                test.translation.x = b.center().x;
+                test.translation.y = b.center().y;
             }
             return;
         }
@@ -93,12 +96,16 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Circle
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(bevy::math::primitives::Circle::new(1.)).into(),
-        material: materials.add(ColorMaterial::from(Color::PURPLE)),
-        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        ..default()
-    });
+    commands.spawn(
+        (
+        MaterialMesh2dBundle {
+            mesh: meshes.add(bevy::math::primitives::Circle::new(1.)).into(),
+            material: materials.add(ColorMaterial::from(Color::PURPLE)),
+            transform: Transform::from_translation(Vec3::new(1., 0., 0.)),
+            ..default()
+        },
+        Test,
+    ));
     // Grid
     commands.spawn((
         MaterialMesh2dBundle {
