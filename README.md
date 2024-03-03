@@ -85,10 +85,9 @@ B - define device boundary
 Target application is EDA schematic capture
 
 #### Currently Working On:
-* improved wiring pathfinding (petgraph)
-* device/wire drag/grab keeping net connections
-* connect overlapping ports with wiring
-* net labels
+Looking into building this with a game engine instead, since useful systems should be supported already such as entity (device) instancing with unique properties.
+
+This is happening in a branch.
 
 ### Contribute:
 Consider using `cargo fmt` & `cargo fix`.
