@@ -1,21 +1,19 @@
 use bevy::{
-    math::{vec3, vec4},
-    pbr::{MaterialPipeline, MaterialPipelineKey},
+    math::vec3,
     prelude::*,
     reflect::TypePath,
     render::{
-        mesh::{MeshVertexAttribute, MeshVertexBufferLayout, PrimitiveTopology},
+        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
-            SpecializedMeshPipelineError, VertexFormat,
+            AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
         },
     },
 };
-use bevy::pbr::wireframe::WireframeMaterial;
+
 use bevy::sprite::{Material2d, Material2dKey, Material2dPlugin};
-use bevy::window::PrimaryWindow;
-use bevy::{input::mouse::MouseWheel, prelude::*, sprite::MaterialMesh2dBundle};
+
+use bevy::sprite::MaterialMesh2dBundle;
 
 pub struct WirePlugin;
 

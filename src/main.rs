@@ -1,27 +1,9 @@
-use bevy::pbr::wireframe::WireframeMaterial;
-use bevy::sprite::{Material2d, Material2dKey, Material2dPlugin};
 use bevy::window::PrimaryWindow;
 use bevy::{input::mouse::MouseWheel, prelude::*, sprite::MaterialMesh2dBundle};
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
 
 mod wire;
-use crate::wire::WirePlugin;
-
-use bevy::{
-    math::{vec3, vec4},
-    pbr::{MaterialPipeline, MaterialPipelineKey},
-    prelude::*,
-    reflect::TypePath,
-    render::{
-        mesh::{MeshVertexAttribute, MeshVertexBufferLayout, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
-        render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
-            SpecializedMeshPipelineError, VertexFormat,
-        },
-    },
-};
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
