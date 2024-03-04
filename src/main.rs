@@ -5,12 +5,22 @@ use bevy::{input::mouse::MouseWheel, prelude::*, sprite::MaterialMesh2dBundle};
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
 
+mod wire;
+use crate::wire::WirePlugin;
+
 use bevy::{
-    math::{vec3, vec4}, pbr::{MaterialPipeline, MaterialPipelineKey}, prelude::*, reflect::TypePath, render::{
-        mesh::{MeshVertexAttribute, MeshVertexBufferLayout, PrimitiveTopology}, render_asset::RenderAssetUsages, render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, VertexFormat
-        }
-    }
+    math::{vec3, vec4},
+    pbr::{MaterialPipeline, MaterialPipelineKey},
+    prelude::*,
+    reflect::TypePath,
+    render::{
+        mesh::{MeshVertexAttribute, MeshVertexBufferLayout, PrimitiveTopology},
+        render_asset::RenderAssetUsages,
+        render_resource::{
+            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
+            SpecializedMeshPipelineError, VertexFormat,
+        },
+    },
 };
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
@@ -92,7 +102,11 @@ fn setup_camera(mut commands: Commands) {
     let scale = 0.1;
     commands.spawn((
         Camera2dBundle {
-            transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 { x: scale, y: scale, z: scale }),
+            transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 {
+                x: scale,
+                y: scale,
+                z: scale,
+            }),
             // projection: OrthographicProjection::default(),
             ..default()
         },
@@ -104,11 +118,9 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut materials1: ResMut<Assets<CustomMaterial>>,
 ) {
     // Circle
-    commands.spawn(
-        (
+    commands.spawn((
         MaterialMesh2dBundle {
             mesh: meshes.add(bevy::math::primitives::Circle::new(1.)).into(),
             material: materials.add(ColorMaterial::from(Color::PURPLE)),
@@ -120,7 +132,9 @@ fn setup(
     // Grid
     commands.spawn((
         MaterialMesh2dBundle {
-            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
+            mesh: meshes
+                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+                .into(),
             material: materials.add(ColorMaterial::from(Color::RED)),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
@@ -129,26 +143,15 @@ fn setup(
     ));
     commands.spawn((
         MaterialMesh2dBundle {
-            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
+            mesh: meshes
+                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+                .into(),
             material: materials.add(ColorMaterial::from(Color::RED)),
             transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
             ..default()
         },
         Grid,
     ));
-    // wire?
-    let mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::RENDER_WORLD)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)]);
-    commands.spawn(MaterialMesh2dBundle {
-        // mesh: meshes.add(mesh),
-        mesh: meshes.add(mesh).into(),
-        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        // material: materials1.add(WireframeMaterial::default()),
-        material: materials1.add(CustomMaterial {
-            color: Color::WHITE,
-        }),
-        ..default()
-    });
 
     commands.init_resource::<CursorWorldCoords>();
     commands.init_resource::<VisibleWorldRect>();
@@ -179,31 +182,8 @@ fn camera_transform(
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, Material2dPlugin::<CustomMaterial>::default()))
+        .add_plugins((DefaultPlugins, wire::WirePlugin))
         .add_systems(Startup, (setup_camera, setup))
         .add_systems(Update, (camera_transform, window_to_world))
         .run();
-}
-
-// This is the struct that will be passed to your shader
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct CustomMaterial {
-    #[uniform(0)]
-    color: Color,
-}
-
-impl Material2d for CustomMaterial {
-    fn specialize(
-        descriptor: &mut RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayout,
-        _key: Material2dKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        // let vertex_layout = layout.get_layout(&[
-        //     Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-        //     ATTRIBUTE_BLEND_COLOR.at_shader_location(1),
-        // ])?;
-        // descriptor.vertex.buffers = vec![vertex_layout];
-        descriptor.primitive.polygon_mode = PolygonMode::Line;
-        Ok(())
-    }
 }
