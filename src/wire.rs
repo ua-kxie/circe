@@ -1,5 +1,4 @@
 use bevy::{
-    math::vec3,
     prelude::*,
     reflect::TypePath,
     render::{
@@ -10,6 +9,8 @@ use bevy::{
         },
     },
 };
+
+use bevy::math::vec3;
 
 use bevy::sprite::{Material2d, Material2dKey, Material2dPlugin};
 
@@ -58,10 +59,8 @@ fn wiring_test(
             vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
         );
     commands.spawn(MaterialMesh2dBundle {
-        // mesh: meshes.add(mesh),
         mesh: meshes.add(mesh).into(),
         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        // material: materials1.add(WireframeMaterial::default()),
         material: materials1.add(CustomMaterial {
             color: Color::WHITE,
         }),

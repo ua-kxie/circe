@@ -1,5 +1,6 @@
-use bevy::window::PrimaryWindow;
-use bevy::{input::mouse::MouseWheel, prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{
+    input::mouse::MouseWheel, prelude::*, sprite::MaterialMesh2dBundle, window::PrimaryWindow,
+};
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
 

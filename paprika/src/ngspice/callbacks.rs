@@ -1,5 +1,4 @@
-use crate::ngspice::*;
-use crate::PkSpiceManager;
+use crate::{ngspice::*, PkSpiceManager};
 use libc::*;
 
 pub unsafe extern "C" fn cbw_send_char<T>(

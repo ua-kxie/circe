@@ -1,6 +1,8 @@
-use std::collections::VecDeque;
-use std::ffi::OsStr;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::VecDeque,
+    ffi::OsStr,
+    sync::{Arc, RwLock},
+};
 
 use paprika::*;
 
