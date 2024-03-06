@@ -19,7 +19,9 @@ use std::ops::Mul;
 
 
 #[derive(Component)]
-struct ActiveWireSeg;
+struct ActiveWireSeg{
+    mesh: Handle<Mesh>
+}
 
 #[derive(Component)]
 struct MyCameraMarker;
@@ -70,20 +72,20 @@ fn wiring_test(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
 ) {
-    let mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::RENDER_WORLD)
+    let mesh = meshes.add(Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::RENDER_WORLD)
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
-        );
+        ));
     commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(mesh).into(),
+        mesh: mesh.clone().into(),
         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
         material: materials.add(CustomMaterial {
             color: Color::WHITE,
         }),
         ..default()
     }, 
-    ActiveWireSeg));
+    ActiveWireSeg{mesh}));
 }
 
 fn cursor_to_world(
@@ -92,7 +94,8 @@ fn cursor_to_world(
     q_window: Query<&Window, With<PrimaryWindow>>,
     // query to get camera transform
     q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
-    mut q_activewire: Query<&mut Mesh2dHandle, With<ActiveWireSeg>>,
+    mut q_activewire: Query<&mut ActiveWireSeg>,
+    mut assets: ResMut<Assets<Mesh>>
 ) {
     if let Ok((camera, cam_transform)) = q_camera.get_single() {
         if let Ok(window) = q_window.get_single() {
@@ -101,7 +104,15 @@ fn cursor_to_world(
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
                 schematic_coords.0 = coords;
-                // let aw = q_activewire.get_single_mut().unwrap();
+                let aw = q_activewire.get_single_mut().unwrap();
+                println!("bla1");
+                if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
+                    println!("bla");
+                    mesh.insert_attribute(
+                        Mesh::ATTRIBUTE_POSITION,
+                        vec![vec3(coords.x, coords.y, 0.0), vec3(0.0, 0.0, 0.0)],
+                    );
+                }
             }
         }
     }
@@ -161,9 +172,7 @@ fn setup(
     // Grid
     commands.spawn((
         MaterialMesh2dBundle {
-            mesh: meshes
-                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-                .into(),
+            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
             material: materials.add(ColorMaterial::from(Color::RED)),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
