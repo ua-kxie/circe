@@ -1,4 +1,5 @@
 use bevy::{
+    input::mouse::MouseWheel,
     math::vec3,
     prelude::*,
     reflect::TypePath,
@@ -9,15 +10,13 @@ use bevy::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
         },
     },
-    sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
-};
-use bevy::{
-    input::mouse::MouseWheel, window::PrimaryWindow,
+    sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle},
+    window::PrimaryWindow,
 };
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
-mod tools;
 mod state;
+mod tools;
 
 ///
 struct Schematic {
@@ -29,8 +28,8 @@ struct Schematic {
 ///
 
 #[derive(Component)]
-struct ActiveWireSeg{
-    mesh: Handle<Mesh>
+struct ActiveWireSeg {
+    mesh: Handle<Mesh>,
 }
 
 #[derive(Component)]
@@ -47,7 +46,6 @@ pub struct WorldSpace;
 /// minimum rectangle containing the visible area
 #[derive(Resource, Default)]
 struct VisibleWorldRect(Option<Box2D<f32, WorldSpace>>);
-
 
 pub struct SchematicPlugin;
 
@@ -82,20 +80,27 @@ fn wiring_test(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
 ) {
-    let mesh = meshes.add(Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD )
+    let mesh = meshes.add(
+        Mesh::new(
+            PrimitiveTopology::LineList,
+            RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+        )
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
-        ));
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: mesh.clone().into(),
-        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        material: materials.add(CustomMaterial {
-            color: Color::WHITE,
-        }),
-        ..default()
-    }, 
-    ActiveWireSeg{mesh}));
+        ),
+    );
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: mesh.clone().into(),
+            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+            material: materials.add(CustomMaterial {
+                color: Color::WHITE,
+            }),
+            ..default()
+        },
+        ActiveWireSeg { mesh },
+    ));
 }
 
 fn cursor_to_world(
@@ -105,7 +110,7 @@ fn cursor_to_world(
     // query to get camera transform
     q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
     mut q_activewire: Query<&mut ActiveWireSeg>,
-    mut assets: ResMut<Assets<Mesh>>
+    mut assets: ResMut<Assets<Mesh>>,
 ) {
     if let Ok((camera, cam_transform)) = q_camera.get_single() {
         if let Ok(window) = q_window.get_single() {
@@ -178,24 +183,22 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Grid
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-            ..default()
-        },
-    ));
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes
-                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-                .into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
-            ..default()
-        },
-    ));
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes
+            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+            .into(),
+        material: materials.add(ColorMaterial::from(Color::RED)),
+        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+        ..default()
+    },));
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes
+            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+            .into(),
+        material: materials.add(ColorMaterial::from(Color::RED)),
+        transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
+        ..default()
+    },));
 
     commands.init_resource::<CursorWorldCoords>();
     commands.init_resource::<VisibleWorldRect>();

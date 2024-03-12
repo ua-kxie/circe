@@ -1,6 +1,5 @@
 //! types and constants facillitating geometry and transforms
 
-use euclid::Point2D;
 use serde::{Deserialize, Serialize};
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists

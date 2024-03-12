@@ -1,23 +1,7 @@
 // different tools the schematic may have active
 
-use bevy::{
-    math::vec3,
-    prelude::*,
-    reflect::TypePath,
-    render::{
-        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
-        render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
-        },
-    },
-    sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
-};
-use bevy::{
-    input::mouse::MouseWheel, window::PrimaryWindow,
-};
-use petgraph::graphmap::GraphMap;
 use crate::types::SSPoint;
+use petgraph::graphmap::GraphMap;
 
 pub struct State {
     nets: Nets,
@@ -27,7 +11,7 @@ pub struct State {
     ports: Ports,
 }
 
-struct Nets{
+struct Nets {
     graph: Box<GraphMap<SSPoint, (), petgraph::Undirected>>,
 }
 
