@@ -17,10 +17,12 @@ use euclid::{Box2D, Point2D};
 use std::ops::Mul;
 mod state;
 mod tools;
+mod net_vertex;
 
 ///
+#[derive(Resource, Default)]
 struct Schematic {
-    toolstack: Vec<tools::Tool>,
+    active_tool: tools::ActiveTool,
 
     state: state::State,
 }
@@ -52,8 +54,8 @@ pub struct SchematicPlugin;
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
-        app.add_systems(Startup, (wiring_test, setup, setup_camera));
-        app.add_systems(Update, (camera_transform, cursor_to_world));
+        app.add_systems(Startup, (setup, setup1, setup_camera, cursor_to_world));
+        app.add_systems(Update, (main, camera_transform));
     }
 }
 
@@ -75,32 +77,78 @@ impl Material2d for CustomMaterial {
     }
 }
 
-fn wiring_test(
+fn setup(
     mut commands: Commands,
+) {
+    commands.init_resource::<Schematic>();
+}
+
+use tools::ActiveTool;
+
+fn main(
+    keys: Res<ButtonInput<KeyCode>>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    mut schematic: ResMut<Schematic>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
+    mut commands: Commands,
+    mut schematic_coords: ResMut<CursorWorldCoords>,
 ) {
-    let mesh = meshes.add(
-        Mesh::new(
-            PrimitiveTopology::LineList,
-            RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-        )
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_POSITION,
-            vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
-        ),
-    );
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: mesh.clone().into(),
-            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-            material: materials.add(CustomMaterial {
-                color: Color::WHITE,
-            }),
-            ..default()
-        },
-        ActiveWireSeg { mesh },
-    ));
+    let mut new_tool: Option<ActiveTool> = None;
+    match &mut schematic.active_tool {
+        tools::ActiveTool::Idle => {
+            if keys.just_released(KeyCode::KeyW) {
+                new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring{mesh:None})))
+            }
+        }
+        tools::ActiveTool::Wiring(wiring) => {
+            let coords = schematic_coords.get_single();
+            if buttons.just_released(MouseButton::Left) {
+                match &wiring.mesh {
+                    None => {
+                        let mesh = meshes.add(
+                            Mesh::new(
+                                PrimitiveTopology::LineList,
+                                RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+                            )
+                            .with_inserted_attribute(
+                                Mesh::ATTRIBUTE_POSITION,
+                                vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
+                            ),
+                        );
+                        commands.spawn((
+                            MaterialMesh2dBundle {
+                                mesh: mesh.clone().into(),
+                                transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+                                material: materials.add(CustomMaterial {
+                                    color: Color::WHITE,
+                                }),
+                                visibility: Visibility::Hidden,
+                                ..default()
+                            },
+                        ));
+                        wiring.mesh = Some(mesh);
+                    },
+                    Some(mesh) => {
+                        let wire = meshes.get_mut(mesh).unwrap();
+                        wire.insert_attribute(
+                            Mesh::ATTRIBUTE_POSITION,
+                            vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
+                        )
+                    },
+                }
+            }
+        }
+        _ => {
+
+        }
+    }
+    if keys.just_released(KeyCode::Escape) {
+        new_tool = Some(ActiveTool::Idle)
+    }
+    if let Some(tool) = new_tool {
+        schematic.active_tool = tool;
+    }
 }
 
 fn cursor_to_world(
@@ -109,8 +157,8 @@ fn cursor_to_world(
     q_window: Query<&Window, With<PrimaryWindow>>,
     // query to get camera transform
     q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
-    mut q_activewire: Query<&mut ActiveWireSeg>,
-    mut assets: ResMut<Assets<Mesh>>,
+    // mut q_activewire: Query<&mut ActiveWireSeg>,
+    // mut assets: ResMut<Assets<Mesh>>,
 ) {
     if let Ok((camera, cam_transform)) = q_camera.get_single() {
         if let Ok(window) = q_window.get_single() {
@@ -119,13 +167,13 @@ fn cursor_to_world(
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
                 schematic_coords.0 = coords;
-                let aw = q_activewire.get_single_mut().unwrap();
-                if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
-                    mesh.insert_attribute(
-                        Mesh::ATTRIBUTE_POSITION,
-                        vec![vec3(coords.x, coords.y, 0.0), vec3(0.0, 0.0, 0.0)],
-                    );
-                }
+                // let aw = q_activewire.get_single_mut().unwrap();
+                // if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
+                //     mesh.insert_attribute(
+                //         Mesh::ATTRIBUTE_POSITION,
+                //         vec![vec3(coords.x, coords.y, 0.0), vec3(0.0, 0.0, 0.0)],
+                //     );
+                // }
             }
         }
     }
@@ -177,7 +225,7 @@ fn setup_camera(mut commands: Commands) {
     ));
 }
 
-fn setup(
+fn setup1(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,

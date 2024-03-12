@@ -2,12 +2,16 @@
 
 use bevy::prelude::*;
 
-pub enum Tool {
-    Wiring(Wiring),
+#[derive(Default)]
+pub enum ActiveTool {
+    #[default]
+    Idle,
+    Wiring(Box<Wiring>),
     Label,   // wire/net labeling
     Comment, // plain text comment with basic formatting options
 }
 
-struct Wiring {
-    mesh: Option<Handle<Mesh>>,
+#[derive(Default)]
+pub struct Wiring {
+    pub mesh: Option<Handle<Mesh>>,
 }
