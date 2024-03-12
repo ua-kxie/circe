@@ -72,7 +72,7 @@ fn wiring_test(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
 ) {
-    let mesh = meshes.add(Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::RENDER_WORLD)
+    let mesh = meshes.add(Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD )
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
@@ -105,9 +105,7 @@ fn cursor_to_world(
             {
                 schematic_coords.0 = coords;
                 let aw = q_activewire.get_single_mut().unwrap();
-                println!("bla1");
                 if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
-                    println!("bla");
                     mesh.insert_attribute(
                         Mesh::ATTRIBUTE_POSITION,
                         vec![vec3(coords.x, coords.y, 0.0), vec3(0.0, 0.0, 0.0)],
