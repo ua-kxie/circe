@@ -16,7 +16,17 @@ use bevy::{
 };
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
+mod tools;
+mod state;
 
+///
+struct Schematic {
+    toolstack: Vec<tools::Tool>,
+
+    state: state::State,
+}
+
+///
 
 #[derive(Component)]
 struct ActiveWireSeg{
