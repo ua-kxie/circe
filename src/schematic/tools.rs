@@ -15,5 +15,5 @@ pub enum ActiveTool {
 
 #[derive(Default)]
 pub struct Wiring {
-    pub mesh: Option<(SSPoint, Handle<Mesh>)>,
+    pub mesh: Option<(SSPoint, Handle<Mesh>, Entity)>,
 }

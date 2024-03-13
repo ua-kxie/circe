@@ -28,6 +28,9 @@ struct Schematic {
 #[derive(Component)]
 struct MyCameraMarker;
 
+#[derive(Component)]
+struct ActiveWireSeg;
+
 /// cursor position
 #[derive(Resource, Default)]
 struct CursorWorldCoords(SSPoint);
@@ -68,9 +71,31 @@ impl Material2d for CustomMaterial {
     }
 }
 
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
+            material: materials.add(ColorMaterial::from(Color::RED)),
+            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+            ..default()
+        },
+    ));
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes
+                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::RED)),
+            transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
+            ..default()
+        },
+    ));
+
     commands.init_resource::<Schematic>();
-    
     commands.init_resource::<CursorWorldCoords>();
     commands.init_resource::<VisibleWorldRect>();
 }
@@ -107,19 +132,20 @@ fn main(
                             )
                             .with_inserted_attribute(
                                 Mesh::ATTRIBUTE_POSITION,
-                                vec![Vec3::new(1., 1., 0.), Vec3::new(0., 0., 0.)],
-                                // vec![Vec3::from(Point::from(coords.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
+                                // vec![Vec3::new(1., 1., 0.), Vec3::new(0., 0., 0.)],
+                                vec![Vec3::from(Point::from(coords.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
                             ),
                         );
-                        commands.spawn((MaterialMesh2dBundle {
+                        let ent = commands.spawn((MaterialMesh2dBundle {
                             mesh: mesh.clone().into(),
                             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
                             material: materials.add(CustomMaterial {
                                 color: Color::WHITE,
                             }),
                             ..default()
-                        },));
-                        wiring.mesh = Some((coords, mesh));
+                        },)
+                        ).id();
+                        wiring.mesh = Some((coords, mesh, ent));
                     }
                 }
                 Some(mesh) => {
@@ -130,7 +156,10 @@ fn main(
                             Vec3::from(Point::from(mesh.0.cast().cast_unit())),
                             Point::from(coords.cast().cast_unit()).into(),
                         ],
-                    )
+                    );
+                    if keys.just_released(KeyCode::Escape) {
+                        commands.entity(mesh.2).despawn();
+                    }
                 }
             }
         }
@@ -159,7 +188,7 @@ fn cursor_to_world(
                 .cursor_position()
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
-                schematic_coords.0 = CSPoint::new(coords.x, coords.y).cast().cast_unit();
+                schematic_coords.0 = CSPoint::new(coords.x, coords.y).round().cast().cast_unit();
                 // let aw = q_activewire.get_single_mut().unwrap();
                 // if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
                 //     mesh.insert_attribute(
