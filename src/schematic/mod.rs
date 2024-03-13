@@ -22,15 +22,7 @@ mod tools;
 #[derive(Resource, Default)]
 struct Schematic {
     active_tool: tools::ActiveTool,
-
     state: state::State,
-}
-
-///
-
-#[derive(Component)]
-struct ActiveWireSeg {
-    mesh: Handle<Mesh>,
 }
 
 #[derive(Component)]
@@ -53,7 +45,7 @@ pub struct SchematicPlugin;
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
-        app.add_systems(Startup, (setup, setup1, setup_camera));
+        app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(Update, (main, camera_transform, cursor_to_world));
     }
 }
@@ -78,6 +70,9 @@ impl Material2d for CustomMaterial {
 
 fn setup(mut commands: Commands) {
     commands.init_resource::<Schematic>();
+    
+    commands.init_resource::<CursorWorldCoords>();
+    commands.init_resource::<VisibleWorldRect>();
 }
 
 use tools::ActiveTool;
@@ -221,34 +216,6 @@ fn setup_camera(mut commands: Commands) {
         },
         MyCameraMarker,
     ));
-}
-
-fn setup1(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    _materials1: ResMut<Assets<CustomMaterial>>,
-) {
-    // Grid
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes
-            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-            .into(),
-        material: materials.add(ColorMaterial::from(Color::RED)),
-        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        ..default()
-    },));
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes
-            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-            .into(),
-        material: materials.add(ColorMaterial::from(Color::RED)),
-        transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
-        ..default()
-    },));
-
-    commands.init_resource::<CursorWorldCoords>();
-    commands.init_resource::<VisibleWorldRect>();
 }
 
 fn camera_transform(
