@@ -1,6 +1,5 @@
 use bevy::{
     input::mouse::MouseWheel,
-    math::vec3,
     prelude::*,
     reflect::TypePath,
     render::{
@@ -15,9 +14,9 @@ use bevy::{
 };
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
+mod net_vertex;
 mod state;
 mod tools;
-mod net_vertex;
 
 ///
 #[derive(Resource, Default)]
@@ -77,9 +76,7 @@ impl Material2d for CustomMaterial {
     }
 }
 
-fn setup(
-    mut commands: Commands,
-) {
+fn setup(mut commands: Commands) {
     commands.init_resource::<Schematic>();
 }
 
@@ -100,7 +97,7 @@ fn main(
     match &mut schematic.active_tool {
         tools::ActiveTool::Idle => {
             if keys.just_released(KeyCode::KeyW) {
-                new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring{mesh:None})))
+                new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })))
             }
         }
         tools::ActiveTool::Wiring(wiring) => {
@@ -119,31 +116,30 @@ fn main(
                                 // vec![Vec3::from(Point::from(coords.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
                             ),
                         );
-                        commands.spawn((
-                            MaterialMesh2dBundle {
-                                mesh: mesh.clone().into(),
-                                transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                                material: materials.add(CustomMaterial {
-                                    color: Color::WHITE,
-                                }),
-                                ..default()
-                            },
-                        ));
-                        wiring.mesh = Some((coords, mesh)); 
+                        commands.spawn((MaterialMesh2dBundle {
+                            mesh: mesh.clone().into(),
+                            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+                            material: materials.add(CustomMaterial {
+                                color: Color::WHITE,
+                            }),
+                            ..default()
+                        },));
+                        wiring.mesh = Some((coords, mesh));
                     }
-                },
+                }
                 Some(mesh) => {
                     let wire = meshes.get_mut(mesh.1.clone()).unwrap();
                     wire.insert_attribute(
                         Mesh::ATTRIBUTE_POSITION,
-                        vec![Vec3::from(Point::from(mesh.0.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
+                        vec![
+                            Vec3::from(Point::from(mesh.0.cast().cast_unit())),
+                            Point::from(coords.cast().cast_unit()).into(),
+                        ],
                     )
-                },
+                }
             }
-            } 
-        _ => {
-
         }
+        _ => {}
     }
     if keys.just_released(KeyCode::Escape) {
         new_tool = Some(ActiveTool::Idle)
@@ -231,7 +227,7 @@ fn setup1(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut materials1: ResMut<Assets<CustomMaterial>>,
+    _materials1: ResMut<Assets<CustomMaterial>>,
 ) {
     // Grid
     commands.spawn((MaterialMesh2dBundle {
