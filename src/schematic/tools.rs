@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+use crate::types::SSPoint;
+
 #[derive(Default)]
 pub enum ActiveTool {
     #[default]
@@ -13,5 +15,5 @@ pub enum ActiveTool {
 
 #[derive(Default)]
 pub struct Wiring {
-    pub mesh: Option<Handle<Mesh>>,
+    pub mesh: Option<(SSPoint, Handle<Mesh>)>,
 }

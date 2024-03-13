@@ -39,7 +39,7 @@ struct MyCameraMarker;
 
 /// cursor position
 #[derive(Resource, Default)]
-struct CursorWorldCoords(Vec2);
+struct CursorWorldCoords(SSPoint);
 
 /// PhantomData tag for schematic space
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -54,8 +54,8 @@ pub struct SchematicPlugin;
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
-        app.add_systems(Startup, (setup, setup1, setup_camera, cursor_to_world));
-        app.add_systems(Update, (main, camera_transform));
+        app.add_systems(Startup, (setup, setup1, setup_camera));
+        app.add_systems(Update, (main, camera_transform, cursor_to_world));
     }
 }
 
@@ -85,6 +85,8 @@ fn setup(
 
 use tools::ActiveTool;
 
+use crate::types::{CSPoint, Point, SSPoint};
+
 fn main(
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
@@ -92,7 +94,7 @@ fn main(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
     mut commands: Commands,
-    mut schematic_coords: ResMut<CursorWorldCoords>,
+    schematic_coords: ResMut<CursorWorldCoords>,
 ) {
     let mut new_tool: Option<ActiveTool> = None;
     match &mut schematic.active_tool {
@@ -102,10 +104,10 @@ fn main(
             }
         }
         tools::ActiveTool::Wiring(wiring) => {
-            let coords = schematic_coords.get_single();
-            if buttons.just_released(MouseButton::Left) {
-                match &wiring.mesh {
-                    None => {
+            let coords = schematic_coords.0;
+            match &wiring.mesh {
+                None => {
+                    if buttons.just_released(MouseButton::Left) {
                         let mesh = meshes.add(
                             Mesh::new(
                                 PrimitiveTopology::LineList,
@@ -113,7 +115,8 @@ fn main(
                             )
                             .with_inserted_attribute(
                                 Mesh::ATTRIBUTE_POSITION,
-                                vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
+                                vec![Vec3::new(1., 1., 0.), Vec3::new(0., 0., 0.)],
+                                // vec![Vec3::from(Point::from(coords.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
                             ),
                         );
                         commands.spawn((
@@ -123,22 +126,21 @@ fn main(
                                 material: materials.add(CustomMaterial {
                                     color: Color::WHITE,
                                 }),
-                                visibility: Visibility::Hidden,
                                 ..default()
                             },
                         ));
-                        wiring.mesh = Some(mesh);
-                    },
-                    Some(mesh) => {
-                        let wire = meshes.get_mut(mesh).unwrap();
-                        wire.insert_attribute(
-                            Mesh::ATTRIBUTE_POSITION,
-                            vec![vec3(1.0, 1.0, 0.0), vec3(0.0, 0.0, 0.0)],
-                        )
-                    },
-                }
+                        wiring.mesh = Some((coords, mesh)); 
+                    }
+                },
+                Some(mesh) => {
+                    let wire = meshes.get_mut(mesh.1.clone()).unwrap();
+                    wire.insert_attribute(
+                        Mesh::ATTRIBUTE_POSITION,
+                        vec![Vec3::from(Point::from(mesh.0.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
+                    )
+                },
             }
-        }
+            } 
         _ => {
 
         }
@@ -166,7 +168,7 @@ fn cursor_to_world(
                 .cursor_position()
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
-                schematic_coords.0 = coords;
+                schematic_coords.0 = CSPoint::new(coords.x, coords.y).cast().cast_unit();
                 // let aw = q_activewire.get_single_mut().unwrap();
                 // if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
                 //     mesh.insert_attribute(
@@ -229,6 +231,7 @@ fn setup1(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials1: ResMut<Assets<CustomMaterial>>,
 ) {
     // Grid
     commands.spawn((MaterialMesh2dBundle {
