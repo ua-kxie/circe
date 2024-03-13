@@ -76,24 +76,22 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(bevy::math::primitives::Rectangle::new(0.1, 0.1)).into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-            ..default()
-        },
-    ));
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes
-                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-                .into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
-            ..default()
-        },
-    ));
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes
+            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+            .into(),
+        material: materials.add(ColorMaterial::from(Color::RED)),
+        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+        ..default()
+    },));
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes
+            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+            .into(),
+        material: materials.add(ColorMaterial::from(Color::RED)),
+        transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
+        ..default()
+    },));
 
     commands.init_resource::<Schematic>();
     commands.init_resource::<CursorWorldCoords>();
@@ -133,18 +131,22 @@ fn main(
                             .with_inserted_attribute(
                                 Mesh::ATTRIBUTE_POSITION,
                                 // vec![Vec3::new(1., 1., 0.), Vec3::new(0., 0., 0.)],
-                                vec![Vec3::from(Point::from(coords.cast().cast_unit())), Point::from(coords.cast().cast_unit()).into()],
+                                vec![
+                                    Vec3::from(Point::from(coords.cast().cast_unit())),
+                                    Point::from(coords.cast().cast_unit()).into(),
+                                ],
                             ),
                         );
-                        let ent = commands.spawn((MaterialMesh2dBundle {
-                            mesh: mesh.clone().into(),
-                            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                            material: materials.add(CustomMaterial {
-                                color: Color::WHITE,
-                            }),
-                            ..default()
-                        },)
-                        ).id();
+                        let ent = commands
+                            .spawn((MaterialMesh2dBundle {
+                                mesh: mesh.clone().into(),
+                                transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+                                material: materials.add(CustomMaterial {
+                                    color: Color::WHITE,
+                                }),
+                                ..default()
+                            },))
+                            .id();
                         wiring.mesh = Some((coords, mesh, ent));
                     }
                 }
