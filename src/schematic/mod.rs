@@ -130,10 +130,9 @@ fn main(
                             )
                             .with_inserted_attribute(
                                 Mesh::ATTRIBUTE_POSITION,
-                                // vec![Vec3::new(1., 1., 0.), Vec3::new(0., 0., 0.)],
                                 vec![
                                     Vec3::from(Point::from(coords.cast().cast_unit())),
-                                    Point::from(coords.cast().cast_unit()).into(),
+                                    Vec3::from(Point::from(coords.cast().cast_unit())),
                                 ],
                             ),
                         );
@@ -150,17 +149,34 @@ fn main(
                         wiring.mesh = Some((coords, mesh, ent));
                     }
                 }
-                Some(mesh) => {
-                    let wire = meshes.get_mut(mesh.1.clone()).unwrap();
-                    wire.insert_attribute(
-                        Mesh::ATTRIBUTE_POSITION,
-                        vec![
-                            Vec3::from(Point::from(mesh.0.cast().cast_unit())),
-                            Point::from(coords.cast().cast_unit()).into(),
-                        ],
-                    );
+                Some(aws) => {
+
                     if keys.just_released(KeyCode::Escape) {
-                        commands.entity(mesh.2).despawn();
+                        commands.entity(aws.2).despawn();
+                    } else if buttons.just_released(MouseButton::Left) {
+                        // left click while a wire seg is being drawn
+                        // persist current segment:
+
+                        // set up next aws:
+                        let wire = meshes.get_mut(aws.1.clone()).unwrap();
+                        wire.insert_attribute(
+                            Mesh::ATTRIBUTE_POSITION,
+                            vec![
+                                Vec3::from(Point::from(coords.cast().cast_unit())),
+                                Vec3::from(Point::from(coords.cast().cast_unit())),
+                            ],
+                        );
+                        wiring.mesh = Some((coords, aws.1.clone(), aws.2));
+                    } else {
+                        // just mouse movement
+                        let wire = meshes.get_mut(aws.1.clone()).unwrap();
+                        wire.insert_attribute(
+                            Mesh::ATTRIBUTE_POSITION,
+                            vec![
+                                Vec3::from(Point::from(aws.0.cast().cast_unit())),
+                                Vec3::from(Point::from(coords.cast().cast_unit())),
+                            ],
+                        );
                     }
                 }
             }
@@ -242,7 +258,7 @@ fn setup_camera(mut commands: Commands) {
                 y: scale,
                 z: scale,
             }),
-            // projection: OrthographicProjection::default(),
+            projection: OrthographicProjection::default(),
             ..default()
         },
         MyCameraMarker,
