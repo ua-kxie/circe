@@ -31,6 +31,9 @@ struct MyCameraMarker;
 #[derive(Component)]
 struct ActiveWireSeg;
 
+#[derive(Component)]
+struct CursorMarker;
+
 /// cursor position
 #[derive(Resource, Default)]
 struct CursorWorldCoords(SSPoint);
@@ -49,7 +52,7 @@ impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
         app.add_systems(Startup, (setup, setup_camera));
-        app.add_systems(Update, (main, camera_transform, cursor_to_world));
+        app.add_systems(Update, (main, camera_transform, cursor));
     }
 }
 
@@ -92,6 +95,15 @@ fn setup(
         transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
         ..default()
     },));
+
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes
+            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+            .into(),
+        material: materials.add(ColorMaterial::from(Color::YELLOW)),
+        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+        ..default()
+    }, CursorMarker));
 
     commands.init_resource::<Schematic>();
     commands.init_resource::<CursorWorldCoords>();
@@ -219,7 +231,7 @@ fn main(
     }
 }
 
-fn cursor_to_world(
+fn cursor(
     mut schematic_coords: ResMut<CursorWorldCoords>,
     // query to get the window (so we can read the current cursor position)
     q_window: Query<&Window, With<PrimaryWindow>>,
@@ -227,6 +239,7 @@ fn cursor_to_world(
     q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
     // mut q_activewire: Query<&mut ActiveWireSeg>,
     // mut assets: ResMut<Assets<Mesh>>,
+    mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
 ) {
     if let Ok((camera, cam_transform)) = q_camera.get_single() {
         if let Ok(window) = q_window.get_single() {
@@ -235,13 +248,7 @@ fn cursor_to_world(
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
                 schematic_coords.0 = CSPoint::new(coords.x, coords.y).round().cast().cast_unit();
-                // let aw = q_activewire.get_single_mut().unwrap();
-                // if let Some(mesh) = assets.get_mut(aw.mesh.id()) {
-                //     mesh.insert_attribute(
-                //         Mesh::ATTRIBUTE_POSITION,
-                //         vec![vec3(coords.x, coords.y, 0.0), vec3(0.0, 0.0, 0.0)],
-                //     );
-                // }
+                q_cursor.single_mut().translation = Vec3::new(coords.x.round(), coords.y.round(), 0.0);
             }
         }
     }
