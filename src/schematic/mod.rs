@@ -336,9 +336,11 @@ fn camera_transform(
     mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<CursorMoved>,
     mut mw: EventReader<MouseWheel>,
-    mut camera: Query<(&mut Transform, &MyCameraMarker)>,
+    mut camera: Query<(&Camera, &mut Transform, &GlobalTransform), With<MyCameraMarker>>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    // mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
 ) {
-    if let Ok(mut cam) = camera.get_single_mut() {
+    if let Ok((cam, mut transform, gt)) = camera.get_single_mut() {
         if mb.pressed(MouseButton::Middle) {
             let mut pan = Vec3::ZERO;
             for m in mm.read() {
@@ -346,11 +348,33 @@ fn camera_transform(
                     pan += Vec3::new(-d.x, d.y, 0.0);
                 }
             }
-            let t = cam.0.scale.mul(pan);
-            cam.0.translation += t;
+            let t = transform.scale.mul(pan);
+            transform.translation += t;
+        }
+
+        let mut curpos = None;
+        if let Ok(window) = q_window.get_single() {
+            if let Some(coords) = window
+                .cursor_position()
+                .and_then(|cursor| cam.viewport_to_world_2d(gt, cursor))
+            {
+                curpos = cam.viewport_to_world_2d(gt, coords);
+            }
         }
         for mwe in mw.read() {
-            cam.0.scale *= 1. - mwe.y / 5.
+            transform.scale *= 1. - mwe.y / 5.
+        }
+        let mut curpos1 = None;
+        if let Ok(window) = q_window.get_single() {
+            if let Some(coords) = window
+                .cursor_position()
+                .and_then(|cursor| cam.viewport_to_world_2d(gt, cursor))
+            {
+                curpos1 = cam.viewport_to_world_2d(gt, coords);
+            }
+        }
+        if curpos1 != curpos {
+            println!("{curpos1:?} {curpos:?}")
         }
     }
 }
