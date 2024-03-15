@@ -99,14 +99,17 @@ fn setup(
         ..default()
     },));
 
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes
-            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-            .into(),
-        material: materials.add(ColorMaterial::from(Color::YELLOW)),
-        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        ..default()
-    }, CursorMarker));
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes
+                .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::YELLOW)),
+            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+            ..default()
+        },
+        CursorMarker,
+    ));
 
     commands.init_resource::<Schematic>();
     commands.init_resource::<CursorWorldCoords>();
@@ -188,14 +191,17 @@ fn main(
                                     ],
                                 ),
                             );
-                            commands.spawn((MaterialMesh2dBundle {
-                                mesh: mesh.clone().into(),
-                                transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                                material: materials.add(CustomMaterial {
-                                    color: Color::WHITE,
-                                }),
-                                ..default()
-                            }, WireSeg));
+                            commands.spawn((
+                                MaterialMesh2dBundle {
+                                    mesh: mesh.clone().into(),
+                                    transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+                                    material: materials.add(CustomMaterial {
+                                        color: Color::WHITE,
+                                    }),
+                                    ..default()
+                                },
+                                WireSeg,
+                            ));
                             // set up next aws:
                             let wire = meshes.get_mut(aws.1.clone()).unwrap();
                             wire.insert_attribute(
@@ -251,7 +257,8 @@ fn cursor(
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
                 schematic_coords.0 = CSPoint::new(coords.x, coords.y).round().cast().cast_unit();
-                q_cursor.single_mut().translation = Vec3::new(coords.x.round(), coords.y.round(), 0.0);
+                q_cursor.single_mut().translation =
+                    Vec3::new(coords.x.round(), coords.y.round(), 0.0);
             }
         }
     }
