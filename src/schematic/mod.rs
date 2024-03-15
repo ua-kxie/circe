@@ -7,7 +7,7 @@ use bevy::{
         render_asset::RenderAssetUsages,
         render_resource::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
-        },
+        }, view::NoFrustumCulling,
     },
     sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle},
     window::PrimaryWindow,
@@ -180,7 +180,8 @@ fn main(
                                     color: Color::WHITE,
                                 }),
                                 ..default()
-                            },));
+                            },),
+                            );
                             // set up next aws:
                             let wire = meshes.get_mut(aws.1.clone()).unwrap();
                             wire.insert_attribute(
@@ -202,6 +203,9 @@ fn main(
                                 Vec3::from(Point::from(coords.cast().cast_unit())),
                             ],
                         );
+                        if let Some(aabb) = wire.compute_aabb() {
+                            commands.entity(aws.2).insert(aabb);
+                        }
                     }
                 }
             }
