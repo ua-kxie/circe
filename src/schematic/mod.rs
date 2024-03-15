@@ -120,13 +120,117 @@ use tools::ActiveTool;
 
 use crate::types::{CSPoint, Point, SSPoint};
 
+fn wiring(
+    keys: &Res<ButtonInput<KeyCode>>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    coords: SSPoint,
+    wiremesh: &mut Option<(SSPoint, Handle<Mesh>, Entity)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut commands: Commands,
+) -> Option<ActiveTool> {
+    let mut new_tool = None;
+    match wiremesh {
+        None => {
+            if buttons.just_released(MouseButton::Left) {
+                let mesh = meshes.add(
+                    Mesh::new(
+                        PrimitiveTopology::LineList,
+                        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+                    )
+                    .with_inserted_attribute(
+                        Mesh::ATTRIBUTE_POSITION,
+                        vec![
+                            Vec3::from(Point::from(coords.cast().cast_unit())),
+                            Vec3::from(Point::from(coords.cast().cast_unit())),
+                        ],
+                    ),
+                );
+                let ent = commands
+                    .spawn((MaterialMesh2dBundle {
+                        mesh: mesh.clone().into(),
+                        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+                        material: materials.add(CustomMaterial {
+                            color: Color::WHITE,
+                        }),
+                        ..default()
+                    },))
+                    .id();
+                *wiremesh = Some((coords, mesh, ent));
+            }
+        }
+        Some(aws) => {
+            if keys.just_released(KeyCode::Escape) {
+                commands.entity(aws.2).despawn();
+            } else if buttons.just_released(MouseButton::Left) {
+                // left click while a wire seg is being drawn
+                if coords == aws.0 {
+                    // terminate current line seg
+                    new_tool =
+                        Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })));
+                } else {
+                    // persist current segment:
+                    let mesh = meshes.add(
+                        Mesh::new(
+                            PrimitiveTopology::LineList,
+                            RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+                        )
+                        .with_inserted_attribute(
+                            Mesh::ATTRIBUTE_POSITION,
+                            vec![
+                                Vec3::from(Point::from(aws.0.cast().cast_unit())),
+                                Vec3::from(Point::from(coords.cast().cast_unit())),
+                            ],
+                        ),
+                    );
+                    commands.spawn((
+                        MaterialMesh2dBundle {
+                            mesh: mesh.clone().into(),
+                            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+                            material: materials.add(CustomMaterial {
+                                color: Color::WHITE,
+                            }),
+                            ..default()
+                        },
+                        WireSeg,
+                    ));
+                    // set up next aws:
+                    let wire = meshes.get_mut(aws.1.clone()).unwrap();
+                    wire.insert_attribute(
+                        Mesh::ATTRIBUTE_POSITION,
+                        vec![
+                            Vec3::from(Point::from(coords.cast().cast_unit())),
+                            Vec3::from(Point::from(coords.cast().cast_unit())),
+                        ],
+                    );
+                    *wiremesh = Some((coords, aws.1.clone(), aws.2));
+                }
+            } else {
+                // just mouse movement
+                let wire = meshes.get_mut(aws.1.clone()).unwrap();
+                wire.insert_attribute(
+                    Mesh::ATTRIBUTE_POSITION,
+                    vec![
+                        Vec3::from(Point::from(aws.0.cast().cast_unit())),
+                        Vec3::from(Point::from(coords.cast().cast_unit())),
+                    ],
+                );
+                if let Some(aabb) = wire.compute_aabb() {
+                    commands.entity(aws.2).insert(aabb);
+                }
+            }
+        }
+    }
+    new_tool
+}
+
 fn main(
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
     mut schematic: ResMut<Schematic>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
-    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<CustomMaterial>>,
+    commands: Commands,
     schematic_coords: ResMut<CursorWorldCoords>,
 ) {
     let mut new_tool: Option<ActiveTool> = None;
@@ -136,99 +240,17 @@ fn main(
                 new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })))
             }
         }
-        tools::ActiveTool::Wiring(wiring) => {
+        tools::ActiveTool::Wiring(wiringc) => {
             let coords = schematic_coords.0;
-            match &wiring.mesh {
-                None => {
-                    if buttons.just_released(MouseButton::Left) {
-                        let mesh = meshes.add(
-                            Mesh::new(
-                                PrimitiveTopology::LineList,
-                                RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                            )
-                            .with_inserted_attribute(
-                                Mesh::ATTRIBUTE_POSITION,
-                                vec![
-                                    Vec3::from(Point::from(coords.cast().cast_unit())),
-                                    Vec3::from(Point::from(coords.cast().cast_unit())),
-                                ],
-                            ),
-                        );
-                        let ent = commands
-                            .spawn((MaterialMesh2dBundle {
-                                mesh: mesh.clone().into(),
-                                transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                                material: materials.add(CustomMaterial {
-                                    color: Color::WHITE,
-                                }),
-                                ..default()
-                            },))
-                            .id();
-                        wiring.mesh = Some((coords, mesh, ent));
-                    }
-                }
-                Some(aws) => {
-                    if keys.just_released(KeyCode::Escape) {
-                        commands.entity(aws.2).despawn();
-                    } else if buttons.just_released(MouseButton::Left) {
-                        // left click while a wire seg is being drawn
-                        if coords == aws.0 {
-                            // terminate current line seg
-                            new_tool =
-                                Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })));
-                        } else {
-                            // persist current segment:
-                            let mesh = meshes.add(
-                                Mesh::new(
-                                    PrimitiveTopology::LineList,
-                                    RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                                )
-                                .with_inserted_attribute(
-                                    Mesh::ATTRIBUTE_POSITION,
-                                    vec![
-                                        Vec3::from(Point::from(aws.0.cast().cast_unit())),
-                                        Vec3::from(Point::from(coords.cast().cast_unit())),
-                                    ],
-                                ),
-                            );
-                            commands.spawn((
-                                MaterialMesh2dBundle {
-                                    mesh: mesh.clone().into(),
-                                    transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                                    material: materials.add(CustomMaterial {
-                                        color: Color::WHITE,
-                                    }),
-                                    ..default()
-                                },
-                                WireSeg,
-                            ));
-                            // set up next aws:
-                            let wire = meshes.get_mut(aws.1.clone()).unwrap();
-                            wire.insert_attribute(
-                                Mesh::ATTRIBUTE_POSITION,
-                                vec![
-                                    Vec3::from(Point::from(coords.cast().cast_unit())),
-                                    Vec3::from(Point::from(coords.cast().cast_unit())),
-                                ],
-                            );
-                            wiring.mesh = Some((coords, aws.1.clone(), aws.2));
-                        }
-                    } else {
-                        // just mouse movement
-                        let wire = meshes.get_mut(aws.1.clone()).unwrap();
-                        wire.insert_attribute(
-                            Mesh::ATTRIBUTE_POSITION,
-                            vec![
-                                Vec3::from(Point::from(aws.0.cast().cast_unit())),
-                                Vec3::from(Point::from(coords.cast().cast_unit())),
-                            ],
-                        );
-                        if let Some(aabb) = wire.compute_aabb() {
-                            commands.entity(aws.2).insert(aabb);
-                        }
-                    }
-                }
-            }
+            new_tool = wiring(
+                &keys, 
+                buttons, 
+                coords, 
+                &mut wiringc.mesh, 
+                meshes, 
+                materials, 
+                commands
+            );
         }
         _ => {}
     }
@@ -328,7 +350,7 @@ fn camera_transform(
             cam.0.translation += t;
         }
         for mwe in mw.read() {
-            cam.0.scale *= 1. - mwe.y / 10.
+            cam.0.scale *= 1. - mwe.y / 5.
         }
     }
 }
