@@ -32,6 +32,9 @@ struct MyCameraMarker;
 struct ActiveWireSeg;
 
 #[derive(Component)]
+struct WireSeg;
+
+#[derive(Component)]
 struct CursorMarker;
 
 /// cursor position
@@ -192,7 +195,7 @@ fn main(
                                     color: Color::WHITE,
                                 }),
                                 ..default()
-                            },));
+                            }, WireSeg));
                             // set up next aws:
                             let wire = meshes.get_mut(aws.1.clone()).unwrap();
                             wire.insert_attribute(
