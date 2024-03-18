@@ -39,7 +39,16 @@ struct CursorMarker;
 
 /// cursor position
 #[derive(Resource, Default)]
-struct CursorWorldCoords(SSPoint);
+struct Curpos{
+    opt_ssp: Option<SSPoint>,
+    opt_vsp: Option<CSPoint>,
+}
+
+#[derive(Event)]
+struct NewCurposSSP(Option<SSPoint>);
+
+#[derive(Event)]
+struct NewCurposVSP(Option<CSPoint>);
 
 /// PhantomData tag for schematic space
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -55,7 +64,9 @@ impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
         app.add_systems(Startup, (setup, setup_camera));
-        app.add_systems(Update, (main, camera_transform, cursor));
+        app.add_systems(Update, (main, camera_transform, cursor_update, draw_curpos_ssp));
+        app.add_event::<NewCurposSSP>();
+        app.add_event::<NewCurposVSP>();
     }
 }
 
@@ -73,6 +84,8 @@ impl Material2d for CustomMaterial {
         _key: Material2dKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.primitive.polygon_mode = PolygonMode::Line;
+        // descriptor.primitive.polygon_mode = PolygonMode::Point;
+        // descriptor.primitive.topology = PrimitiveTopology::PointList;
         Ok(())
     }
 }
@@ -112,7 +125,7 @@ fn setup(
     ));
 
     commands.init_resource::<Schematic>();
-    commands.init_resource::<CursorWorldCoords>();
+    commands.init_resource::<Curpos>();
     commands.init_resource::<VisibleWorldRect>();
 }
 
@@ -123,12 +136,13 @@ use crate::types::{CSPoint, Point, SSPoint};
 fn wiring(
     keys: &Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
-    coords: SSPoint,
+    coords1: Option<SSPoint>,
     wiremesh: &mut Option<(SSPoint, Handle<Mesh>, Entity)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
     mut commands: Commands,
 ) -> Option<ActiveTool> {
+    let coords = coords1.unwrap_or_default();
     let mut new_tool = None;
     match wiremesh {
         None => {
@@ -231,7 +245,7 @@ fn main(
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<CustomMaterial>>,
     commands: Commands,
-    schematic_coords: ResMut<CursorWorldCoords>,
+    schematic_coords: ResMut<Curpos>,
 ) {
     let mut new_tool: Option<ActiveTool> = None;
     match &mut schematic.active_tool {
@@ -241,11 +255,10 @@ fn main(
             }
         }
         tools::ActiveTool::Wiring(wiringc) => {
-            let coords = schematic_coords.0;
             new_tool = wiring(
                 &keys, 
                 buttons, 
-                coords, 
+                schematic_coords.opt_ssp, 
                 &mut wiringc.mesh, 
                 meshes, 
                 materials, 
@@ -262,28 +275,66 @@ fn main(
     }
 }
 
-fn cursor(
-    mut schematic_coords: ResMut<CursorWorldCoords>,
-    // query to get the window (so we can read the current cursor position)
+/// this function retrieves the cursor position and stores it for use, 
+/// sending out events for world position changed, or viewport position changed
+fn cursor_update(
+    mut curpos: ResMut<Curpos>,
     q_window: Query<&Window, With<PrimaryWindow>>,
-    // query to get camera transform
     q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
-    // mut q_activewire: Query<&mut ActiveWireSeg>,
-    // mut assets: ResMut<Assets<Mesh>>,
-    mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
+    // mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
+    mut e_curpos_ssp: EventWriter<NewCurposSSP>,
+    mut e_curpos_vsp: EventWriter<NewCurposVSP>,
 ) {
+    let mut new_curpos = Curpos{
+        opt_ssp: None,
+        opt_vsp: None,
+    };
     if let Ok((camera, cam_transform)) = q_camera.get_single() {
         if let Ok(window) = q_window.get_single() {
             if let Some(coords) = window
                 .cursor_position()
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
-                schematic_coords.0 = CSPoint::new(coords.x, coords.y).round().cast().cast_unit();
-                q_cursor.single_mut().translation =
-                    Vec3::new(coords.x.round(), coords.y.round(), 0.0);
+                new_curpos = Curpos{
+                    opt_vsp: Some(CSPoint::new(coords.x, coords.y)),
+                    opt_ssp: Some(CSPoint::new(coords.x, coords.y).round().cast().cast_unit()),
+                };
+                // q_cursor.single_mut().translation =
+                //     Vec3::new(coords.x.round(), coords.y.round(), 0.0);
             }
         }
     }
+
+    if curpos.opt_vsp != new_curpos.opt_vsp {
+        e_curpos_vsp.send(NewCurposVSP(new_curpos.opt_vsp));
+
+        // snapped cursor may only change if raw cursor changes
+        if curpos.opt_ssp != new_curpos.opt_ssp {
+            e_curpos_ssp.send(NewCurposSSP(new_curpos.opt_ssp));
+        }
+    }
+    *curpos = new_curpos;
+}
+
+fn draw_curpos_ssp(
+    mut e_new_curpos_ssp: EventReader<NewCurposSSP>,
+    mut q_cursor: Query<(&mut Transform, &mut Visibility), With<CursorMarker>>,
+) {
+    if let Some(NewCurposSSP(last_e)) = e_new_curpos_ssp.read().last() {
+        if let Some(curpos_ssp) = last_e {
+            *q_cursor.single_mut().1 = Visibility::Visible;
+            q_cursor.single_mut().0.translation = Vec3::new(curpos_ssp.x.into(), curpos_ssp.y.into(), 0.0);
+        } else {
+            *q_cursor.single_mut().1 = Visibility::Hidden;
+        }
+    }
+    // if let Some(NewCurposSSP(Some(curpos_ssp))) = e_new_curpos_ssp.read().last() {
+    //     *q_cursor.single_mut().1 = Visibility::Visible;
+    //     q_cursor.single_mut().0.translation = Vec3::new(curpos_ssp.x.into(), curpos_ssp.y.into(), 0.0);
+    // } else {
+    //     *q_cursor.single_mut().1 = Visibility::Hidden;
+    // }
+
 }
 
 fn window_to_world(
