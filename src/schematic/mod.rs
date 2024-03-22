@@ -328,13 +328,6 @@ fn draw_curpos_ssp(
             *q_cursor.single_mut().1 = Visibility::Hidden;
         }
     }
-    // if let Some(NewCurposSSP(Some(curpos_ssp))) = e_new_curpos_ssp.read().last() {
-    //     *q_cursor.single_mut().1 = Visibility::Visible;
-    //     q_cursor.single_mut().0.translation = Vec3::new(curpos_ssp.x.into(), curpos_ssp.y.into(), 0.0);
-    // } else {
-    //     *q_cursor.single_mut().1 = Visibility::Hidden;
-    // }
-
 }
 
 fn window_to_world(
