@@ -39,7 +39,7 @@ struct CursorMarker;
 
 /// cursor position
 #[derive(Resource, Default)]
-struct Curpos{
+struct Curpos {
     opt_ssp: Option<SSPoint>,
     opt_vsp: Option<CSPoint>,
 }
@@ -64,7 +64,10 @@ impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
         app.add_systems(Startup, (setup, setup_camera));
-        app.add_systems(Update, (main, camera_transform, cursor_update, draw_curpos_ssp));
+        app.add_systems(
+            Update,
+            (main, camera_transform, cursor_update, draw_curpos_ssp),
+        );
         app.add_event::<NewCurposSSP>();
         app.add_event::<NewCurposVSP>();
     }
@@ -180,8 +183,7 @@ fn wiring(
                 // left click while a wire seg is being drawn
                 if coords == aws.0 {
                     // terminate current line seg
-                    new_tool =
-                        Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })));
+                    new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })));
                 } else {
                     // persist current segment:
                     let mesh = meshes.add(
@@ -256,13 +258,13 @@ fn main(
         }
         tools::ActiveTool::Wiring(wiringc) => {
             new_tool = wiring(
-                &keys, 
-                buttons, 
-                schematic_coords.opt_ssp, 
-                &mut wiringc.mesh, 
-                meshes, 
-                materials, 
-                commands
+                &keys,
+                buttons,
+                schematic_coords.opt_ssp,
+                &mut wiringc.mesh,
+                meshes,
+                materials,
+                commands,
             );
         }
         _ => {}
@@ -275,7 +277,7 @@ fn main(
     }
 }
 
-/// this function retrieves the cursor position and stores it for use, 
+/// this function retrieves the cursor position and stores it for use,
 /// sending out events for world position changed, or viewport position changed
 fn cursor_update(
     mut curpos: ResMut<Curpos>,
@@ -285,7 +287,7 @@ fn cursor_update(
     mut e_curpos_ssp: EventWriter<NewCurposSSP>,
     mut e_curpos_vsp: EventWriter<NewCurposVSP>,
 ) {
-    let mut new_curpos = Curpos{
+    let mut new_curpos = Curpos {
         opt_ssp: None,
         opt_vsp: None,
     };
@@ -295,7 +297,7 @@ fn cursor_update(
                 .cursor_position()
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
-                new_curpos = Curpos{
+                new_curpos = Curpos {
                     opt_vsp: Some(CSPoint::new(coords.x, coords.y)),
                     opt_ssp: Some(CSPoint::new(coords.x, coords.y).round().cast().cast_unit()),
                 };
@@ -323,7 +325,8 @@ fn draw_curpos_ssp(
     if let Some(NewCurposSSP(last_e)) = e_new_curpos_ssp.read().last() {
         if let Some(curpos_ssp) = last_e {
             *q_cursor.single_mut().1 = Visibility::Visible;
-            q_cursor.single_mut().0.translation = Vec3::new(curpos_ssp.x.into(), curpos_ssp.y.into(), 0.0);
+            q_cursor.single_mut().0.translation =
+                Vec3::new(curpos_ssp.x.into(), curpos_ssp.y.into(), 0.0);
         } else {
             *q_cursor.single_mut().1 = Visibility::Hidden;
         }
