@@ -17,6 +17,7 @@ use std::ops::Mul;
 mod net_vertex;
 mod state;
 mod tools;
+mod grid;
 
 ///
 #[derive(Resource, Default)]
@@ -114,6 +115,17 @@ fn setup(
         transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
         ..default()
     },));
+
+    // quad
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: meshes.add(Rectangle::default()).into(),
+        transform: Transform::default().with_scale(Vec3::splat(128.)),
+        material: materials.add(grid::GridMaterial {
+            color: Color::BLUE,
+            color_texture: None,
+        }),
+        ..default()
+    });
 
     commands.spawn((
         MaterialMesh2dBundle {
@@ -283,7 +295,6 @@ fn cursor_update(
     mut curpos: ResMut<Curpos>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
-    // mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
     mut e_curpos_ssp: EventWriter<NewCurposSSP>,
     mut e_curpos_vsp: EventWriter<NewCurposVSP>,
 ) {
@@ -301,8 +312,6 @@ fn cursor_update(
                     opt_vsp: Some(CSPoint::new(coords.x, coords.y)),
                     opt_ssp: Some(CSPoint::new(coords.x, coords.y).round().cast().cast_unit()),
                 };
-                // q_cursor.single_mut().translation =
-                //     Vec3::new(coords.x.round(), coords.y.round(), 0.0);
             }
         }
     }

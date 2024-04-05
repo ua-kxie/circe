@@ -10,7 +10,7 @@ edition = "2021"
 opt-level = 3
 
 [dependencies]
-bevy = {version="0.13"}
+bevy = {version="0.13.2"}
 euclid = {version="0.22.9", features = ["serde"]}
 petgraph = "0.6.3"
 serde = {version="1.0.164", features = ["derive"]}
