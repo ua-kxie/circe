@@ -1,21 +1,14 @@
-use std::marker::PhantomData;
-
 use bevy::{
-    input::mouse::MouseWheel,
     prelude::*,
     reflect::TypePath,
     render::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
         render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
+            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
+            SpecializedMeshPipelineError,
         },
     },
-    sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle},
-    window::PrimaryWindow,
-};
-use bevy::{
-    render::render_resource::ShaderRef,
+    sprite::{Material2d, Material2dKey},
 };
 
 // This is the struct that will be passed to your shader

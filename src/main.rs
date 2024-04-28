@@ -5,7 +5,11 @@ mod types;
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, schematic::SchematicPlugin, Material2dPlugin::<schematic::grid::GridMaterial>::default(),))
+        .add_plugins((
+            DefaultPlugins,
+            schematic::SchematicPlugin,
+            Material2dPlugin::<schematic::grid::GridMaterial>::default(),
+        ))
         .add_systems(Startup, hide_cursor)
         .run();
 }
