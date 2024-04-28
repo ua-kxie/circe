@@ -17,7 +17,7 @@ use std::ops::Mul;
 mod net_vertex;
 mod state;
 mod tools;
-mod grid;
+pub(crate) mod grid;
 
 ///
 #[derive(Resource, Default)]
@@ -98,6 +98,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
 ) {
     commands.spawn((MaterialMesh2dBundle {
         mesh: meshes
@@ -118,12 +119,20 @@ fn setup(
 
     // quad
     commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(Rectangle::default()).into(),
-        transform: Transform::default().with_scale(Vec3::splat(128.)),
-        material: materials.add(grid::GridMaterial {
-            color: Color::BLUE,
-            color_texture: None,
-        }),
+        mesh: meshes.add(
+            Mesh::new(
+                PrimitiveTopology::PointList,
+                RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+            )
+            .with_inserted_attribute(
+                Mesh::ATTRIBUTE_POSITION,
+                vec![
+                    Vec3::from([2.0, 2.0, 0.0]),
+                    Vec3::from([-2.0, -2.0, 0.0]),
+                ],
+            ),
+        ).into(),
+        material: materials.add(ColorMaterial::from(Color::WHITE)),
         ..default()
     });
 

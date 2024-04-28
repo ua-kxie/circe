@@ -22,10 +22,7 @@ use bevy::{
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct GridMaterial {
     #[uniform(0)]
-    color: Color,
-    #[texture(1)]
-    #[sampler(2)]
-    color_texture: Option<Handle<Image>>,
+    pub(crate) color: Color,
 }
 
 impl Material2d for GridMaterial {
@@ -40,9 +37,9 @@ impl Material2d for GridMaterial {
     }
 
     fn vertex_shader() -> ShaderRef {
-        "schematic/grid_shader.wgsl".into()
+        "grid_shader.wgsl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "schematic/grid_shader.wgsl".into()
+        "grid_shader.wgsl".into()
     }
 }

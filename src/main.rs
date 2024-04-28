@@ -1,11 +1,11 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{prelude::*, sprite::Material2dPlugin, window::PrimaryWindow};
 
 mod schematic;
 mod types;
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, schematic::SchematicPlugin))
+        .add_plugins((DefaultPlugins, schematic::SchematicPlugin, Material2dPlugin::<schematic::grid::GridMaterial>::default(),))
         .add_systems(Startup, hide_cursor)
         .run();
 }
