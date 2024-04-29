@@ -1,9 +1,9 @@
 #import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
 
-// struct CustomMaterial {
-//     color: vec4<f32>,
-// };
-// @group(2) @binding(0) var<uniform> material: CustomMaterial;
+struct UIMaterial {
+    color: vec4<f32>,
+};
+@group(2) @binding(0) var<uniform> material: UIMaterial;
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
@@ -33,5 +33,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4(0.9);
+    // return vec4(0.9);
+    return material.color;
 }

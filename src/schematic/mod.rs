@@ -97,26 +97,9 @@ impl Material2d for WireMaterial {
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
 ) {
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes
-            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-            .into(),
-        material: materials.add(ColorMaterial::from(Color::RED)),
-        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-        ..default()
-    },));
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes
-            .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
-            .into(),
-        material: materials.add(ColorMaterial::from(Color::RED)),
-        transform: Transform::from_translation(Vec3::new(1., 1., 0.)),
-        ..default()
-    },));
-
     // grid
     commands.spawn(MaterialMeshBundle {
         mesh: meshes
@@ -136,16 +119,16 @@ fn setup(
                 // Mesh::from(Cuboid::default())
             )
             .into(),
-        material: grid_materials.add(grid::GridMaterial{}),
+        material: grid_materials.add(grid::GridMaterial{color: Color::WHITE}),
         ..default()
     });
 
     commands.spawn((
-        MaterialMesh2dBundle {
+        MaterialMeshBundle {
             mesh: meshes
                 .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
                 .into(),
-            material: materials.add(ColorMaterial::from(Color::YELLOW)),
+            material: grid_materials.add(grid::GridMaterial{color: Color::YELLOW}),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
         },
