@@ -63,7 +63,7 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(Material2dPlugin::<CustomMaterial>::default());
+        app.add_plugins(Material2dPlugin::<WireMaterial>::default());
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,
@@ -76,12 +76,12 @@ impl Plugin for SchematicPlugin {
 
 // This is the struct that will be passed to your shader
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct CustomMaterial {
+struct WireMaterial {
     #[uniform(0)]
     color: Color,
 }
 
-impl Material2d for CustomMaterial {
+impl Material2d for WireMaterial {
     fn specialize(
         descriptor: &mut RenderPipelineDescriptor,
         _layout: &MeshVertexBufferLayout,
@@ -98,7 +98,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    _grid_materials: ResMut<Assets<grid::GridMaterial>>,
+    mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
 ) {
     commands.spawn((MaterialMesh2dBundle {
         mesh: meshes
@@ -117,21 +117,26 @@ fn setup(
         ..default()
     },));
 
-    // quad
-    commands.spawn(MaterialMesh2dBundle {
+    // grid
+    commands.spawn(MaterialMeshBundle {
         mesh: meshes
             .add(
                 Mesh::new(
-                    PrimitiveTopology::PointList,
+                    PrimitiveTopology::TriangleList,
                     RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
                 )
                 .with_inserted_attribute(
                     Mesh::ATTRIBUTE_POSITION,
-                    vec![Vec3::from([2.0, 2.0, 0.0]), Vec3::from([-2.0, -2.0, 0.0])],
+                    vec![
+                        Vec3::from([2.0, 2.0, 0.0]), 
+                        Vec3::from([-2.0, -2.0, 0.0]),
+                        Vec3::from([2.0, -2.0, 0.0]),
+                        ],
                 ),
+                // Mesh::from(Cuboid::default())
             )
             .into(),
-        material: materials.add(ColorMaterial::from(Color::WHITE)),
+        material: grid_materials.add(grid::GridMaterial{}),
         ..default()
     });
 
@@ -162,7 +167,7 @@ fn wiring(
     coords1: Option<SSPoint>,
     wiremesh: &mut Option<(SSPoint, Handle<Mesh>, Entity)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut materials: ResMut<Assets<WireMaterial>>,
     mut commands: Commands,
 ) -> Option<ActiveTool> {
     let coords = coords1.unwrap_or_default();
@@ -187,7 +192,7 @@ fn wiring(
                     .spawn((MaterialMesh2dBundle {
                         mesh: mesh.clone().into(),
                         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                        material: materials.add(CustomMaterial {
+                        material: materials.add(WireMaterial {
                             color: Color::WHITE,
                         }),
                         ..default()
@@ -223,7 +228,7 @@ fn wiring(
                         MaterialMesh2dBundle {
                             mesh: mesh.clone().into(),
                             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                            material: materials.add(CustomMaterial {
+                            material: materials.add(WireMaterial {
                                 color: Color::WHITE,
                             }),
                             ..default()
@@ -265,7 +270,7 @@ fn main(
     buttons: Res<ButtonInput<MouseButton>>,
     mut schematic: ResMut<Schematic>,
     meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<CustomMaterial>>,
+    materials: ResMut<Assets<WireMaterial>>,
     commands: Commands,
     schematic_coords: ResMut<Curpos>,
 ) {
