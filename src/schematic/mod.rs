@@ -122,7 +122,7 @@ fn setup(
         mesh: meshes
             .add(
                 Mesh::new(
-                    PrimitiveTopology::TriangleList,
+                    PrimitiveTopology::PointList,
                     RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
                 )
                 .with_inserted_attribute(
@@ -388,13 +388,13 @@ fn window_to_world(
 fn setup_camera(mut commands: Commands) {
     let scale = 0.1;
     commands.spawn((
-        Camera2dBundle {
+        Camera3dBundle {
             transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 {
                 x: scale,
                 y: scale,
                 z: scale,
             }),
-            projection: OrthographicProjection::default(),
+            projection: Projection::Orthographic(OrthographicProjection::default()),
             ..default()
         },
         MyCameraMarker,
