@@ -51,13 +51,12 @@ struct NewCurposSSP(Option<SSPoint>);
 #[derive(Event)]
 struct NewCurposVSP(Option<CSPoint>);
 
-/// PhantomData tag for schematic space
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct WorldSpace;
+#[derive(Event)]
+struct NewVisibleCanvasAABB;
 
 /// minimum rectangle containing the visible area
 #[derive(Resource, Default)]
-struct VisibleWorldRect(Option<Box2D<f32, WorldSpace>>);
+struct VisibleCanvasAABB(Option<Box2D<i32, SchematicSpace>>);
 
 pub struct SchematicPlugin;
 
@@ -67,10 +66,11 @@ impl Plugin for SchematicPlugin {
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,
-            (main, camera_transform, cursor_update, draw_curpos_ssp),
+            (main, camera_transform, cursor_update, draw_curpos_ssp, visible_canvas_aabb),
         );
         app.add_event::<NewCurposSSP>();
         app.add_event::<NewCurposVSP>();
+        app.add_event::<NewVisibleCanvasAABB>();
     }
 }
 
@@ -99,28 +99,28 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
 ) {
-    // grid
-    commands.spawn(MaterialMeshBundle {
-        mesh: meshes
-            .add(
-                Mesh::new(
-                    PrimitiveTopology::PointList,
-                    RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                )
-                .with_inserted_attribute(
-                    Mesh::ATTRIBUTE_POSITION,
-                    vec![
-                        Vec3::from([2.0, 2.0, 0.0]), 
-                        Vec3::from([-2.0, -2.0, 0.0]),
-                        Vec3::from([2.0, -2.0, 0.0]),
-                        ],
-                ),
-                // Mesh::from(Cuboid::default())
-            )
-            .into(),
-        material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
-        ..default()
-    });
+    // // grid
+    // commands.spawn(MaterialMeshBundle {
+    //     mesh: meshes
+    //         .add(
+    //             Mesh::new(
+    //                 PrimitiveTopology::PointList,
+    //                 RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+    //             )
+    //             .with_inserted_attribute(
+    //                 Mesh::ATTRIBUTE_POSITION,
+    //                 vec![
+    //                     Vec3::from([2.0, 2.0, 0.0]), 
+    //                     Vec3::from([-2.0, -2.0, 0.0]),
+    //                     Vec3::from([2.0, -2.0, 0.0]),
+    //                     ],
+    //             ),
+    //             // Mesh::from(Cuboid::default())
+    //         )
+    //         .into(),
+    //     material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
+    //     ..default()
+    // });
 
     commands.spawn((
         MaterialMeshBundle {
@@ -136,12 +136,12 @@ fn setup(
 
     commands.init_resource::<Schematic>();
     commands.init_resource::<Curpos>();
-    commands.init_resource::<VisibleWorldRect>();
+    commands.init_resource::<VisibleCanvasAABB>();
 }
 
 use tools::ActiveTool;
 
-use crate::types::{CSPoint, Point, SSPoint};
+use crate::types::{CSPoint, CanvasSpace, Point, SSPoint, SchematicSpace};
 
 fn wiring(
     keys: &Res<ButtonInput<KeyCode>>,
@@ -284,6 +284,39 @@ fn main(
     }
 }
 
+/// this function maps the viewport rect onto the canvas (aabb) and sends out events 
+fn visible_canvas_aabb(
+    mut visible_canvas_aabb: ResMut<VisibleCanvasAABB>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
+    mut e_new_viewport: EventWriter<NewVisibleCanvasAABB>,
+) {
+    let mut new_canvas_aabb: Option<Box2D<i32, SchematicSpace>> = None;
+    if let Ok((camera, cam_transform)) = q_camera.get_single() {
+        if let Ok(window) = q_window.get_single() {
+            // 0  1
+            // 2  3
+            let corners = [
+                Vec2::ZERO,
+                Vec2::new(window.width(), 0.),
+                Vec2::new(0., window.height()),
+                Vec2::new(window.width(), window.height()),
+            ];
+            let bb = corners.iter().filter_map(|p| {
+                camera
+                    .viewport_to_world_2d(cam_transform, *p)
+                    .map(|v| Point2D::new(v.x, v.y))
+            });
+            let b: Box2D<f32, CanvasSpace> = Box2D::from_points(bb);
+            new_canvas_aabb = Some(b.round_out().cast().cast_unit());
+        }
+    }
+    if new_canvas_aabb != visible_canvas_aabb.0 {
+        visible_canvas_aabb.0 = new_canvas_aabb;
+        e_new_viewport.send(NewVisibleCanvasAABB);
+    }  
+}
+
 /// this function retrieves the cursor position and stores it for use,
 /// sending out events for world position changed, or viewport position changed
 fn cursor_update(
@@ -337,34 +370,38 @@ fn draw_curpos_ssp(
     }
 }
 
-fn window_to_world(
-    mut visible_coords: ResMut<VisibleWorldRect>,
-    // query to get the window (so we can read the current cursor position)
-    q_window: Query<&Window, With<PrimaryWindow>>,
-    // query to get camera transform
-    q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
+fn draw_grid(
+    mut e_new_viewport: EventReader<NewVisibleCanvasAABB>,
+    mut viewport: ResMut<VisibleCanvasAABB>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
 ) {
-    if let Ok((camera, cam_transform)) = q_camera.get_single() {
-        if let Ok(window) = q_window.get_single() {
-            // 0  1
-            // 2  3
-            let corners = [
-                Vec2::ZERO,
-                Vec2::new(window.width(), 0.),
-                Vec2::new(0., window.height()),
-                Vec2::new(window.width(), window.height()),
-            ];
-            let bb = corners.iter().filter_map(|p| {
-                camera
-                    .viewport_to_world_2d(cam_transform, *p)
-                    .map(|v| Point2D::new(v.x, v.y))
-            });
-            let b = Box2D::from_points(bb);
-            visible_coords.0 = Some(b);
-            return;
-        }
+    if let Some(NewVisibleCanvasAABB) = e_new_viewport.read().last() {
+        // todo - need to clear previously drawn grids
     }
-    visible_coords.0 = None // if theres any problem, assume camera doesnt see anything
+    // grid
+    commands.spawn(MaterialMeshBundle {
+        mesh: meshes
+            .add(
+                Mesh::new(
+                    PrimitiveTopology::PointList,
+                    RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+                )
+                .with_inserted_attribute(
+                    Mesh::ATTRIBUTE_POSITION,
+                    vec![
+                        Vec3::from([2.0, 2.0, 0.0]), 
+                        Vec3::from([-2.0, -2.0, 0.0]),
+                        Vec3::from([2.0, -2.0, 0.0]),
+                        ],
+                ),
+                // Mesh::from(Cuboid::default())
+            )
+            .into(),
+        material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
+        ..default()
+    });
 }
 
 fn setup_camera(mut commands: Commands) {
