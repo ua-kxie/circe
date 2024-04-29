@@ -8,7 +8,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins,
             schematic::SchematicPlugin,
-            MaterialPlugin::<schematic::grid::GridMaterial>::default(),
+            MaterialPlugin::<schematic::ui::GridMaterial>::default(),
         ))
         .add_systems(Startup, hide_cursor)
         .run();

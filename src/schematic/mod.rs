@@ -14,7 +14,7 @@ use bevy::{
 };
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
-pub(crate) mod grid;
+pub(crate) mod ui;
 mod net_vertex;
 mod state;
 mod tools;
@@ -97,8 +97,7 @@ impl Material2d for WireMaterial {
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
+    mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
 ) {
     // grid
     commands.spawn(MaterialMeshBundle {
@@ -119,7 +118,7 @@ fn setup(
                 // Mesh::from(Cuboid::default())
             )
             .into(),
-        material: grid_materials.add(grid::GridMaterial{color: Color::WHITE}),
+        material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
         ..default()
     });
 
@@ -128,7 +127,7 @@ fn setup(
             mesh: meshes
                 .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
                 .into(),
-            material: grid_materials.add(grid::GridMaterial{color: Color::YELLOW}),
+            material: grid_materials.add(ui::GridMaterial{color: Color::YELLOW}),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
         },

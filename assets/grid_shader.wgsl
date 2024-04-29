@@ -8,12 +8,10 @@ struct UIMaterial {
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
-    // @location(1) blend_color: vec4<f32>,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
-    // @location(0) blend_color: vec4<f32>,
 };
 
 @vertex
@@ -23,16 +21,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-    // out.blend_color = vertex.blend_color;
+    out.clip_position[2] = 1.0;  // keep the z coordinate fixed to maintain rendered size of lines and points
     return out;
 }
 
-// struct FragmentInput {
-//     @location(0) blend_color: vec4<f32>,
-// };
-
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
-    // return vec4(0.9);
     return material.color;
 }
