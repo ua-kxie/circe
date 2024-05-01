@@ -1,23 +1,15 @@
 use bevy::{
     input::mouse::MouseWheel,
     prelude::*,
-    reflect::TypePath,
-    render::{
-        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
-        render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
-        },
-    },
-    sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle},
+    render::{mesh::PrimitiveTopology, render_asset::RenderAssetUsages},
     window::PrimaryWindow,
 };
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
-pub(crate) mod ui;
 mod net_vertex;
 mod state;
 mod tools;
+pub(crate) mod ui;
 mod wire;
 
 ///
@@ -67,7 +59,13 @@ impl Plugin for SchematicPlugin {
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,
-            (main, camera_transform, cursor_update, draw_curpos_ssp, visible_canvas_aabb),
+            (
+                main,
+                camera_transform,
+                cursor_update,
+                draw_curpos_ssp,
+                visible_canvas_aabb,
+            ),
         );
         app.add_event::<NewCurposSSP>();
         app.add_event::<NewCurposVSP>();
@@ -91,7 +89,7 @@ fn setup(
     //             .with_inserted_attribute(
     //                 Mesh::ATTRIBUTE_POSITION,
     //                 vec![
-    //                     Vec3::from([2.0, 2.0, 0.0]), 
+    //                     Vec3::from([2.0, 2.0, 0.0]),
     //                     Vec3::from([-2.0, -2.0, 0.0]),
     //                     Vec3::from([2.0, -2.0, 0.0]),
     //                     ],
@@ -108,7 +106,9 @@ fn setup(
             mesh: meshes
                 .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
                 .into(),
-            material: grid_materials.add(ui::GridMaterial{color: Color::YELLOW}),
+            material: grid_materials.add(ui::GridMaterial {
+                color: Color::YELLOW,
+            }),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
         },
@@ -265,7 +265,7 @@ fn main(
     }
 }
 
-/// this function maps the viewport rect onto the canvas (aabb) and sends out events 
+/// this function maps the viewport rect onto the canvas (aabb) and sends out events
 fn visible_canvas_aabb(
     mut visible_canvas_aabb: ResMut<VisibleCanvasAABB>,
     q_window: Query<&Window, With<PrimaryWindow>>,
@@ -295,7 +295,7 @@ fn visible_canvas_aabb(
     if new_canvas_aabb != visible_canvas_aabb.0 {
         visible_canvas_aabb.0 = new_canvas_aabb;
         e_new_viewport.send(NewVisibleCanvasAABB);
-    }  
+    }
 }
 
 /// this function retrieves the cursor position and stores it for use,
@@ -353,7 +353,7 @@ fn draw_curpos_ssp(
 
 fn draw_grid(
     mut e_new_viewport: EventReader<NewVisibleCanvasAABB>,
-    mut viewport: ResMut<VisibleCanvasAABB>,
+    _viewport: ResMut<VisibleCanvasAABB>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
@@ -372,15 +372,17 @@ fn draw_grid(
                 .with_inserted_attribute(
                     Mesh::ATTRIBUTE_POSITION,
                     vec![
-                        Vec3::from([2.0, 2.0, 0.0]), 
+                        Vec3::from([2.0, 2.0, 0.0]),
                         Vec3::from([-2.0, -2.0, 0.0]),
                         Vec3::from([2.0, -2.0, 0.0]),
-                        ],
+                    ],
                 ),
                 // Mesh::from(Cuboid::default())
             )
             .into(),
-        material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
+        material: grid_materials.add(ui::GridMaterial {
+            color: Color::WHITE,
+        }),
         ..default()
     });
 }

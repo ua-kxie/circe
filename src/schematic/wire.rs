@@ -1,11 +1,13 @@
 use bevy::{
-    input::mouse::MouseWheel, pbr::{MaterialPipeline, MaterialPipelineKey}, prelude::*, reflect::TypePath, render::{
-        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
+    pbr::{MaterialPipeline, MaterialPipelineKey},
+    prelude::*,
+    reflect::TypePath,
+    render::{
+        mesh::MeshVertexBufferLayout,
         render_resource::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
         },
-    }, sprite::{Material2d, Material2dKey, Material2dPlugin, MaterialMesh2dBundle}, window::PrimaryWindow
+    },
 };
 
 use crate::types::SSPoint;
@@ -15,7 +17,6 @@ struct WireSeg {
     p0: SSPoint,
     p1: SSPoint,
 }
-
 
 // This is the struct that will be passed to your shader
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -28,14 +29,13 @@ impl Material for WireMaterial {
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
-        layout: &MeshVertexBufferLayout,
+        _layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.primitive.polygon_mode = PolygonMode::Line;
         Ok(())
     }
 }
-
 
 #[derive(Bundle)]
 struct WireSegBundle {

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, sprite::Material2dPlugin, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow};
 
 mod schematic;
 mod types;

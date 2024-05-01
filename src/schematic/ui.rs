@@ -3,10 +3,9 @@ use bevy::{
     prelude::*,
     reflect::TypePath,
     render::{
-        mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
+        mesh::MeshVertexBufferLayout,
         render_resource::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
-            VertexFormat,
         },
     },
 };
