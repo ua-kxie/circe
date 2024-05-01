@@ -18,6 +18,7 @@ pub(crate) mod ui;
 mod net_vertex;
 mod state;
 mod tools;
+mod wire;
 
 ///
 #[derive(Resource, Default)]
@@ -62,7 +63,7 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(Material2dPlugin::<WireMaterial>::default());
+        app.add_plugins(MaterialPlugin::<wire::WireMaterial>::default());
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,
@@ -71,26 +72,6 @@ impl Plugin for SchematicPlugin {
         app.add_event::<NewCurposSSP>();
         app.add_event::<NewCurposVSP>();
         app.add_event::<NewVisibleCanvasAABB>();
-    }
-}
-
-// This is the struct that will be passed to your shader
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct WireMaterial {
-    #[uniform(0)]
-    color: Color,
-}
-
-impl Material2d for WireMaterial {
-    fn specialize(
-        descriptor: &mut RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayout,
-        _key: Material2dKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        descriptor.primitive.polygon_mode = PolygonMode::Line;
-        // descriptor.primitive.polygon_mode = PolygonMode::Point;
-        // descriptor.primitive.topology = PrimitiveTopology::PointList;
-        Ok(())
     }
 }
 
@@ -149,7 +130,7 @@ fn wiring(
     coords1: Option<SSPoint>,
     wiremesh: &mut Option<(SSPoint, Handle<Mesh>, Entity)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<WireMaterial>>,
+    mut materials: ResMut<Assets<wire::WireMaterial>>,
     mut commands: Commands,
 ) -> Option<ActiveTool> {
     let coords = coords1.unwrap_or_default();
@@ -171,10 +152,10 @@ fn wiring(
                     ),
                 );
                 let ent = commands
-                    .spawn((MaterialMesh2dBundle {
+                    .spawn((MaterialMeshBundle {
                         mesh: mesh.clone().into(),
                         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                        material: materials.add(WireMaterial {
+                        material: materials.add(wire::WireMaterial {
                             color: Color::WHITE,
                         }),
                         ..default()
@@ -207,10 +188,10 @@ fn wiring(
                         ),
                     );
                     commands.spawn((
-                        MaterialMesh2dBundle {
+                        MaterialMeshBundle {
                             mesh: mesh.clone().into(),
                             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                            material: materials.add(WireMaterial {
+                            material: materials.add(wire::WireMaterial {
                                 color: Color::WHITE,
                             }),
                             ..default()
@@ -252,7 +233,7 @@ fn main(
     buttons: Res<ButtonInput<MouseButton>>,
     mut schematic: ResMut<Schematic>,
     meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<WireMaterial>>,
+    materials: ResMut<Assets<wire::WireMaterial>>,
     commands: Commands,
     schematic_coords: ResMut<Curpos>,
 ) {
