@@ -48,27 +48,6 @@ fn setup(
         },
         grid: GridMarker,
     });
-    // commands.spawn(MaterialMeshBundle {
-    //     mesh: meshes
-    //         .add(
-    //             Mesh::new(
-    //                 PrimitiveTopology::PointList,
-    //                 RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-    //             )
-    //             .with_inserted_attribute(
-    //                 Mesh::ATTRIBUTE_POSITION,
-    //                 vec![
-    //                     Vec3::from([2.0, 2.0, 0.0]),
-    //                     Vec3::from([-2.0, -2.0, 0.0]),
-    //                     Vec3::from([2.0, -2.0, 0.0]),
-    //                     ],
-    //             ),
-    //             // Mesh::from(Cuboid::default())
-    //         )
-    //         .into(),
-    //     material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
-    //     ..default()
-    // });
 }
 
 // place grid dots according to visible canvas aabb
@@ -81,18 +60,27 @@ fn main(
 ) {
     if let Some(_) = e_new_viewport.read().last() {
         let aabb = visible_canvas_aabb.0.unwrap();
-        let veclen = (aabb.width() * aabb.height()).try_into().unwrap();
-        let mut gridvec = vec![Vec3::splat(0.0); veclen];
-        for x in 0..aabb.width() {
-            for y in 0..aabb.height() {
-                gridvec[(x * aabb.height() + y) as usize] =
-                    Vec3::from_array([(aabb.min.x + x) as f32, (aabb.min.y + y) as f32, 0.0])
-            }
-        }
-
         let grid = g.get_single_mut().unwrap();
         let gridmesh = meshes.get_mut(grid.1.id()).unwrap();
-        gridmesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, gridvec);
+
+        // delete old grid
+        gridmesh.remove_attribute(Mesh::ATTRIBUTE_POSITION);
+
+        if aabb.height() < 100 && aabb.width() < 100 {
+            let veclen = (aabb.width() * aabb.height()).try_into().unwrap();
+            let mut gridvec = vec![Vec3::splat(0.0); veclen];
+            for x in 0..aabb.width() {
+                for y in 0..aabb.height() {
+                    gridvec[(x * aabb.height() + y) as usize] =
+                        Vec3::from_array([(aabb.min.x + x) as f32, (aabb.min.y + y) as f32, 0.0])
+                }
+            }
+            gridmesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, gridvec);
+        } else {
+            // too many dots to display
+            gridmesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![Vec3::splat(0.0); 0]);
+        }
+
         if let Some(aabb) = gridmesh.compute_aabb() {
             commands.entity(grid.0).insert(aabb);
         }
