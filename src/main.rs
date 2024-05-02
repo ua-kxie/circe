@@ -5,10 +5,7 @@ mod types;
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins,
-            schematic::SchematicPlugin,
-        ))
+        .add_plugins((DefaultPlugins, schematic::SchematicPlugin))
         .add_systems(Startup, hide_cursor)
         .run();
 }

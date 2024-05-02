@@ -1,6 +1,6 @@
 //! types and constants facillitating geometry and transforms
 
-use bevy::{math::Vec3, render::render_resource::VertexAttribute};
+use bevy::math::Vec3;
 use serde::{Deserialize, Serialize};
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists

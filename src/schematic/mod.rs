@@ -6,12 +6,12 @@ use bevy::{
 };
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
+mod grid;
 mod net_vertex;
 mod state;
 mod tools;
 pub(crate) mod ui;
 mod wire;
-mod grid;
 
 ///
 #[derive(Resource, Default)]
