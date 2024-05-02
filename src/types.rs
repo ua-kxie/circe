@@ -1,6 +1,6 @@
 //! types and constants facillitating geometry and transforms
 
-use bevy::math::Vec3;
+use bevy::{math::Vec3, render::render_resource::VertexAttribute};
 use serde::{Deserialize, Serialize};
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
@@ -16,6 +16,7 @@ pub struct CanvasSpace;
 
 /// SchematicSpace Point
 pub type SSPoint = euclid::Point2D<i16, SchematicSpace>;
+
 /// CanvasSpace Point
 pub type CSPoint = euclid::Point2D<f32, CanvasSpace>;
 

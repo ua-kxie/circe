@@ -11,6 +11,7 @@ mod state;
 mod tools;
 pub(crate) mod ui;
 mod wire;
+mod grid;
 
 ///
 #[derive(Resource, Default)]
@@ -20,7 +21,7 @@ struct Schematic {
 }
 
 #[derive(Component)]
-struct MyCameraMarker;
+struct SchematicCameraMarker;
 
 #[derive(Component)]
 struct ActiveWireSeg;
@@ -56,6 +57,7 @@ pub struct SchematicPlugin;
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<wire::WireMaterial>::default());
+        app.add_plugins(grid::Grid);
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,
@@ -78,29 +80,6 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
 ) {
-    // // grid
-    // commands.spawn(MaterialMeshBundle {
-    //     mesh: meshes
-    //         .add(
-    //             Mesh::new(
-    //                 PrimitiveTopology::PointList,
-    //                 RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-    //             )
-    //             .with_inserted_attribute(
-    //                 Mesh::ATTRIBUTE_POSITION,
-    //                 vec![
-    //                     Vec3::from([2.0, 2.0, 0.0]),
-    //                     Vec3::from([-2.0, -2.0, 0.0]),
-    //                     Vec3::from([2.0, -2.0, 0.0]),
-    //                     ],
-    //             ),
-    //             // Mesh::from(Cuboid::default())
-    //         )
-    //         .into(),
-    //     material: grid_materials.add(ui::GridMaterial{color: Color::WHITE}),
-    //     ..default()
-    // });
-
     commands.spawn((
         MaterialMeshBundle {
             mesh: meshes
@@ -269,7 +248,7 @@ fn main(
 fn visible_canvas_aabb(
     mut visible_canvas_aabb: ResMut<VisibleCanvasAABB>,
     q_window: Query<&Window, With<PrimaryWindow>>,
-    q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
+    q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_new_viewport: EventWriter<NewVisibleCanvasAABB>,
 ) {
     let mut new_canvas_aabb: Option<Box2D<i32, SchematicSpace>> = None;
@@ -303,7 +282,7 @@ fn visible_canvas_aabb(
 fn cursor_update(
     mut curpos: ResMut<Curpos>,
     q_window: Query<&Window, With<PrimaryWindow>>,
-    q_camera: Query<(&Camera, &GlobalTransform), With<MyCameraMarker>>,
+    q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_curpos_ssp: EventWriter<NewCurposSSP>,
     mut e_curpos_vsp: EventWriter<NewCurposVSP>,
 ) {
@@ -399,7 +378,7 @@ fn setup_camera(mut commands: Commands) {
             projection: Projection::Orthographic(OrthographicProjection::default()),
             ..default()
         },
-        MyCameraMarker,
+        SchematicCameraMarker,
     ));
 }
 
@@ -407,7 +386,7 @@ fn camera_transform(
     mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<CursorMoved>,
     mut mw: EventReader<MouseWheel>,
-    mut camera: Query<(&Camera, &mut Transform, &GlobalTransform), With<MyCameraMarker>>,
+    mut camera: Query<(&Camera, &mut Transform, &GlobalTransform), With<SchematicCameraMarker>>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     // mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
 ) {
