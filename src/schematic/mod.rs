@@ -35,8 +35,8 @@ struct WireSeg;
 #[derive(Component)]
 struct CursorMarker;
 
-/// cursor position
-#[derive(Resource, Default)]
+// /// cursor position
+#[derive(Default)]
 struct Curpos {
     opt_ssp: Option<SSPoint>,
     opt_vsp: Option<CSPoint>,
@@ -51,9 +51,16 @@ struct NewCurposVSP(Option<CSPoint>);
 #[derive(Event)]
 struct NewVisibleCanvasAABB;
 
-/// minimum rectangle containing the visible area
-#[derive(Resource, Default)]
+// /// minimum rectangle containing the visible area
+#[derive(Default)]
 struct VisibleCanvasAABB(Option<Box2D<i32, SchematicSpace>>);
+
+/// schematic resources
+#[derive(Resource, Default)]
+struct SchematicRes{
+    visible_canvas_aabb: VisibleCanvasAABB,
+    cursor_position: Curpos,
+}
 
 pub struct SchematicPlugin;
 
@@ -98,8 +105,8 @@ fn setup(
     ));
 
     commands.init_resource::<Schematic>();
-    commands.init_resource::<Curpos>();
-    commands.init_resource::<VisibleCanvasAABB>();
+    commands.init_resource::<SchematicRes>();
+    // commands.init_resource::<VisibleCanvasAABB>();
 }
 
 use tools::ActiveTool;
@@ -217,7 +224,7 @@ fn main(
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<wire::WireMaterial>>,
     commands: Commands,
-    schematic_coords: ResMut<Curpos>,
+    schematic_res: ResMut<SchematicRes>,
 ) {
     let mut new_tool: Option<ActiveTool> = None;
     match &mut schematic.active_tool {
@@ -230,7 +237,7 @@ fn main(
             new_tool = wiring(
                 &keys,
                 buttons,
-                schematic_coords.opt_ssp,
+                schematic_res.cursor_position.opt_ssp,
                 &mut wiringc.mesh,
                 meshes,
                 materials,
@@ -249,7 +256,7 @@ fn main(
 
 /// this function maps the viewport rect onto the canvas (aabb) and sends out events
 fn visible_canvas_aabb(
-    mut visible_canvas_aabb: ResMut<VisibleCanvasAABB>,
+    mut schematic_Res: ResMut<SchematicRes>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_new_viewport: EventWriter<NewVisibleCanvasAABB>,
@@ -274,8 +281,8 @@ fn visible_canvas_aabb(
             new_canvas_aabb = Some(b.round_out().cast().cast_unit());
         }
     }
-    if new_canvas_aabb != visible_canvas_aabb.0 {
-        visible_canvas_aabb.0 = new_canvas_aabb;
+    if new_canvas_aabb != schematic_Res.visible_canvas_aabb.0 {
+        schematic_Res.visible_canvas_aabb.0 = new_canvas_aabb;
         e_new_viewport.send(NewVisibleCanvasAABB);
     }
 }
@@ -283,7 +290,7 @@ fn visible_canvas_aabb(
 /// this function retrieves the cursor position and stores it for use,
 /// sending out events for world position changed, or viewport position changed
 fn cursor_update(
-    mut curpos: ResMut<Curpos>,
+    mut schematic_res: ResMut<SchematicRes>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_curpos_ssp: EventWriter<NewCurposSSP>,
@@ -307,15 +314,15 @@ fn cursor_update(
         }
     }
 
-    if curpos.opt_vsp != new_curpos.opt_vsp {
+    if schematic_res.cursor_position.opt_vsp != new_curpos.opt_vsp {
         e_curpos_vsp.send(NewCurposVSP(new_curpos.opt_vsp));
 
         // snapped cursor may only change if raw cursor changes
-        if curpos.opt_ssp != new_curpos.opt_ssp {
+        if schematic_res.cursor_position.opt_ssp != new_curpos.opt_ssp {
             e_curpos_ssp.send(NewCurposSSP(new_curpos.opt_ssp));
         }
     }
-    *curpos = new_curpos;
+    schematic_res.cursor_position = new_curpos;
 }
 
 fn draw_curpos_ssp(
@@ -331,42 +338,6 @@ fn draw_curpos_ssp(
             *q_cursor.single_mut().1 = Visibility::Hidden;
         }
     }
-}
-
-fn draw_grid(
-    mut e_new_viewport: EventReader<NewVisibleCanvasAABB>,
-    _viewport: ResMut<VisibleCanvasAABB>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
-) {
-    if let Some(NewVisibleCanvasAABB) = e_new_viewport.read().last() {
-        // todo - need to clear previously drawn grids
-    }
-    // grid
-    commands.spawn(MaterialMeshBundle {
-        mesh: meshes
-            .add(
-                Mesh::new(
-                    PrimitiveTopology::PointList,
-                    RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                )
-                .with_inserted_attribute(
-                    Mesh::ATTRIBUTE_POSITION,
-                    vec![
-                        Vec3::from([2.0, 2.0, 0.0]),
-                        Vec3::from([-2.0, -2.0, 0.0]),
-                        Vec3::from([2.0, -2.0, 0.0]),
-                    ],
-                ),
-                // Mesh::from(Cuboid::default())
-            )
-            .into(),
-        material: grid_materials.add(ui::GridMaterial {
-            color: Color::WHITE,
-        }),
-        ..default()
-    });
 }
 
 fn setup_camera(mut commands: Commands) {

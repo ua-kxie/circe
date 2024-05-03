@@ -7,8 +7,7 @@ use euclid::{Box2D, Point2D};
 use crate::types::SchematicSpace;
 
 use super::{
-    ui::{self, GridMaterial},
-    NewVisibleCanvasAABB, VisibleCanvasAABB,
+    ui::{self, GridMaterial}, NewVisibleCanvasAABB, SchematicRes, VisibleCanvasAABB
 };
 
 pub struct Grid;
@@ -80,12 +79,12 @@ fn setup(
 fn main(
     mut g: Query<(Entity, &mut Handle<Mesh>), With<GridMarker>>,
     mut e_new_viewport: EventReader<NewVisibleCanvasAABB>,
-    visible_canvas_aabb: ResMut<VisibleCanvasAABB>,
+    schematic_res: ResMut<SchematicRes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
     if let Some(_) = e_new_viewport.read().last() {
-        let aabb = visible_canvas_aabb.0.unwrap();
+        let aabb = schematic_res.visible_canvas_aabb.0.unwrap();
         let grid = g.get_single_mut().unwrap();
         let gridmesh = meshes.get_mut(grid.1.id()).unwrap();
 
