@@ -1,3 +1,12 @@
+pub mod wire;
+
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum SchematicToolState {
+    #[default]
+    Idle,
+    Wiring,
+}
+
 // different tools the schematic may have active
 
 use bevy::prelude::*;

@@ -84,6 +84,8 @@ impl Plugin for SchematicPlugin {
         app.add_event::<NewCurposSSP>();
         app.add_event::<NewCurposVSP>();
         app.add_event::<NewVisibleCanvasAABB>();
+
+        app.init_state::<tools::SchematicToolState>();
     }
 }
 
