@@ -14,7 +14,7 @@ pub(crate) mod ui;
 mod wire;
 
 const MINSCALE:Vec3 = Vec3::splat(0.0001);
-const MAXSCALE:Vec3 = Vec3::splat(1000.0);
+const MAXSCALE:Vec3 = Vec3::splat(100.0);
 
 ///
 #[derive(Resource, Default)]
@@ -416,6 +416,7 @@ fn camera_transform(
         }
         for mwe in mw.read() {
             transform.scale = (transform.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
+            println!("{0:?}", transform.scale)
         }
         let mut curpos1 = None;
         if let Ok(window) = q_window.get_single() {
