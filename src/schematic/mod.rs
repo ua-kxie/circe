@@ -35,13 +35,6 @@ struct WireSeg;
 #[derive(Component)]
 struct CursorMarker;
 
-// /// cursor position
-#[derive(Default)]
-struct Curpos {
-    opt_ssp: Option<SSPoint>,
-    opt_vsp: Option<CSPoint>,
-}
-
 #[derive(Event)]
 struct NewCurposSSP(Option<SSPoint>);
 
@@ -51,9 +44,18 @@ struct NewCurposVSP(Option<CSPoint>);
 #[derive(Event)]
 struct NewVisibleCanvasAABB;
 
-// /// minimum rectangle containing the visible area
+/// minimum rectangle containing the visible area
 #[derive(Default)]
 struct VisibleCanvasAABB(Option<Box2D<i32, SchematicSpace>>);
+
+/// cursor position
+#[derive(Default)]
+struct Curpos {
+    opt_ssp: Option<SSPoint>,
+    opt_vsp: Option<CSPoint>,
+}
+
+
 
 /// schematic resources
 #[derive(Resource, Default)]
@@ -256,7 +258,7 @@ fn main(
 
 /// this function maps the viewport rect onto the canvas (aabb) and sends out events
 fn visible_canvas_aabb(
-    mut schematic_Res: ResMut<SchematicRes>,
+    mut schematic_res: ResMut<SchematicRes>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_new_viewport: EventWriter<NewVisibleCanvasAABB>,
@@ -281,8 +283,8 @@ fn visible_canvas_aabb(
             new_canvas_aabb = Some(b.round_out().cast().cast_unit());
         }
     }
-    if new_canvas_aabb != schematic_Res.visible_canvas_aabb.0 {
-        schematic_Res.visible_canvas_aabb.0 = new_canvas_aabb;
+    if new_canvas_aabb != schematic_res.visible_canvas_aabb.0 {
+        schematic_res.visible_canvas_aabb.0 = new_canvas_aabb;
         e_new_viewport.send(NewVisibleCanvasAABB);
     }
 }
@@ -387,7 +389,6 @@ fn camera_transform(
         }
         for mwe in mw.read() {
             transform.scale = (transform.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
-            println!("{0:?}", transform.scale)
         }
         let mut curpos1 = None;
         if let Ok(window) = q_window.get_single() {

@@ -2,12 +2,12 @@ use bevy::{
     prelude::*,
     render::{mesh::PrimitiveTopology, render_asset::RenderAssetUsages},
 };
-use euclid::{Box2D, Point2D};
+use euclid::Box2D;
 
 use crate::types::SchematicSpace;
 
 use super::{
-    ui::{self, GridMaterial}, NewVisibleCanvasAABB, SchematicRes, VisibleCanvasAABB
+    ui::{self, GridMaterial}, NewVisibleCanvasAABB, SchematicRes
 };
 
 pub struct Grid;
@@ -102,18 +102,20 @@ fn main(
 fn gridvec(
     aabb: Box2D<i32, SchematicSpace>,
 ) -> Vec<Vec3> {
-    if aabb.height() > 10000 || aabb.width() > 10000 {
+    let area = aabb.height() as f32 * aabb.width() as f32;
+    if area > 1000000.0 {
         return vec![];
     }
+
     let spacing;
-    if aabb.height() < 100 && aabb.width() < 100 {
+    if area < 10000.0 {
         spacing = 2;
     } else {
         spacing = 16;
     }
-    let height = aabb.height() / spacing;
-    let width = aabb.width() / spacing;
-    let minpoint = ((aabb.min / spacing) + Point2D::splat(1).to_vector()) * spacing;
+    let height = aabb.height() / spacing + 1;
+    let width = aabb.width() / spacing + 1;
+    let minpoint = aabb.min / spacing * spacing;
     let veclen = (width * height).try_into().unwrap();
     let mut gridvec = vec![Vec3::splat(0.0); veclen];
     for x in 0..width {
