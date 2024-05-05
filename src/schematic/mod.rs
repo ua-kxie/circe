@@ -18,7 +18,6 @@ const MAXSCALE:Vec3 = Vec3::splat(100.0);
 ///
 #[derive(Resource, Default)]
 struct Schematic {
-    active_tool: tools::ActiveTool,
     state: state::State,
 }
 
@@ -73,7 +72,6 @@ impl Plugin for SchematicPlugin {
         app.add_systems(
             Update,
             (
-                main,
                 camera_transform,
                 cursor_update,
                 draw_curpos_ssp,
@@ -112,150 +110,7 @@ fn setup(
     // commands.init_resource::<VisibleCanvasAABB>();
 }
 
-use tools::ActiveTool;
-
 use crate::types::{CSPoint, CanvasSpace, Point, SSPoint, SchematicSpace};
-
-fn wiring(
-    keys: &Res<ButtonInput<KeyCode>>,
-    buttons: Res<ButtonInput<MouseButton>>,
-    coords1: Option<SSPoint>,
-    wiremesh: &mut Option<(SSPoint, Handle<Mesh>, Entity)>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<tools::wire::WireMaterial>>,
-    mut commands: Commands,
-) -> Option<ActiveTool> {
-    let coords = coords1.unwrap_or_default();
-    let mut new_tool = None;
-    match wiremesh {
-        None => {
-            if buttons.just_released(MouseButton::Left) {
-                let mesh = meshes.add(
-                    Mesh::new(
-                        PrimitiveTopology::LineList,
-                        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                    )
-                    .with_inserted_attribute(
-                        Mesh::ATTRIBUTE_POSITION,
-                        vec![
-                            Vec3::from(Point::from(coords.cast().cast_unit())),
-                            Vec3::from(Point::from(coords.cast().cast_unit())),
-                        ],
-                    ),
-                );
-                let ent = commands
-                    .spawn((MaterialMeshBundle {
-                        mesh: mesh.clone().into(),
-                        transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                        material: materials.add(tools::wire::WireMaterial {
-                            color: Color::WHITE,
-                        }),
-                        ..default()
-                    },))
-                    .id();
-                *wiremesh = Some((coords, mesh, ent));
-            }
-        }
-        Some(aws) => {
-            if keys.just_released(KeyCode::Escape) {
-                commands.entity(aws.2).despawn();
-            } else if buttons.just_released(MouseButton::Left) {
-                // left click while a wire seg is being drawn
-                if coords == aws.0 {
-                    // terminate current line seg
-                    new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })));
-                } else {
-                    // persist current segment:
-                    let mesh = meshes.add(
-                        Mesh::new(
-                            PrimitiveTopology::LineList,
-                            RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                        )
-                        .with_inserted_attribute(
-                            Mesh::ATTRIBUTE_POSITION,
-                            vec![
-                                Vec3::from(Point::from(aws.0.cast().cast_unit())),
-                                Vec3::from(Point::from(coords.cast().cast_unit())),
-                            ],
-                        ),
-                    );
-                    commands.spawn((
-                        MaterialMeshBundle {
-                            mesh: mesh.clone().into(),
-                            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                            material: materials.add(tools::wire::WireMaterial {
-                                color: Color::WHITE,
-                            }),
-                            ..default()
-                        },
-                        WireSeg,
-                    ));
-                    // set up next aws:
-                    let wire = meshes.get_mut(aws.1.clone()).unwrap();
-                    wire.insert_attribute(
-                        Mesh::ATTRIBUTE_POSITION,
-                        vec![
-                            Vec3::from(Point::from(coords.cast().cast_unit())),
-                            Vec3::from(Point::from(coords.cast().cast_unit())),
-                        ],
-                    );
-                    *wiremesh = Some((coords, aws.1.clone(), aws.2));
-                }
-            } else {
-                // just mouse movement
-                let wire = meshes.get_mut(aws.1.clone()).unwrap();
-                wire.insert_attribute(
-                    Mesh::ATTRIBUTE_POSITION,
-                    vec![
-                        Vec3::from(Point::from(aws.0.cast().cast_unit())),
-                        Vec3::from(Point::from(coords.cast().cast_unit())),
-                    ],
-                );
-                if let Some(aabb) = wire.compute_aabb() {
-                    commands.entity(aws.2).insert(aabb);
-                }
-            }
-        }
-    }
-    new_tool
-}
-
-fn main(
-    keys: Res<ButtonInput<KeyCode>>,
-    buttons: Res<ButtonInput<MouseButton>>,
-    mut schematic: ResMut<Schematic>,
-    meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<tools::wire::WireMaterial>>,
-    commands: Commands,
-    schematic_res: ResMut<SchematicRes>,
-) {
-    let mut new_tool: Option<ActiveTool> = None;
-    match &mut schematic.active_tool {
-        tools::ActiveTool::Idle => {
-            if keys.just_released(KeyCode::KeyW) {
-                new_tool = Some(ActiveTool::Wiring(Box::new(tools::Wiring { mesh: None })))
-            }
-        }
-        tools::ActiveTool::Wiring(wiringc) => {
-            new_tool = wiring(
-                &keys,
-                buttons,
-                schematic_res.cursor_position.opt_ssp,
-                &mut wiringc.mesh,
-                meshes,
-                materials,
-                commands,
-            );
-        }
-        _ => {}
-    }
-    if keys.just_released(KeyCode::Escape) {
-        new_tool = Some(ActiveTool::Idle)
-    }
-    if let Some(tool) = new_tool {
-        schematic.active_tool = tool;
-    }
-}
 
 /// this function maps the viewport rect onto the canvas (aabb) and sends out events
 fn visible_canvas_aabb(

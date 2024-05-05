@@ -17,21 +17,6 @@ use bevy::{prelude::*, ui::update};
 
 use crate::types::SSPoint;
 
-#[derive(Default)]
-pub enum ActiveTool {
-    #[default]
-    Idle,
-    Wiring(Box<Wiring>),
-    Label,   // wire/net labeling
-    Comment, // plain text comment with basic formatting options
-}
-
-#[derive(Default)]
-pub struct Wiring {
-    pub mesh: Option<(SSPoint, Handle<Mesh>, Entity)>,
-}
-
-
 pub struct ToolsPlugin;
 
 impl Plugin for ToolsPlugin {
@@ -58,8 +43,8 @@ fn main(
                 next_toolstate.set(SchematicToolState::Wiring);
             }
         },
-        SchematicToolState::Wiring => todo!(),
-        SchematicToolState::Label => todo!(),
-        SchematicToolState::Comment => todo!(),
+        SchematicToolState::Wiring => {},
+        SchematicToolState::Label => {},
+        SchematicToolState::Comment => {},
     }
 }
