@@ -1,6 +1,6 @@
 pub mod wire;
 
-const WIRE_TOOL_KEY: KeyCode = KeyCode::KeyE;
+const WIRE_TOOL_KEY: KeyCode = KeyCode::KeyW;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum SchematicToolState {

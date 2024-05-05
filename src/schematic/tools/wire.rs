@@ -186,16 +186,21 @@ fn main(
                 // finish adding current entity
                 // set up next active wire segment
                 // add entity, change state
-                if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) = WireSegBundle::new(pt, meshes, materials);
-                    let wireseg = bundle.wireseg.clone();
-                    let aws = commands.spawn(bundle).id();
-                    next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg{
-                        entityid: aws,
-                        meshid,
-                        wireseg,
-                    }));
+                if aws.wireseg.p0 != aws.wireseg.p1 {
+                    if let Some(pt) = schematic_res.cursor_position.opt_ssp {
+                        let (bundle, meshid) = WireSegBundle::new(pt, meshes, materials);
+                        let wireseg = bundle.wireseg.clone();
+                        let aws = commands.spawn(bundle).id();
+                        next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg{
+                            entityid: aws,
+                            meshid,
+                            wireseg,
+                        }));
+                    }
+                } else {
+                    next_wiretoolstate.set(WiringToolState::Ready);
                 }
+
 
                 // zero length wire segments will be cleaned up during check
             } else {
