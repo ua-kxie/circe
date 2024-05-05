@@ -127,7 +127,7 @@ fn minor_grid_main(
 fn major_grid_main(
     mut g: Query<(Entity, &mut Handle<Mesh>), With<MajorGridMarker>>,
     mut e_new_viewport: EventReader<NewVisibleCanvasAABB>,
-    schematic_res: ResMut<SchematicRes>,
+    schematic_res: Res<SchematicRes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
