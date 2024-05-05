@@ -1,9 +1,4 @@
-use bevy::{
-    input::mouse::MouseWheel,
-    prelude::*,
-    render::{mesh::PrimitiveTopology, render_asset::RenderAssetUsages},
-    window::PrimaryWindow,
-};
+use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
 use euclid::{Box2D, Point2D};
 use std::ops::Mul;
 mod grid;
@@ -12,8 +7,8 @@ mod state;
 mod tools;
 pub(crate) mod ui;
 
-const MINSCALE:Vec3 = Vec3::splat(0.0001);
-const MAXSCALE:Vec3 = Vec3::splat(100.0);
+const MINSCALE: Vec3 = Vec3::splat(0.0001);
+const MAXSCALE: Vec3 = Vec3::splat(100.0);
 
 ///
 #[derive(Resource, Default)]
@@ -53,11 +48,9 @@ struct Curpos {
     opt_vsp: Option<CSPoint>,
 }
 
-
-
 /// schematic resources
 #[derive(Resource, Default)]
-struct SchematicRes{
+struct SchematicRes {
     visible_canvas_aabb: VisibleCanvasAABB,
     cursor_position: Curpos,
 }
@@ -110,7 +103,7 @@ fn setup(
     // commands.init_resource::<VisibleCanvasAABB>();
 }
 
-use crate::types::{CSPoint, CanvasSpace, Point, SSPoint, SchematicSpace};
+use crate::types::{CSPoint, CanvasSpace, SSPoint, SchematicSpace};
 
 /// this function maps the viewport rect onto the canvas (aabb) and sends out events
 fn visible_canvas_aabb(

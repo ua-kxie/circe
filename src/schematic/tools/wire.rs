@@ -1,21 +1,22 @@
-
 pub struct Wire;
 use bevy::{
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
     reflect::TypePath,
     render::{
-        mesh::{MeshVertexBufferLayout, PrimitiveTopology}, render_asset::RenderAssetUsages, render_resource::{
+        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
+        render_asset::RenderAssetUsages,
+        render_resource::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
-        }
+        },
     },
 };
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum WiringToolState {
     #[default]
-    Ready,  // ready to place first anchor
-    Drawing(ActiveWireSeg),  // placing second anchor point
+    Ready, // ready to place first anchor
+    Drawing(ActiveWireSeg), // placing second anchor point
 }
 
 use crate::{schematic::SchematicRes, types::SSPoint};
@@ -61,27 +62,21 @@ struct WireSegBundle {
 
 impl WireSegBundle {
     fn new(
-        pt: SSPoint, 
-        mut meshes: ResMut<Assets<Mesh>>, 
-        mut materials: ResMut<Assets<WireMaterial>>
+        pt: SSPoint,
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<WireMaterial>>,
     ) -> (WireSegBundle, Handle<Mesh>) {
         let ptf = Vec3::from_array([pt.x as f32, pt.y as f32, 0.0]);
         let mesh = Mesh::new(
             PrimitiveTopology::LineList,
             RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
         )
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_POSITION,
-            vec![
-                ptf,
-                ptf,
-            ],
-        );
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![ptf, ptf]);
         let meshid = meshes.add(mesh);
         (
-            WireSegBundle { 
-                wireseg: WireSeg::new(pt), 
-                meshbundle: MaterialMeshBundle{
+            WireSegBundle {
+                wireseg: WireSeg::new(pt),
+                meshbundle: MaterialMeshBundle {
                     mesh: meshid.clone(),
                     material: materials.add(WireMaterial {
                         color: Color::WHITE,
@@ -103,7 +98,7 @@ struct ActiveWireSeg {
 
 impl ActiveWireSeg {
     fn new_endpoint(
-        &self, 
+        &self,
         pt: SSPoint,
         mut commands: Commands,
         mut meshes: ResMut<Assets<Mesh>>,
@@ -121,29 +116,30 @@ impl ActiveWireSeg {
         let mut ent = commands.entity(self.entityid);
         ent.insert((self.wireseg.clone(), aabb));
 
-        ActiveWireSeg{
+        ActiveWireSeg {
             entityid: self.entityid,
             meshid: self.meshid.clone(),
-            wireseg: WireSeg { p0: self.wireseg.p0, p1: pt },
+            wireseg: WireSeg {
+                p0: self.wireseg.p0,
+                p1: pt,
+            },
         }
     }
 }
 
-
 impl Plugin for Wire {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
-        app.add_systems(Update, 
-            main.run_if(in_state(super::SchematicToolState::Wiring))
+        app.add_systems(
+            Update,
+            main.run_if(in_state(super::SchematicToolState::Wiring)),
         );
 
         app.init_state::<WiringToolState>();
     }
 }
 
-fn setup(
-    mut next_wirestate: ResMut<NextState<WiringToolState>>,
-) {
+fn setup(mut next_wirestate: ResMut<NextState<WiringToolState>>) {
     // on entering wiring tool
     next_wirestate.set(WiringToolState::Ready);
 }
@@ -156,8 +152,8 @@ fn main(
     mut next_wiretoolstate: ResMut<NextState<WiringToolState>>,
     mut next_schematictoolstate: ResMut<NextState<SchematicToolState>>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<WireMaterial>>,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<WireMaterial>>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {
@@ -168,19 +164,18 @@ fn main(
                     let (bundle, meshid) = WireSegBundle::new(pt, meshes, materials);
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
-                    next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg{
+                    next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
                         entityid: aws,
                         meshid,
                         wireseg,
                     }));
                 }
             }
-        },
+        }
         WiringToolState::Drawing(aws) => {
             if keys.just_released(KeyCode::Escape) {
                 commands.entity(aws.entityid).despawn();
                 next_schematictoolstate.set(SchematicToolState::Idle);
-
             } else if buttons.just_released(MouseButton::Left) {
                 // left click while a wire seg is being drawn
                 // finish adding current entity
@@ -191,7 +186,7 @@ fn main(
                         let (bundle, meshid) = WireSegBundle::new(pt, meshes, materials);
                         let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
-                        next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg{
+                        next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
                             entityid: aws,
                             meshid,
                             wireseg,
@@ -201,14 +196,15 @@ fn main(
                     next_wiretoolstate.set(WiringToolState::Ready);
                 }
 
-
                 // zero length wire segments will be cleaned up during check
             } else {
                 // update aws on mouse movement
                 if let Some(ssp) = schematic_res.cursor_position.opt_ssp {
-                    next_wiretoolstate.set(WiringToolState::Drawing(aws.new_endpoint(ssp, commands, meshes)));
+                    next_wiretoolstate.set(WiringToolState::Drawing(
+                        aws.new_endpoint(ssp, commands, meshes),
+                    ));
                 }
             }
-        },
+        }
     }
 }

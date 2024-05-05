@@ -13,9 +13,7 @@ pub(crate) enum SchematicToolState {
 
 // different tools the schematic may have active
 
-use bevy::{prelude::*, ui::update};
-
-use crate::types::SSPoint;
+use bevy::prelude::*;
 
 pub struct ToolsPlugin;
 
@@ -35,16 +33,16 @@ fn main(
 ) {
     if keys.just_released(KeyCode::Escape) {
         next_toolstate.set(SchematicToolState::Idle);
-        return
+        return;
     }
     match curr_toolstate.get() {
         SchematicToolState::Idle => {
             if keys.just_released(WIRE_TOOL_KEY) {
                 next_toolstate.set(SchematicToolState::Wiring);
             }
-        },
-        SchematicToolState::Wiring => {},
-        SchematicToolState::Label => {},
-        SchematicToolState::Comment => {},
+        }
+        SchematicToolState::Wiring => {}
+        SchematicToolState::Label => {}
+        SchematicToolState::Comment => {}
     }
 }
