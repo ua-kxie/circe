@@ -11,7 +11,6 @@ mod net_vertex;
 mod state;
 mod tools;
 pub(crate) mod ui;
-mod wire;
 
 const MINSCALE:Vec3 = Vec3::splat(0.0001);
 const MAXSCALE:Vec3 = Vec3::splat(100.0);
@@ -68,7 +67,7 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<wire::WireMaterial>::default());
+        app.add_plugins(MaterialPlugin::<tools::wire::WireMaterial>::default());
         app.add_plugins(grid::Grid);
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
@@ -123,7 +122,7 @@ fn wiring(
     coords1: Option<SSPoint>,
     wiremesh: &mut Option<(SSPoint, Handle<Mesh>, Entity)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<wire::WireMaterial>>,
+    mut materials: ResMut<Assets<tools::wire::WireMaterial>>,
     mut commands: Commands,
 ) -> Option<ActiveTool> {
     let coords = coords1.unwrap_or_default();
@@ -148,7 +147,7 @@ fn wiring(
                     .spawn((MaterialMeshBundle {
                         mesh: mesh.clone().into(),
                         transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                        material: materials.add(wire::WireMaterial {
+                        material: materials.add(tools::wire::WireMaterial {
                             color: Color::WHITE,
                         }),
                         ..default()
@@ -184,7 +183,7 @@ fn wiring(
                         MaterialMeshBundle {
                             mesh: mesh.clone().into(),
                             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-                            material: materials.add(wire::WireMaterial {
+                            material: materials.add(tools::wire::WireMaterial {
                                 color: Color::WHITE,
                             }),
                             ..default()
@@ -226,7 +225,7 @@ fn main(
     buttons: Res<ButtonInput<MouseButton>>,
     mut schematic: ResMut<Schematic>,
     meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<wire::WireMaterial>>,
+    materials: ResMut<Assets<tools::wire::WireMaterial>>,
     commands: Commands,
     schematic_res: ResMut<SchematicRes>,
 ) {
