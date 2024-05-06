@@ -12,6 +12,11 @@ use bevy::{
     },
 };
 
+#[derive(Resource, Default)]
+struct WireRes {
+    wire_mat_id: Option<Handle<WireMaterial>>,
+}
+
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum WiringToolState {
     #[default]
@@ -64,7 +69,7 @@ impl WireSegBundle {
     fn new(
         pt: SSPoint,
         mut meshes: ResMut<Assets<Mesh>>,
-        mut materials: ResMut<Assets<WireMaterial>>,
+        mut wire_mat_id: Handle<WireMaterial>,
     ) -> (WireSegBundle, Handle<Mesh>) {
         let ptf = Vec3::from_array([pt.x as f32, pt.y as f32, 0.0]);
         let mesh = Mesh::new(
@@ -78,9 +83,7 @@ impl WireSegBundle {
                 wireseg: WireSeg::new(pt),
                 meshbundle: MaterialMeshBundle {
                     mesh: meshid.clone(),
-                    material: materials.add(WireMaterial {
-                        color: Color::WHITE,
-                    }),
+                    material: wire_mat_id,
                     ..default()
                 },
             },
@@ -136,12 +139,21 @@ impl Plugin for Wire {
         );
 
         app.init_state::<WiringToolState>();
+        app.init_resource::<WireRes>();
     }
 }
 
-fn setup(mut next_wirestate: ResMut<NextState<WiringToolState>>) {
+fn setup(
+    mut next_wirestate: ResMut<NextState<WiringToolState>>,
+    mut materials: ResMut<Assets<WireMaterial>>,
+    mut wireres: ResMut<WireRes>,
+) {
     // on entering wiring tool
     next_wirestate.set(WiringToolState::Ready);
+    let wire_mat_id = materials.add(WireMaterial {
+        color: Color::WHITE,
+    });
+    wireres.wire_mat_id = Some(wire_mat_id);
 }
 
 fn main(
@@ -153,7 +165,7 @@ fn main(
     mut next_schematictoolstate: ResMut<NextState<SchematicToolState>>,
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<WireMaterial>>,
+    wireres: Res<WireRes>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {
@@ -161,7 +173,11 @@ fn main(
             if buttons.just_released(MouseButton::Left) {
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) = WireSegBundle::new(pt, meshes, materials);
+                    let (bundle, meshid) = WireSegBundle::new(
+                        pt, 
+                        meshes, 
+                        wireres.wire_mat_id.clone().unwrap(),
+                    );
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -183,8 +199,11 @@ fn main(
                 // add entity, change state
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                        let (bundle, meshid) = WireSegBundle::new(pt, meshes, materials);
-                        let wireseg = bundle.wireseg.clone();
+                        let (bundle, meshid) = WireSegBundle::new(
+                            pt, 
+                            meshes, 
+                            wireres.wire_mat_id.clone().unwrap(),
+                        );                        let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
                         next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
                             entityid: aws,
