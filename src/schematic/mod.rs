@@ -10,12 +10,6 @@ pub(crate) mod ui;
 const MINSCALE: Vec3 = Vec3::splat(0.0001);
 const MAXSCALE: Vec3 = Vec3::splat(100.0);
 
-///
-#[derive(Resource, Default)]
-struct Schematic {
-    state: state::State,
-}
-
 #[derive(Component)]
 struct SchematicCameraMarker;
 
@@ -98,9 +92,7 @@ fn setup(
         CursorMarker,
     ));
 
-    commands.init_resource::<Schematic>();
     commands.init_resource::<SchematicRes>();
-    // commands.init_resource::<VisibleCanvasAABB>();
 }
 
 use crate::types::{CSPoint, CanvasSpace, SSPoint, SchematicSpace};
@@ -213,7 +205,6 @@ fn camera_transform(
     mut mw: EventReader<MouseWheel>,
     mut camera: Query<(&Camera, &mut Transform, &GlobalTransform), With<SchematicCameraMarker>>,
     q_window: Query<&Window, With<PrimaryWindow>>,
-    // mut q_cursor: Query<&mut Transform, With<CursorMarker>>,
 ) {
     if let Ok((cam, mut transform, gt)) = camera.get_single_mut() {
         if mb.pressed(MouseButton::Middle) {

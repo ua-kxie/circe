@@ -1,3 +1,7 @@
-make all wire segs use one material
+make wiring tool draw axis aligned segments only
 add wire pruning
+make wiring use cursor events
+
 add device designer
+make cursor always appear as same size on screen
+display cursor coordinates

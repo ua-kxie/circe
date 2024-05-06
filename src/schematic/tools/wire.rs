@@ -69,7 +69,7 @@ impl WireSegBundle {
     fn new(
         pt: SSPoint,
         mut meshes: ResMut<Assets<Mesh>>,
-        mut wire_mat_id: Handle<WireMaterial>,
+        wire_mat_id: Handle<WireMaterial>,
     ) -> (WireSegBundle, Handle<Mesh>) {
         let ptf = Vec3::from_array([pt.x as f32, pt.y as f32, 0.0]);
         let mesh = Mesh::new(
