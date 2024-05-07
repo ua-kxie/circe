@@ -1,5 +1,5 @@
-pub mod wire;
 mod sel;
+pub mod wire;
 
 const WIRE_TOOL_KEY: KeyCode = KeyCode::KeyW;
 

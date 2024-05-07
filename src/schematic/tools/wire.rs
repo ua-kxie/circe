@@ -25,7 +25,10 @@ enum WiringToolState {
     Drawing(ActiveWireSeg), // placing second anchor point
 }
 
-use crate::{schematic::SchematicRes, types::SSPoint};
+use crate::{
+    schematic::{NewCurposSSP, SchematicRes},
+    types::SSPoint,
+};
 
 use super::SchematicToolState;
 
@@ -177,6 +180,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     wireres: Res<WireRes>,
+    mut e_new_ssp: EventReader<NewCurposSSP>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {
@@ -224,10 +228,12 @@ fn main(
                 // zero length wire segments will be cleaned up during check
             } else {
                 // update aws on mouse movement
-                if let Some(ssp) = schematic_res.cursor_position.opt_ssp {
-                    next_wiretoolstate.set(WiringToolState::Drawing(
-                        aws.new_endpoint(ssp, commands, meshes),
-                    ));
+                if let Some(new_curpos) = e_new_ssp.read().last() {
+                    if let Some(curpos_ssp) = new_curpos.0 {
+                        next_wiretoolstate.set(WiringToolState::Drawing(
+                            aws.new_endpoint(curpos_ssp, commands, meshes),
+                        ));
+                    }
                 }
             }
         }

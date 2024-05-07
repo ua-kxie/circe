@@ -26,7 +26,10 @@ enum SelToolState {
     Active(ActiveSelBox), // placing second anchor point
 }
 
-use crate::{schematic::{NewCurposSSP, SchematicRes}, types::{SSBox, SSPoint}};
+use crate::{
+    schematic::{NewCurposSSP, SchematicRes},
+    types::{SSBox, SSPoint},
+};
 
 use super::SchematicToolState;
 
@@ -37,7 +40,9 @@ struct SelBox {
 
 impl SelBox {
     fn new(pt: SSPoint) -> SelBox {
-        SelBox { sel: SSBox::from_points([pt]) }
+        SelBox {
+            sel: SSBox::from_points([pt]),
+        }
     }
 }
 
@@ -55,9 +60,7 @@ impl Material for SelMaterial {
         layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        let vertex_layout = layout.get_layout(
-            &[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)]
-        )?;
+        let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }
@@ -87,9 +90,7 @@ impl SelectionBundle {
             PrimitiveTopology::TriangleStrip,
             RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
         )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![
-            ptf, ptf, ptf
-            ]);
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![ptf, ptf, ptf]);
         let meshid = meshes.add(mesh);
         (
             SelectionBundle {
@@ -122,17 +123,35 @@ impl ActiveSelBox {
         let asb = ActiveSelBox {
             entityid: self.entityid,
             meshid: self.meshid.clone(),
-            selbox: SelBox { sel: SSBox::from_points([self.selbox.sel.min, pt]) },
+            selbox: SelBox {
+                sel: SSBox::from_points([self.selbox.sel.min, pt]),
+            },
         };
 
         let mesh = meshes.get_mut(self.meshid.clone()).unwrap();
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             vec![
-                Vec3::from_array([self.selbox.sel.min.x as f32 ,self.selbox.sel.min.y as f32, 0.0]),
-                Vec3::from_array([self.selbox.sel.min.x as f32 ,self.selbox.sel.max.y as f32, 0.0]),
-                Vec3::from_array([self.selbox.sel.max.x as f32 ,self.selbox.sel.min.y as f32, 0.0]),
-                Vec3::from_array([self.selbox.sel.max.x as f32 ,self.selbox.sel.max.y as f32, 0.0]),
+                Vec3::from_array([
+                    self.selbox.sel.min.x as f32,
+                    self.selbox.sel.min.y as f32,
+                    0.0,
+                ]),
+                Vec3::from_array([
+                    self.selbox.sel.min.x as f32,
+                    self.selbox.sel.max.y as f32,
+                    0.0,
+                ]),
+                Vec3::from_array([
+                    self.selbox.sel.max.x as f32,
+                    self.selbox.sel.min.y as f32,
+                    0.0,
+                ]),
+                Vec3::from_array([
+                    self.selbox.sel.max.x as f32,
+                    self.selbox.sel.max.y as f32,
+                    0.0,
+                ]),
             ],
         );
         let aabb = mesh.compute_aabb().unwrap();
@@ -148,10 +167,7 @@ impl Plugin for Sel {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<SelMaterial>::default());
         app.add_systems(Startup, setup);
-        app.add_systems(
-            Update,
-            main.run_if(in_state(SchematicToolState::Idle)),
-        );
+        app.add_systems(Update, main.run_if(in_state(SchematicToolState::Idle)));
 
         app.init_state::<SelToolState>();
         app.init_resource::<SelRes>();
@@ -180,7 +196,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     selres: Res<SelRes>,
-    mut e_new_ssp: EventReader<NewCurposSSP>
+    mut e_new_ssp: EventReader<NewCurposSSP>,
 ) {
     // run if tool state is idle
     match seltoolstate.get() {
@@ -192,13 +208,11 @@ fn main(
                         SelectionBundle::new(pt, meshes, selres.sel_mat_id.clone().unwrap());
                     let selbox = bundle.selbox.clone();
                     let asel = commands.spawn(bundle).id();
-                    next_seltoolstate.set(SelToolState::Active(
-                        ActiveSelBox{
-                            entityid: asel,
-                            meshid,
-                            selbox,
-                        }
-                    ));
+                    next_seltoolstate.set(SelToolState::Active(ActiveSelBox {
+                        entityid: asel,
+                        meshid,
+                        selbox,
+                    }));
                 }
             }
         }
@@ -207,7 +221,7 @@ fn main(
                 if let Some(curpos_ssp) = new_curpos.0 {
                     next_seltoolstate.set(SelToolState::Active(
                         // also update selected entities
-                        asb.new_endpoint(curpos_ssp, &mut commands, meshes)
+                        asb.new_endpoint(curpos_ssp, &mut commands, meshes),
                     ));
                 }
             }

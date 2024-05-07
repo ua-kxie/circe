@@ -82,16 +82,16 @@ fn setup(
                 color: Color::rgba(0.5, 0.5, 0.5, 0.5),
             }),
             mesh: meshes
-                .add(Mesh::new(
-                    PrimitiveTopology::PointList,
-                    RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                ).with_inserted_attribute(
-                    Mesh::ATTRIBUTE_POSITION,
-                    vec![
-                        Vec3::new(0.0, 0.0, 0.0),
-                    ],
-                ),
-            )
+                .add(
+                    Mesh::new(
+                        PrimitiveTopology::PointList,
+                        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+                    )
+                    .with_inserted_attribute(
+                        Mesh::ATTRIBUTE_POSITION,
+                        vec![Vec3::new(0.0, 0.0, 0.0)],
+                    ),
+                )
                 .into(),
             ..default()
         },
@@ -105,16 +105,16 @@ fn setup(
                 color: Color::rgba(1.0, 1.0, 1.0, 1.0),
             }),
             mesh: meshes
-                .add(Mesh::new(
-                    PrimitiveTopology::PointList,
-                    RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                ).with_inserted_attribute(
-                    Mesh::ATTRIBUTE_POSITION,
-                    vec![
-                        Vec3::new(0.0, 0.0, 0.0),
-                    ],
-                ),
-            )
+                .add(
+                    Mesh::new(
+                        PrimitiveTopology::PointList,
+                        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+                    )
+                    .with_inserted_attribute(
+                        Mesh::ATTRIBUTE_POSITION,
+                        vec![Vec3::new(0.0, 0.0, 0.0)],
+                    ),
+                )
                 .into(),
             ..default()
         },
