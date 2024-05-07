@@ -22,7 +22,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-    out.clip_position[2] = 1.0;  // keep the z coordinate fixed to maintain rendered size of lines and points
+    // out.clip_position[2] = 1.0;  // keep the z coordinate fixed to maintain rendered size of lines and points
     return out;
 }
 
@@ -31,5 +31,5 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
     // return material.color;
     // return vec4(coord.x/1920.0, coord.y/1080.0, 1.0, 1.0);
-    return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 1.0);
+    return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 0.2);
 }

@@ -1,5 +1,5 @@
 use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
-use euclid::{Box2D, Point2D};
+use euclid::{Box2D, Point2D, Translation3D};
 use std::ops::Mul;
 mod grid;
 mod net_vertex;
@@ -14,6 +14,9 @@ struct SchematicCameraMarker;
 
 #[derive(Component)]
 struct CursorMarker;
+
+#[derive(Component)]
+struct BackgroundMarker;
 
 #[derive(Event)]
 struct NewCurposSSP(Option<SSPoint>);
@@ -42,10 +45,6 @@ struct SchematicRes {
     cursor_position: Curpos,
 }
 
-// hold children (and save state?)
-#[derive(Component)]
-struct SchematicComponent;
-
 pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
@@ -73,6 +72,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands.spawn((
         MaterialMeshBundle {
@@ -87,8 +87,6 @@ fn setup(
         },
         CursorMarker,
     ));
-
-    commands.spawn((SchematicComponent));
 
     commands.init_resource::<SchematicRes>();
 }
@@ -181,9 +179,13 @@ fn draw_curpos_ssp(
     }
 }
 
-fn setup_camera(mut commands: Commands) {
+fn setup_camera(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     let scale = 0.1;
-    commands.spawn((
+    let cam = commands.spawn((
         Camera3dBundle {
             transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 {
                 x: scale,
@@ -194,7 +196,18 @@ fn setup_camera(mut commands: Commands) {
             ..default()
         },
         SchematicCameraMarker,
-    ));
+        InheritedVisibility::VISIBLE,
+    )).id();
+
+    // background
+    let bg = commands.spawn(PbrBundle {
+        mesh: meshes.add(Plane3d::new(*Direction3d::Z).mesh().size(1e9, 1e9)),
+        material: materials.add(Color::GREEN),
+        transform: Transform::default().with_translation(Direction3d::NEG_Z * 1e3),
+        ..default()
+    }).id();
+
+    commands.entity(cam).push_children(&[bg]);
 }
 
 fn camera_transform(

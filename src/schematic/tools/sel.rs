@@ -65,12 +65,12 @@ impl Material for SelMaterial {
         Ok(())
     }
 
-    // fn vertex_shader() -> ShaderRef {
-    //     "sel_shader.wgsl".into()
-    // }
-    // fn fragment_shader() -> ShaderRef {
-    //     "sel_shader.wgsl".into()
-    // }
+    fn vertex_shader() -> ShaderRef {
+        "sel_shader.wgsl".into()
+    }
+    fn fragment_shader() -> ShaderRef {
+        "sel_shader.wgsl".into()
+    }
 }
 
 #[derive(Bundle)]
@@ -124,10 +124,9 @@ impl ActiveSelBox {
             entityid: self.entityid,
             meshid: self.meshid.clone(),
             selbox: SelBox {
-                sel: SSBox::from_points([self.selbox.sel.min, pt]),
+                sel: SSBox::new(self.selbox.sel.min, pt),
             },
         };
-
         let mesh = meshes.get_mut(self.meshid.clone()).unwrap();
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
@@ -155,7 +154,6 @@ impl ActiveSelBox {
             ],
         );
         let aabb = mesh.compute_aabb().unwrap();
-
         let mut ent = commands.entity(self.entityid);
         ent.insert((self.selbox.clone(), aabb));
 

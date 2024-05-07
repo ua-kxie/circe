@@ -128,7 +128,6 @@ impl ActiveWireSeg {
             ],
         );
         let aabb = mesh.compute_aabb().unwrap();
-
         let mut ent = commands.entity(self.entityid);
         ent.insert((self.wireseg.clone(), aabb));
 
