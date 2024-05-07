@@ -1,3 +1,5 @@
+add cursor material
+
 make wiring tool draw axis aligned segments only
 add wire pruning
 make wiring use cursor events

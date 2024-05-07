@@ -13,12 +13,6 @@ const MAXSCALE: Vec3 = Vec3::splat(100.0);
 struct SchematicCameraMarker;
 
 #[derive(Component)]
-struct ActiveWireSeg;
-
-#[derive(Component)]
-struct WireSeg;
-
-#[derive(Component)]
 struct CursorMarker;
 
 #[derive(Event)]
@@ -47,6 +41,10 @@ struct SchematicRes {
     visible_canvas_aabb: VisibleCanvasAABB,
     cursor_position: Curpos,
 }
+
+// hold children (and save state?)
+#[derive(Component)]
+struct SchematicComponent;
 
 pub struct SchematicPlugin;
 
@@ -90,6 +88,8 @@ fn setup(
         },
         CursorMarker,
     ));
+
+    commands.spawn((SchematicComponent));
 
     commands.init_resource::<SchematicRes>();
 }
