@@ -1,5 +1,5 @@
 use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
-use euclid::{Box2D, Point2D, Translation3D};
+use euclid::{Box2D, Point2D};
 use std::ops::Mul;
 mod grid;
 mod net_vertex;
@@ -72,7 +72,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands.spawn((
         MaterialMeshBundle {
@@ -185,27 +185,31 @@ fn setup_camera(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let scale = 0.1;
-    let cam = commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 {
-                x: scale,
-                y: scale,
-                z: scale,
-            }),
-            projection: Projection::Orthographic(OrthographicProjection::default()),
-            ..default()
-        },
-        SchematicCameraMarker,
-        InheritedVisibility::VISIBLE,
-    )).id();
+    let cam = commands
+        .spawn((
+            Camera3dBundle {
+                transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 {
+                    x: scale,
+                    y: scale,
+                    z: scale,
+                }),
+                projection: Projection::Orthographic(OrthographicProjection::default()),
+                ..default()
+            },
+            SchematicCameraMarker,
+            InheritedVisibility::VISIBLE,
+        ))
+        .id();
 
     // background
-    let bg = commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane3d::new(*Direction3d::Z).mesh().size(1e9, 1e9)),
-        material: materials.add(Color::GREEN),
-        transform: Transform::default().with_translation(Direction3d::NEG_Z * 1e3),
-        ..default()
-    }).id();
+    let bg = commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Plane3d::new(*Direction3d::Z).mesh().size(1e9, 1e9)),
+            material: materials.add(Color::GREEN),
+            transform: Transform::default().with_translation(Direction3d::NEG_Z * 1e3),
+            ..default()
+        })
+        .id();
 
     commands.entity(cam).push_children(&[bg]);
 }

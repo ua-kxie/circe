@@ -8,8 +8,7 @@ use bevy::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
-            SpecializedMeshPipelineError,
+            AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
     },
 };
