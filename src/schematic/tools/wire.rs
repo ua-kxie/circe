@@ -7,7 +7,8 @@ use bevy::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError
+            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
+            SpecializedMeshPipelineError,
         },
     },
 };
@@ -55,9 +56,7 @@ impl Material for WireMaterial {
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.primitive.polygon_mode = PolygonMode::Line;
-        let vertex_layout = layout.get_layout(&[
-            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-        ])?;
+        let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }
@@ -184,11 +183,8 @@ fn main(
             if buttons.just_released(MouseButton::Left) {
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) = WireSegBundle::new(
-                        pt, 
-                        meshes, 
-                        wireres.wire_mat_id.clone().unwrap(),
-                    );
+                    let (bundle, meshid) =
+                        WireSegBundle::new(pt, meshes, wireres.wire_mat_id.clone().unwrap());
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -210,11 +206,9 @@ fn main(
                 // add entity, change state
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                        let (bundle, meshid) = WireSegBundle::new(
-                            pt, 
-                            meshes, 
-                            wireres.wire_mat_id.clone().unwrap(),
-                        );                        let wireseg = bundle.wireseg.clone();
+                        let (bundle, meshid) =
+                            WireSegBundle::new(pt, meshes, wireres.wire_mat_id.clone().unwrap());
+                        let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
                         next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
                             entityid: aws,

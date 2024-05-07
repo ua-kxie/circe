@@ -1,13 +1,19 @@
 use bevy::{
-    pbr::{MaterialPipeline, MaterialPipelineKey}, prelude::*, render::{mesh::{MeshVertexBufferLayout, PrimitiveTopology}, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError}}
+    pbr::{MaterialPipeline, MaterialPipelineKey},
+    prelude::*,
+    render::{
+        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
+        render_asset::RenderAssetUsages,
+        render_resource::{
+            AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
+        },
+    },
 };
 use euclid::Box2D;
 
 use crate::types::SchematicSpace;
 
-use super::{
-    NewVisibleCanvasAABB, SchematicRes,
-};
+use super::{NewVisibleCanvasAABB, SchematicRes};
 
 // This is the struct that will be passed to your shader
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -23,9 +29,7 @@ impl Material for GridMaterial {
         layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        let vertex_layout = layout.get_layout(&[
-            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-        ])?;
+        let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }
