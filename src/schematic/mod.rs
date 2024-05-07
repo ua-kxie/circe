@@ -50,7 +50,6 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<tools::wire::WireMaterial>::default());
         app.add_plugins((grid::Grid, tools::ToolsPlugin));
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(

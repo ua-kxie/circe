@@ -85,7 +85,13 @@ fn setup(
                 .add(Mesh::new(
                     PrimitiveTopology::PointList,
                     RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                ))
+                ).with_inserted_attribute(
+                    Mesh::ATTRIBUTE_POSITION,
+                    vec![
+                        Vec3::new(0.0, 0.0, 0.0),
+                    ],
+                ),
+            )
                 .into(),
             ..default()
         },
@@ -102,7 +108,13 @@ fn setup(
                 .add(Mesh::new(
                     PrimitiveTopology::PointList,
                     RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-                ))
+                ).with_inserted_attribute(
+                    Mesh::ATTRIBUTE_POSITION,
+                    vec![
+                        Vec3::new(0.0, 0.0, 0.0),
+                    ],
+                ),
+            )
                 .into(),
             ..default()
         },
@@ -148,7 +160,7 @@ fn minor_grid_main(
 
         let grid = g.get_single_mut().unwrap();
         let gridmesh = meshes.get_mut(grid.1.id()).unwrap();
-        gridmesh.remove_attribute(Mesh::ATTRIBUTE_POSITION);
+        // gridmesh.remove_attribute(Mesh::ATTRIBUTE_POSITION);
         gridmesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, gridvec(aabb, 2, 1.0e4));
         if let Some(aabb) = gridmesh.compute_aabb() {
             commands.entity(grid.0).insert(aabb);
@@ -169,7 +181,7 @@ fn major_grid_main(
 
         let grid = g.get_single_mut().unwrap();
         let gridmesh = meshes.get_mut(grid.1.id()).unwrap();
-        gridmesh.remove_attribute(Mesh::ATTRIBUTE_POSITION);
+        // gridmesh.remove_attribute(Mesh::ATTRIBUTE_POSITION);
         gridmesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, gridvec(aabb, 16, 1.0e6));
         if let Some(aabb) = gridmesh.compute_aabb() {
             commands.entity(grid.0).insert(aabb);

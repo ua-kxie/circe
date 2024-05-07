@@ -1,4 +1,5 @@
 pub mod wire;
+mod sel;
 
 const WIRE_TOOL_KEY: KeyCode = KeyCode::KeyW;
 
@@ -20,6 +21,7 @@ pub struct ToolsPlugin;
 impl Plugin for ToolsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(wire::Wire);
+        app.add_plugins(sel::Sel);
         app.add_systems(Update, main);
 
         app.init_state::<SchematicToolState>();

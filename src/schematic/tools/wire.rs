@@ -142,6 +142,7 @@ impl ActiveWireSeg {
 
 impl Plugin for Wire {
     fn build(&self, app: &mut App) {
+        app.add_plugins(MaterialPlugin::<WireMaterial>::default());
         app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
         app.add_systems(
             Update,

@@ -20,6 +20,9 @@ pub type SSPoint = euclid::Point2D<i16, SchematicSpace>;
 /// CanvasSpace Point
 pub type CSPoint = euclid::Point2D<f32, CanvasSpace>;
 
+/// SchematicSpace Box
+pub type SSBox = euclid::Box2D<i16, SchematicSpace>;
+
 /// Newtype for working with bevy::Vec3 and euclid::Point2D s
 #[derive(Debug, Copy, Clone)]
 pub struct Point(CSPoint);
