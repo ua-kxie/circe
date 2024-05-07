@@ -5,7 +5,6 @@ mod grid;
 mod net_vertex;
 mod state;
 mod tools;
-pub(crate) mod ui;
 
 const MINSCALE: Vec3 = Vec3::splat(0.0001);
 const MAXSCALE: Vec3 = Vec3::splat(100.0);
@@ -76,14 +75,14 @@ impl Plugin for SchematicPlugin {
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
+    mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
 ) {
     commands.spawn((
         MaterialMeshBundle {
             mesh: meshes
                 .add(bevy::math::primitives::Rectangle::new(0.1, 0.1))
                 .into(),
-            material: grid_materials.add(ui::GridMaterial {
+            material: grid_materials.add(grid::GridMaterial {
                 color: Color::YELLOW,
             }),
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),

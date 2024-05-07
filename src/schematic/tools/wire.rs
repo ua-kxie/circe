@@ -7,7 +7,7 @@ use bevy::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{
-            AsBindGroup, PolygonMode, RenderPipelineDescriptor, SpecializedMeshPipelineError,
+            AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError
         },
     },
 };
@@ -51,11 +51,22 @@ impl Material for WireMaterial {
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayout,
+        layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.primitive.polygon_mode = PolygonMode::Line;
+        let vertex_layout = layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+        ])?;
+        descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
+    }
+
+    fn vertex_shader() -> ShaderRef {
+        "wire_shader.wgsl".into()
+    }
+    fn fragment_shader() -> ShaderRef {
+        "wire_shader.wgsl".into()
     }
 }
 

@@ -1,7 +1,10 @@
 make wiring tool draw axis aligned segments only
 add wire pruning
 make wiring use cursor events
+draw wire terminals/solder dots
 
 add device designer
 make cursor always appear as same size on screen
 display cursor coordinates
+
+gpu instancing for sized grid dots

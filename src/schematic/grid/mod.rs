@@ -1,15 +1,42 @@
 use bevy::{
-    prelude::*,
-    render::{mesh::PrimitiveTopology, render_asset::RenderAssetUsages},
+    pbr::{MaterialPipeline, MaterialPipelineKey}, prelude::*, render::{mesh::{MeshVertexBufferLayout, PrimitiveTopology}, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError}}
 };
 use euclid::Box2D;
 
 use crate::types::SchematicSpace;
 
 use super::{
-    ui::{self, GridMaterial},
     NewVisibleCanvasAABB, SchematicRes,
 };
+
+// This is the struct that will be passed to your shader
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct GridMaterial {
+    #[uniform(0)]
+    pub(crate) color: Color,
+}
+
+impl Material for GridMaterial {
+    fn specialize(
+        _pipeline: &MaterialPipeline<Self>,
+        descriptor: &mut RenderPipelineDescriptor,
+        layout: &MeshVertexBufferLayout,
+        _key: MaterialPipelineKey<Self>,
+    ) -> Result<(), SpecializedMeshPipelineError> {
+        let vertex_layout = layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+        ])?;
+        descriptor.vertex.buffers = vec![vertex_layout];
+        Ok(())
+    }
+
+    fn vertex_shader() -> ShaderRef {
+        "grid_shader.wgsl".into()
+    }
+    fn fragment_shader() -> ShaderRef {
+        "grid_shader.wgsl".into()
+    }
+}
 
 pub struct Grid;
 
@@ -29,25 +56,25 @@ struct MajorGridMarker;
 
 #[derive(Bundle)]
 struct MinorGridBundle {
-    mesh: MaterialMeshBundle<ui::GridMaterial>,
+    mesh: MaterialMeshBundle<GridMaterial>,
     grid: MinorGridMarker,
 }
 
 #[derive(Bundle)]
 struct MajorGridBundle {
-    mesh: MaterialMeshBundle<ui::GridMaterial>,
+    mesh: MaterialMeshBundle<GridMaterial>,
     grid: MajorGridMarker,
 }
 
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut grid_materials: ResMut<Assets<ui::GridMaterial>>,
+    mut grid_materials: ResMut<Assets<GridMaterial>>,
 ) {
     // grid
     commands.spawn(MinorGridBundle {
         mesh: MaterialMeshBundle {
-            material: grid_materials.add(ui::GridMaterial {
+            material: grid_materials.add(GridMaterial {
                 color: Color::rgba(0.5, 0.5, 0.5, 0.5),
             }),
             mesh: meshes
@@ -64,7 +91,7 @@ fn setup(
     // grid
     commands.spawn(MajorGridBundle {
         mesh: MaterialMeshBundle {
-            material: grid_materials.add(ui::GridMaterial {
+            material: grid_materials.add(GridMaterial {
                 color: Color::rgba(1.0, 1.0, 1.0, 1.0),
             }),
             mesh: meshes
@@ -80,7 +107,7 @@ fn setup(
 
     // axis
     commands.spawn(MaterialMeshBundle {
-        material: grid_materials.add(ui::GridMaterial {
+        material: grid_materials.add(GridMaterial {
             color: Color::WHITE,
         }),
         mesh: meshes
