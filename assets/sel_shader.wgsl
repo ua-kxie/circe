@@ -30,6 +30,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 // fn fragment(@builtin(position) coord: vec4<f32>) -> @location(0) vec4<f32> {
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
     // return material.color_pos;
-    return vec4(input.clip_position.x/100.0, input.clip_position.y/100.0, 1.0, 1.0);
-    // return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 0.2);
+    // return vec4(input.clip_position.x/100.0, input.clip_position.y/100.0, 1.0, 1.0);
+    return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 0.2);
 }
