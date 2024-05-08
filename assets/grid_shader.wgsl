@@ -21,7 +21,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-    out.clip_position[2] = 1.0;  // keep the z coordinate fixed to maintain rendered size of lines and points
+    // out.clip_position[2] = 1.0;  // keep the z coordinate fixed to maintain rendered size of lines and points
     return out;
 }
 

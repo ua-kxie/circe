@@ -179,7 +179,7 @@ fn setup(
     // on entering wiring tool
     next_selstate.set(SelToolState::Ready);
     let sel_mat_id = materials.add(SelMaterial {
-        color_pos: Color::ORANGE_RED,
+        color_pos: Color::rgba(1.0, 1.0, 0.0, 0.1),
         // color_neg: Color::AQUAMARINE,
     });
     selres.sel_mat_id = Some(sel_mat_id);

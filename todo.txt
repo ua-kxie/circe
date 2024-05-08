@@ -1,5 +1,6 @@
 add cursor material
 fix sync issue between cursor and wire/selection (events)
+fix transparency issue
 
 selectable entities
 dragging wires
