@@ -70,6 +70,10 @@ impl Material for SelMaterial {
     fn fragment_shader() -> ShaderRef {
         "sel_shader.wgsl".into()
     }
+
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Blend
+    }
 }
 
 #[derive(Bundle)]
@@ -148,6 +152,22 @@ impl ActiveSelBox {
                 Vec3::from_array([
                     self.selbox.sel.max.x as f32,
                     self.selbox.sel.max.y as f32,
+                    0.0,
+                ]),
+                // backtrack so triangles face both directions (negative selections)
+                Vec3::from_array([
+                    self.selbox.sel.max.x as f32,
+                    self.selbox.sel.min.y as f32,
+                    0.0,
+                ]),
+                Vec3::from_array([
+                    self.selbox.sel.min.x as f32,
+                    self.selbox.sel.max.y as f32,
+                    0.0,
+                ]),
+                Vec3::from_array([
+                    self.selbox.sel.min.x as f32,
+                    self.selbox.sel.min.y as f32,
                     0.0,
                 ]),
             ],
