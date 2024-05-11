@@ -40,6 +40,9 @@ impl Material for GridMaterial {
     fn fragment_shader() -> ShaderRef {
         "grid_shader.wgsl".into()
     }
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Blend
+    }
 }
 
 pub struct Grid;
@@ -79,7 +82,7 @@ fn setup(
     commands.spawn(MinorGridBundle {
         mesh: MaterialMeshBundle {
             material: grid_materials.add(GridMaterial {
-                color: Color::rgba(0.5, 0.5, 0.5, 0.5),
+                color: Color::rgba(1.0, 1.0, 1.0, 0.2),
             }),
             mesh: meshes
                 .add(
