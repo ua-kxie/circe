@@ -12,6 +12,9 @@ const MINSCALE: f32 = 0.001;
 const MAXSCALE: f32 = 10.0;
 
 #[derive(Component)]
+struct InfoTextMarker;
+
+#[derive(Component)]
 struct SchematicCameraMarker;
 
 #[derive(Component)]
@@ -60,6 +63,7 @@ impl Plugin for SchematicPlugin {
                 cursor_update,
                 draw_curpos_ssp,
                 visible_canvas_aabb,
+                update_info_text,
             ),
         );
         app.add_event::<NewCurposSSP>();
@@ -75,6 +79,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
     _materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     commands.spawn((
         MaterialMeshBundle {
@@ -89,8 +94,45 @@ fn setup(
         },
         CursorMarker,
     ));
+    commands.spawn((
+        TextBundle::from_section(
+            "",
+            TextStyle {
+                font_size: 16.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(12.0),
+            left: Val::Px(12.0),
+            ..default()
+        }),
+        InfoTextMarker,
+    )
+    );
 
     commands.init_resource::<SchematicRes>();
+}
+
+fn update_info_text(
+    mut text: Query<&mut Text, With<InfoTextMarker>>,
+    projection: Query<&Projection, With<SchematicCameraMarker>>,
+    schematic_res: Res<SchematicRes>,
+
+) {
+    let mut text = text.single_mut();
+    let text = &mut text.sections[0].value;
+    *text = "".to_string();
+
+    if let Some(ssp) = schematic_res.cursor_position.opt_ssp {
+        text.push_str(&format!("x: {:+03}; y: {:+03}; ", ssp.x, ssp.y))
+    }
+    if let Projection::Orthographic(opj) = projection.single() {
+        text.push_str(&format!("scale: {:.4};", opj.scale));
+    }
+
 }
 
 use crate::types::{CSPoint, CanvasSpace, SSPoint, SchematicSpace};
@@ -186,16 +228,14 @@ fn setup_camera(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let scale = 0.1;
     let cam = commands
         .spawn((
             Camera3dBundle {
-                transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3 {
-                    x: scale,
-                    y: scale,
-                    z: scale,
+                transform: Transform::from_xyz(0., 0., 1.0),
+                projection: Projection::Orthographic(OrthographicProjection{
+                    scale: 0.1,
+                    ..Default::default()
                 }),
-                projection: Projection::Orthographic(OrthographicProjection::default()),
                 ..default()
             },
             SchematicCameraMarker,
@@ -225,14 +265,16 @@ fn camera_transform(
 ) {
     if let Ok((cam, mut transform, gt, mut pj)) = camera.get_single_mut() {
         if mb.pressed(MouseButton::Middle) {
-            let mut pan = Vec3::ZERO;
-            for m in mm.read() {
-                if let Some(d) = m.delta {
-                    pan += Vec3::new(-d.x, d.y, 0.0);
+            if let Projection::Orthographic(opj) = &mut *pj {
+                let mut pan = Vec3::ZERO;
+                for m in mm.read() {
+                    if let Some(d) = m.delta {
+                        pan += Vec3::new(-d.x, d.y, 0.0);
+                    }
                 }
+                let t = pan * opj.scale;
+                transform.translation += t;
             }
-            let t = transform.scale.mul(pan);
-            transform.translation += t;
         }
 
         let mut curpos = None;
@@ -248,15 +290,6 @@ fn camera_transform(
             if let Projection::Orthographic(opj) = &mut *pj {
                 opj.scale = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
             }
-            // opj.scale = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
-            // match &mut pj {
-            //     Projection::Orthographic(mut opj) => {
-            //         // let a = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
-            //         opj.scale = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
-            //     },
-            //     _ => (),
-            // }
-            // transform.scale = (transform.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
         }
         let mut curpos1 = None;
         if let Ok(window) = q_window.get_single() {
