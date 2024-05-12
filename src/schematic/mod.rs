@@ -1,6 +1,6 @@
 use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
 use euclid::{Box2D, Point2D};
-use std::ops::Mul;
+
 mod grid;
 mod net_vertex;
 mod state;
@@ -79,7 +79,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
     _materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
+    _asset_server: Res<AssetServer>,
 ) {
     commands.spawn((
         MaterialMeshBundle {
@@ -110,8 +110,7 @@ fn setup(
             ..default()
         }),
         InfoTextMarker,
-    )
-    );
+    ));
 
     commands.init_resource::<SchematicRes>();
 }
@@ -120,7 +119,6 @@ fn update_info_text(
     mut text: Query<&mut Text, With<InfoTextMarker>>,
     projection: Query<&Projection, With<SchematicCameraMarker>>,
     schematic_res: Res<SchematicRes>,
-
 ) {
     let mut text = text.single_mut();
     let text = &mut text.sections[0].value;
@@ -132,7 +130,6 @@ fn update_info_text(
     if let Projection::Orthographic(opj) = projection.single() {
         text.push_str(&format!("scale: {:.4};", opj.scale));
     }
-
 }
 
 use crate::types::{CSPoint, CanvasSpace, SSPoint, SchematicSpace};
@@ -232,7 +229,7 @@ fn setup_camera(
         .spawn((
             Camera3dBundle {
                 transform: Transform::from_xyz(0., 0., 1.0),
-                projection: Projection::Orthographic(OrthographicProjection{
+                projection: Projection::Orthographic(OrthographicProjection {
                     scale: 0.1,
                     ..Default::default()
                 }),
@@ -260,7 +257,10 @@ fn camera_transform(
     mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<CursorMoved>,
     mut mw: EventReader<MouseWheel>,
-    mut camera: Query<(&Camera, &mut Transform, &GlobalTransform, &mut Projection), With<SchematicCameraMarker>>,
+    mut camera: Query<
+        (&Camera, &mut Transform, &GlobalTransform, &mut Projection),
+        With<SchematicCameraMarker>,
+    >,
     q_window: Query<&Window, With<PrimaryWindow>>,
 ) {
     if let Ok((cam, mut transform, gt, mut pj)) = camera.get_single_mut() {
