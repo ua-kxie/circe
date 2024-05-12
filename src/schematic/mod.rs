@@ -9,7 +9,7 @@ mod tools;
 // const MINSCALE: Vec3 = Vec3::splat(0.0001);
 const MINSCALE: f32 = 0.001;
 // const MAXSCALE: Vec3 = Vec3::splat(100.0);
-const MAXSCALE: f32 = 10.0;
+const MAXSCALE: f32 = 1.0;
 
 #[derive(Component)]
 struct InfoTextMarker;

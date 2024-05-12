@@ -2,13 +2,12 @@ make selection aabb show different color based on pos/neg area
     draw 2 opposing rects simultaneously with different colors?
     switch color based on selection area - just check for area sign then recreate rect from min/max pts
 
-add info bar ui with cursor coords, scale
+camera zoom towards cursor
 
 add cursor material
-fix sync issue between cursor and wire/selection (events)
+fix sync issue between cursor and wire/selection (events) - cursor uses default material, sel/wire uses custom
 
-selectable entities
-dragging wires
+selectable/draggable entities (picking plugin?)
 
 make wiring tool draw axis aligned segments only
 add wire pruning
@@ -17,9 +16,5 @@ draw wire terminals/solder dots
 
 add device designer
 make cursor always appear as same size on screen
-display cursor coordinates
 
 gpu instancing for sized grid dots
-
-fix flickering background/grid
-remove magic resolution numbers in shaders
