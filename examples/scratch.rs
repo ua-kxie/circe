@@ -17,9 +17,7 @@ use bevy::{
 #[derive(Component)]
 struct CameraMarker;
 
-fn setup_camera(
-    mut commands: Commands,
-) {
+fn setup_camera(mut commands: Commands) {
     // add camera
     commands.spawn((
         Camera3dBundle {
@@ -89,9 +87,9 @@ fn draw_cursor(
 fn setup_cursor(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut wire_materials: ResMut<Assets<WireMaterial>>,
+    _wire_materials: ResMut<Assets<WireMaterial>>,
     mut color_materials: ResMut<Assets<StandardMaterial>>,
-    mut wireres: ResMut<WireRes>,
+    _wireres: ResMut<WireRes>,
 ) {
     // add cursor marker
     commands.spawn((
@@ -99,7 +97,7 @@ fn setup_cursor(
             mesh: meshes
                 .add(bevy::math::primitives::Rectangle::new(0.5, 0.5))
                 .into(),
-            material: color_materials.add(StandardMaterial{
+            material: color_materials.add(StandardMaterial {
                 base_color: Color::RED,
                 emissive: Color::RED,
                 ..Default::default()
@@ -247,9 +245,9 @@ impl ActiveWireSeg {
 
 fn setup_wire(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+    meshes: ResMut<Assets<Mesh>>,
     mut wire_materials: ResMut<Assets<WireMaterial>>,
-    mut color_materials: ResMut<Assets<StandardMaterial>>,
+    _color_materials: ResMut<Assets<StandardMaterial>>,
     mut wireres: ResMut<WireRes>,
 ) {
     // add a wire
@@ -326,11 +324,14 @@ impl TriangleBundle {
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
         )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![
-            Vec3::from_array([pts[0].x as f32, pts[0].y as f32, 0.0]),
-            Vec3::from_array([pts[1].x as f32, pts[1].y as f32, 0.0]),
-            Vec3::from_array([pts[2].x as f32, pts[2].y as f32, 0.0]),
-        ],);
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![
+                Vec3::from_array([pts[0].x as f32, pts[0].y as f32, 0.0]),
+                Vec3::from_array([pts[1].x as f32, pts[1].y as f32, 0.0]),
+                Vec3::from_array([pts[2].x as f32, pts[2].y as f32, 0.0]),
+            ],
+        );
         let meshid = meshes.add(mesh);
         (
             TriangleBundle {
@@ -383,7 +384,7 @@ impl ActiveTriangle {
 
 fn setup_triangle(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+    meshes: ResMut<Assets<Mesh>>,
     mut color_materials: ResMut<Assets<StandardMaterial>>,
     mut trires: ResMut<TriangleRes>,
 ) {
@@ -397,9 +398,9 @@ fn setup_triangle(
 
     let (bundle, meshid) = TriangleBundle::new(
         [
-            I16Vec2{x:0, y:0},
-            I16Vec2{x:1, y:1},
-            I16Vec2{x:0, y:0},
+            I16Vec2 { x: 0, y: 0 },
+            I16Vec2 { x: 1, y: 1 },
+            I16Vec2 { x: 0, y: 0 },
         ],
         meshes,
         mat_id,
@@ -419,14 +420,16 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(MaterialPlugin::<WireMaterial>::default())
         .add_event::<NewCurpos>()
-        .add_systems(Update, (update_wire, update_cursor, draw_cursor, update_triangle))
-        .add_systems(Startup, (setup_camera, setup_wire, setup_cursor, setup_triangle))
+        .add_systems(
+            Update,
+            (update_wire, update_cursor, draw_cursor, update_triangle),
+        )
+        .add_systems(
+            Startup,
+            (setup_camera, setup_wire, setup_cursor, setup_triangle),
+        )
         .init_resource::<CurRes>()
         .init_resource::<WireRes>()
         .init_resource::<TriangleRes>()
         .run();
 }
-
-
-
-
