@@ -2,6 +2,8 @@ make selection aabb show different color based on pos/neg area
     draw 2 opposing rects simultaneously with different colors?
     switch color based on selection area - just check for area sign then recreate rect from min/max pts
 
+add info bar ui with cursor coords, scale
+
 add cursor material
 fix sync issue between cursor and wire/selection (events)
 

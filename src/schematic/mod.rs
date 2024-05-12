@@ -6,8 +6,10 @@ mod net_vertex;
 mod state;
 mod tools;
 
-const MINSCALE: Vec3 = Vec3::splat(0.0001);
-const MAXSCALE: Vec3 = Vec3::splat(100.0);
+// const MINSCALE: Vec3 = Vec3::splat(0.0001);
+const MINSCALE: f32 = 0.001;
+// const MAXSCALE: Vec3 = Vec3::splat(100.0);
+const MAXSCALE: f32 = 10.0;
 
 #[derive(Component)]
 struct SchematicCameraMarker;
@@ -218,10 +220,10 @@ fn camera_transform(
     mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<CursorMoved>,
     mut mw: EventReader<MouseWheel>,
-    mut camera: Query<(&Camera, &mut Transform, &GlobalTransform), With<SchematicCameraMarker>>,
+    mut camera: Query<(&Camera, &mut Transform, &GlobalTransform, &mut Projection), With<SchematicCameraMarker>>,
     q_window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    if let Ok((cam, mut transform, gt)) = camera.get_single_mut() {
+    if let Ok((cam, mut transform, gt, mut pj)) = camera.get_single_mut() {
         if mb.pressed(MouseButton::Middle) {
             let mut pan = Vec3::ZERO;
             for m in mm.read() {
@@ -243,7 +245,18 @@ fn camera_transform(
             }
         }
         for mwe in mw.read() {
-            transform.scale = (transform.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
+            if let Projection::Orthographic(opj) = &mut *pj {
+                opj.scale = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
+            }
+            // opj.scale = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
+            // match &mut pj {
+            //     Projection::Orthographic(mut opj) => {
+            //         // let a = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
+            //         opj.scale = (opj.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
+            //     },
+            //     _ => (),
+            // }
+            // transform.scale = (transform.scale * (1. - mwe.y / 5.)).clamp(MINSCALE, MAXSCALE);
         }
         let mut curpos1 = None;
         if let Ok(window) = q_window.get_single() {
