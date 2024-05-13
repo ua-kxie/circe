@@ -1,3 +1,5 @@
+make into 2d, use bounding area intersections: https://bevyengine.org/examples/2D%20Rendering/bounding-2d/
+
 make selection aabb show different color based on pos/neg area
     draw 2 opposing rects simultaneously with different colors?
     switch color based on selection area - just check for area sign then recreate rect from min/max pts
