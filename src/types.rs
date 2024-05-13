@@ -41,7 +41,7 @@ impl From<NewIVec2> for IVec2 {
 
 impl From<SSPoint> for NewIVec2 {
     fn from(src: SSPoint) -> Self {
-        NewIVec2(IVec2{x: src.x, y: src.y})
+        NewIVec2(IVec2 { x: src.x, y: src.y })
     }
 }
 

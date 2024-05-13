@@ -41,7 +41,7 @@ struct SelBox {
 impl SelBox {
     fn new(pt: IVec2) -> SelBox {
         SelBox {
-            sel: SSBox::new(NewIVec2::from(pt).into(), NewIVec2::from(pt).into())
+            sel: SSBox::new(NewIVec2::from(pt).into(), NewIVec2::from(pt).into()),
         }
     }
 }
