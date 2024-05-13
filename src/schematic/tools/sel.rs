@@ -27,8 +27,8 @@ enum SelToolState {
 }
 
 use crate::{
-    schematic::{NewCurpos, SchematicRes},
-    types::{SSBox, SSPoint},
+    schematic::{NewCurposI, SchematicRes},
+    types::{NewIVec2, SSBox},
 };
 
 use super::SchematicToolState;
@@ -39,9 +39,9 @@ struct SelBox {
 }
 
 impl SelBox {
-    fn new(pt: SSPoint) -> SelBox {
+    fn new(pt: IVec2) -> SelBox {
         SelBox {
-            sel: SSBox::from_points([pt]),
+            sel: SSBox::new(NewIVec2::from(pt).into(), NewIVec2::from(pt).into())
         }
     }
 }
@@ -85,7 +85,7 @@ struct SelectionBundle {
 
 impl SelectionBundle {
     fn new(
-        pt: SSPoint,
+        pt: IVec2,
         mut meshes: ResMut<Assets<Mesh>>,
         sel_mat_id: Handle<SelMaterial>,
     ) -> (SelectionBundle, Handle<Mesh>) {
@@ -120,7 +120,7 @@ struct ActiveSelBox {
 impl ActiveSelBox {
     fn new_endpoint(
         &self,
-        pt: SSPoint,
+        pt: IVec2,
         commands: &mut Commands,
         mut meshes: ResMut<Assets<Mesh>>,
     ) -> ActiveSelBox {
@@ -128,7 +128,7 @@ impl ActiveSelBox {
             entityid: self.entityid,
             meshid: self.meshid.clone(),
             selbox: SelBox {
-                sel: SSBox::new(self.selbox.sel.min, pt),
+                sel: SSBox::new(self.selbox.sel.min, NewIVec2::from(pt).into()),
             },
         };
         let mesh = meshes.get_mut(self.meshid.clone()).unwrap();
@@ -212,7 +212,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     selres: Res<SelRes>,
-    mut e_new_ssp: EventReader<NewCurpos>,
+    mut e_new_ssp: EventReader<NewCurposI>,
 ) {
     // run if tool state is idle
     match seltoolstate.get() {

@@ -23,10 +23,10 @@ struct CursorMarker;
 struct BackgroundMarker;
 
 #[derive(Event)]
-struct NewCurpos(Option<SSPoint>);
+struct NewCurposI(Option<IVec2>);
 
 #[derive(Event)]
-struct NewCurposVSP(Option<CSPoint>);
+struct NewCurposF(Option<Vec2>);
 
 #[derive(Event)]
 struct NewVisibleCanvasAABB;
@@ -38,8 +38,8 @@ struct VisibleCanvasAABB(Option<Box2D<i32, SchematicSpace>>);
 /// cursor position
 #[derive(Default)]
 struct Curpos {
-    opt_ssp: Option<SSPoint>,
-    opt_vsp: Option<CSPoint>,
+    opt_ssp: Option<IVec2>,
+    opt_vsp: Option<Vec2>,
 }
 
 /// schematic resources
@@ -65,8 +65,8 @@ impl Plugin for SchematicPlugin {
                 update_info_text,
             ),
         );
-        app.add_event::<NewCurpos>();
-        app.add_event::<NewCurposVSP>();
+        app.add_event::<NewCurposI>();
+        app.add_event::<NewCurposF>();
         app.add_event::<NewVisibleCanvasAABB>();
 
         app.init_state::<tools::SchematicToolState>();
@@ -170,8 +170,8 @@ fn cursor_update(
     mut schematic_res: ResMut<SchematicRes>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
-    mut e_curpos_ssp: EventWriter<NewCurpos>,
-    mut e_curpos_vsp: EventWriter<NewCurposVSP>,
+    mut e_curpos_ssp: EventWriter<NewCurposI>,
+    mut e_curpos_vsp: EventWriter<NewCurposF>,
 ) {
     let mut new_curpos = Curpos {
         opt_ssp: None,
@@ -184,33 +184,32 @@ fn cursor_update(
                 .and_then(|cursor| camera.viewport_to_world_2d(cam_transform, cursor))
             {
                 new_curpos = Curpos {
-                    opt_vsp: Some(CSPoint::new(coords.x, coords.y)),
-                    opt_ssp: Some(CSPoint::new(coords.x, coords.y).round().cast().cast_unit()),
+                    opt_vsp: Some(coords),
+                    opt_ssp: Some(coords.round().as_ivec2()),
                 };
             }
         }
     }
 
     if schematic_res.cursor_position.opt_vsp != new_curpos.opt_vsp {
-        e_curpos_vsp.send(NewCurposVSP(new_curpos.opt_vsp));
+        e_curpos_vsp.send(NewCurposF(new_curpos.opt_vsp));
 
         // snapped cursor may only change if raw cursor changes
         if schematic_res.cursor_position.opt_ssp != new_curpos.opt_ssp {
-            e_curpos_ssp.send(NewCurpos(new_curpos.opt_ssp));
+            e_curpos_ssp.send(NewCurposI(new_curpos.opt_ssp));
         }
     }
     schematic_res.cursor_position = new_curpos;
 }
 
 fn draw_curpos_ssp(
-    mut e_new_curpos_ssp: EventReader<NewCurpos>,
+    mut e_new_snapped_curpos: EventReader<NewCurposI>,
     mut q_cursor: Query<(&mut Transform, &mut Visibility), With<CursorMarker>>,
 ) {
-    if let Some(NewCurpos(last_e)) = e_new_curpos_ssp.read().last() {
-        if let Some(curpos_ssp) = last_e {
+    if let Some(NewCurposI(opt_new_curpos)) = e_new_snapped_curpos.read().last() {
+        if let Some(new_curpos) = opt_new_curpos {
             *q_cursor.single_mut().1 = Visibility::Visible;
-            q_cursor.single_mut().0.translation =
-                Vec3::new(curpos_ssp.x.into(), curpos_ssp.y.into(), 0.0);
+            q_cursor.single_mut().0.translation = new_curpos.as_vec2().extend(0.0);
         } else {
             *q_cursor.single_mut().1 = Visibility::Hidden;
         }

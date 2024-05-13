@@ -1,6 +1,6 @@
 //! types and constants facillitating geometry and transforms
 
-use bevy::math::Vec3;
+use bevy::math::{IVec2, Vec3};
 use serde::{Deserialize, Serialize};
 
 /// PhantomData tag used to denote the i16 space in which the schematic exists
@@ -15,13 +15,41 @@ pub struct SchematicSpace;
 pub struct CanvasSpace;
 
 /// SchematicSpace Point
-pub type SSPoint = euclid::Point2D<i16, SchematicSpace>;
+pub type SSPoint = euclid::Point2D<i32, SchematicSpace>;
 
 /// CanvasSpace Point
 pub type CSPoint = euclid::Point2D<f32, CanvasSpace>;
 
 /// SchematicSpace Box
-pub type SSBox = euclid::Box2D<i16, SchematicSpace>;
+pub type SSBox = euclid::Box2D<i32, SchematicSpace>;
+
+/// Newtype for Point2D<i32, SchematicSpace> <-> IVec2
+#[derive(Debug, Copy, Clone)]
+pub struct NewIVec2(IVec2);
+
+impl From<IVec2> for NewIVec2 {
+    fn from(src: IVec2) -> Self {
+        NewIVec2(src)
+    }
+}
+
+impl From<NewIVec2> for IVec2 {
+    fn from(src: NewIVec2) -> Self {
+        src.0
+    }
+}
+
+impl From<SSPoint> for NewIVec2 {
+    fn from(src: SSPoint) -> Self {
+        NewIVec2(IVec2{x: src.x, y: src.y})
+    }
+}
+
+impl From<NewIVec2> for SSPoint {
+    fn from(src: NewIVec2) -> Self {
+        SSPoint::new(src.0.x, src.0.y)
+    }
+}
 
 /// Newtype for working with bevy::Vec3 and euclid::Point2D s
 #[derive(Debug, Copy, Clone)]

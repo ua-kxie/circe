@@ -27,7 +27,7 @@ enum WiringToolState {
 }
 
 use crate::{
-    schematic::{NewCurpos, SchematicRes},
+    schematic::{NewCurposI, SchematicRes},
     types::SSPoint,
 };
 
@@ -35,12 +35,12 @@ use super::SchematicToolState;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
 struct WireSeg {
-    p0: SSPoint,
-    p1: SSPoint,
+    p0: IVec2,
+    p1: IVec2,
 }
 
 impl WireSeg {
-    fn new(pt: SSPoint) -> WireSeg {
+    fn new(pt: IVec2) -> WireSeg {
         WireSeg { p0: pt, p1: pt }
     }
 }
@@ -81,7 +81,7 @@ struct WireSegBundle {
 
 impl WireSegBundle {
     fn new(
-        pt: SSPoint,
+        pt: IVec2,
         mut meshes: ResMut<Assets<Mesh>>,
         wire_mat_id: Handle<WireMaterial>,
     ) -> (WireSegBundle, Handle<Mesh>) {
@@ -116,7 +116,7 @@ struct ActiveWireSeg {
 impl ActiveWireSeg {
     fn new_endpoint(
         &self,
-        pt: SSPoint,
+        pt: IVec2,
         mut commands: Commands,
         mut meshes: ResMut<Assets<Mesh>>,
     ) -> ActiveWireSeg {
@@ -179,7 +179,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     wireres: Res<WireRes>,
-    mut e_new_ssp: EventReader<NewCurpos>,
+    mut e_new_ssp: EventReader<NewCurposI>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {
