@@ -6,6 +6,7 @@ use bevy::{
     reflect::TypePath,
     render::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
+        primitives::Aabb,
         render_asset::RenderAssetUsages,
         render_resource::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
@@ -26,7 +27,7 @@ enum SelToolState {
 }
 
 use crate::{
-    schematic::{NewCurposSSP, SchematicRes},
+    schematic::{NewCurpos, SchematicRes},
     types::{SSBox, SSPoint},
 };
 
@@ -172,10 +173,8 @@ impl ActiveSelBox {
                 ]),
             ],
         );
-        let aabb = mesh.compute_aabb().unwrap();
-        let mut ent = commands.entity(self.entityid);
-        ent.insert((self.selbox.clone(), aabb));
 
+        commands.entity(self.entityid).remove::<Aabb>();
         asb
     }
 }
@@ -213,7 +212,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     selres: Res<SelRes>,
-    mut e_new_ssp: EventReader<NewCurposSSP>,
+    mut e_new_ssp: EventReader<NewCurpos>,
 ) {
     // run if tool state is idle
     match seltoolstate.get() {

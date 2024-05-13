@@ -3,12 +3,11 @@ use euclid::{Box2D, Point2D};
 
 mod grid;
 mod net_vertex;
+mod selectable;
 mod state;
 mod tools;
 
-// const MINSCALE: Vec3 = Vec3::splat(0.0001);
 const MINSCALE: f32 = 0.001;
-// const MAXSCALE: Vec3 = Vec3::splat(100.0);
 const MAXSCALE: f32 = 1.0;
 
 #[derive(Component)]
@@ -24,7 +23,7 @@ struct CursorMarker;
 struct BackgroundMarker;
 
 #[derive(Event)]
-struct NewCurposSSP(Option<SSPoint>);
+struct NewCurpos(Option<SSPoint>);
 
 #[derive(Event)]
 struct NewCurposVSP(Option<CSPoint>);
@@ -66,7 +65,7 @@ impl Plugin for SchematicPlugin {
                 update_info_text,
             ),
         );
-        app.add_event::<NewCurposSSP>();
+        app.add_event::<NewCurpos>();
         app.add_event::<NewCurposVSP>();
         app.add_event::<NewVisibleCanvasAABB>();
 
@@ -78,8 +77,6 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut grid_materials: ResMut<Assets<grid::GridMaterial>>,
-    _materials: ResMut<Assets<StandardMaterial>>,
-    _asset_server: Res<AssetServer>,
 ) {
     commands.spawn((
         MaterialMeshBundle {
@@ -173,7 +170,7 @@ fn cursor_update(
     mut schematic_res: ResMut<SchematicRes>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
-    mut e_curpos_ssp: EventWriter<NewCurposSSP>,
+    mut e_curpos_ssp: EventWriter<NewCurpos>,
     mut e_curpos_vsp: EventWriter<NewCurposVSP>,
 ) {
     let mut new_curpos = Curpos {
@@ -199,17 +196,17 @@ fn cursor_update(
 
         // snapped cursor may only change if raw cursor changes
         if schematic_res.cursor_position.opt_ssp != new_curpos.opt_ssp {
-            e_curpos_ssp.send(NewCurposSSP(new_curpos.opt_ssp));
+            e_curpos_ssp.send(NewCurpos(new_curpos.opt_ssp));
         }
     }
     schematic_res.cursor_position = new_curpos;
 }
 
 fn draw_curpos_ssp(
-    mut e_new_curpos_ssp: EventReader<NewCurposSSP>,
+    mut e_new_curpos_ssp: EventReader<NewCurpos>,
     mut q_cursor: Query<(&mut Transform, &mut Visibility), With<CursorMarker>>,
 ) {
-    if let Some(NewCurposSSP(last_e)) = e_new_curpos_ssp.read().last() {
+    if let Some(NewCurpos(last_e)) = e_new_curpos_ssp.read().last() {
         if let Some(curpos_ssp) = last_e {
             *q_cursor.single_mut().1 = Visibility::Visible;
             q_cursor.single_mut().0.translation =

@@ -5,6 +5,7 @@ use bevy::{
     reflect::TypePath,
     render::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
+        primitives::Aabb,
         render_asset::RenderAssetUsages,
         render_resource::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
@@ -26,7 +27,7 @@ enum WiringToolState {
 }
 
 use crate::{
-    schematic::{NewCurposSSP, SchematicRes},
+    schematic::{NewCurpos, SchematicRes},
     types::SSPoint,
 };
 
@@ -127,9 +128,8 @@ impl ActiveWireSeg {
                 Vec3::from_array([self.wireseg.p1.x as f32, self.wireseg.p1.y as f32, 0.0]),
             ],
         );
-        let aabb = mesh.compute_aabb().unwrap();
-        let mut ent = commands.entity(self.entityid);
-        ent.insert((self.wireseg.clone(), aabb));
+
+        commands.entity(self.entityid).remove::<Aabb>();
 
         ActiveWireSeg {
             entityid: self.entityid,
@@ -179,7 +179,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     wireres: Res<WireRes>,
-    mut e_new_ssp: EventReader<NewCurposSSP>,
+    mut e_new_ssp: EventReader<NewCurpos>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {

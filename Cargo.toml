@@ -16,6 +16,6 @@ petgraph = "0.6.3"
 serde = {version="1.0.164", features = ["derive"]}
 
 [workspace]
-members = [
+members = [ "docs",
     "paprika",
 ]
