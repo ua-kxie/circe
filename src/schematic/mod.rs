@@ -1,4 +1,4 @@
-use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
+use bevy::{input::mouse::MouseWheel, math::bounding::RayCast3d, prelude::*, window::PrimaryWindow};
 use euclid::{Box2D, Point2D};
 
 mod grid;
@@ -172,6 +172,7 @@ fn cursor_update(
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_curpos_ssp: EventWriter<NewCurposI>,
     mut e_curpos_vsp: EventWriter<NewCurposF>,
+    mut e_new_collider: EventWriter<selectable::NewTentativeCollider>,
 ) {
     let mut new_curpos = Curpos {
         opt_ssp: None,
@@ -197,6 +198,14 @@ fn cursor_update(
         // snapped cursor may only change if raw cursor changes
         if schematic_res.cursor_position.opt_ssp != new_curpos.opt_ssp {
             e_curpos_ssp.send(NewCurposI(new_curpos.opt_ssp));
+
+            if let Some(pt) = new_curpos.opt_ssp {
+                e_new_collider.send(
+                    selectable::NewTentativeCollider::Ray(
+                        RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 10000.)
+                    )
+                );
+            }
         }
     }
     schematic_res.cursor_position = new_curpos;

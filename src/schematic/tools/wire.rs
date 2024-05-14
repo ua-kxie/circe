@@ -14,6 +14,8 @@ use bevy::{
 #[derive(Resource, Default)]
 struct WireRes {
     wire_mat_id: Option<Handle<WireMaterial>>,
+    tentative_wire_mat_id: Option<Handle<WireMaterial>>,
+    selected_wire_mat_id: Option<Handle<WireMaterial>>,
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -24,11 +26,11 @@ enum WiringToolState {
 }
 
 use crate::{
-    schematic::{selectable::SchematicElement, NewCurposI, SchematicRes},
+    schematic::{selectable::{self, SchematicElement}, NewCurposI, SchematicRes},
     types::SSPoint,
 };
 
-use super::SchematicToolState;
+use super::{sel, SchematicToolState};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
 struct WireSeg {
@@ -131,6 +133,14 @@ impl ActiveWireSeg {
         );
 
         commands.entity(self.entityid).remove::<Aabb>();
+        commands.entity(self.entityid).insert(selectable::SchematicElement{
+            aabb: Aabb3d::from_point_cloud(
+                Vec3::ZERO, 
+                Quat::IDENTITY, 
+                &[self.wireseg.p0.as_vec2().extend(0.0), pt.as_vec2().extend(0.0)]
+            )
+        }
+        );
 
         ActiveWireSeg {
             entityid: self.entityid,
@@ -149,7 +159,7 @@ impl Plugin for Wire {
         app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
         app.add_systems(
             Update,
-            main.run_if(in_state(super::SchematicToolState::Wiring)),
+            (main.run_if(in_state(super::SchematicToolState::Wiring)), set_material),
         );
 
         app.init_state::<WiringToolState>();
@@ -164,10 +174,34 @@ fn setup(
 ) {
     // on entering wiring tool
     next_wirestate.set(WiringToolState::Ready);
-    let wire_mat_id = materials.add(WireMaterial {
+
+    wireres.wire_mat_id = Some(materials.add(WireMaterial {
+        color: Color::BLUE,
+    }));
+    wireres.tentative_wire_mat_id = Some(materials.add(WireMaterial {
         color: Color::WHITE,
-    });
-    wireres.wire_mat_id = Some(wire_mat_id);
+    }));
+    wireres.selected_wire_mat_id = Some(materials.add(WireMaterial {
+        color: Color::YELLOW,
+    }));
+}
+
+// set material based on tentative and selection
+fn set_material(
+    mut wq_tentatives: Query<&mut Handle<WireMaterial>, With<selectable::Tentative>>,
+    mut wq_selected: Query<&mut Handle<WireMaterial>, (With<selectable::Selected>, Without<selectable::Tentative>)>,
+    mut wq_defaults: Query<&mut Handle<WireMaterial>, (Without<selectable::Selected>, Without<selectable::Tentative>)>,
+    res_wire_mats: ResMut<WireRes>,
+) {
+    for mut h in wq_defaults.iter_mut() {
+        *h = res_wire_mats.wire_mat_id.clone().unwrap();
+    }
+    for mut h in wq_tentatives.iter_mut() {
+        *h = res_wire_mats.tentative_wire_mat_id.clone().unwrap();
+    }
+    for mut h in wq_selected.iter_mut() {
+        *h = res_wire_mats.selected_wire_mat_id.clone().unwrap();
+    }
 }
 
 fn main(

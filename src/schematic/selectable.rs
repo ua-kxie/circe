@@ -22,10 +22,10 @@ pub struct SchematicElement{
 // pub struct Collider(Aabb3d);
 
 #[derive(Component)]
-struct Selected;
+pub struct Selected;
 
 #[derive(Component)]
-struct Tentative;
+pub struct Tentative;
 
 // events
 
@@ -39,7 +39,7 @@ struct ClearSelected;
 
 /// event fires when tentative collider changes (mouse moves, or area selection is dropped)
 #[derive(Event)]
-enum NewTentativeCollider{
+pub enum NewTentativeCollider{
     Ray(RayCast3d),
     Volume(AabbCast3d),
 }
@@ -57,6 +57,7 @@ fn mark_tentatives(
         for e in &e_tentatives {
             commands.entity(e).remove::<Tentative>();
         }
+        dbg!("A");
         // add tentative markers based on new information
         for e in schematic_elements.iter() {
             if match collider {
@@ -67,6 +68,7 @@ fn mark_tentatives(
                     cast.intersects(&e.1.aabb)
                 },
             } {
+                dbg!("any");
                 commands.entity(e.0).insert(Tentative);
             }
         }

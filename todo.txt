@@ -1,3 +1,5 @@
+change element material for collision - make event based so it doesnt run every frame
+
 make into 2d, use bounding area intersections: https://bevyengine.org/examples/2D%20Rendering/bounding-2d/
 
 make selection aabb show different color based on pos/neg area
