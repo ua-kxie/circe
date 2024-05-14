@@ -26,11 +26,11 @@ enum WiringToolState {
 }
 
 use crate::{
-    schematic::{selectable::{self, SchematicElement}, NewCurposI, SchematicRes},
+    schematic::{NewCurposI, SchematicRes},
     types::SSPoint,
 };
 
-use super::{sel, SchematicToolState};
+use super::{sel::{self, SchematicElement}, SchematicToolState};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
 struct WireSeg {
@@ -133,7 +133,7 @@ impl ActiveWireSeg {
         );
 
         commands.entity(self.entityid).remove::<Aabb>();
-        commands.entity(self.entityid).insert(selectable::SchematicElement{
+        commands.entity(self.entityid).insert(sel::SchematicElement{
             aabb: Aabb3d::from_point_cloud(
                 Vec3::ZERO, 
                 Quat::IDENTITY, 
@@ -188,9 +188,9 @@ fn setup(
 
 // set material based on tentative and selection
 fn set_material(
-    mut wq_tentatives: Query<&mut Handle<WireMaterial>, With<selectable::Tentative>>,
-    mut wq_selected: Query<&mut Handle<WireMaterial>, (With<selectable::Selected>, Without<selectable::Tentative>)>,
-    mut wq_defaults: Query<&mut Handle<WireMaterial>, (Without<selectable::Selected>, Without<selectable::Tentative>)>,
+    mut wq_tentatives: Query<&mut Handle<WireMaterial>, With<sel::Tentative>>,
+    mut wq_selected: Query<&mut Handle<WireMaterial>, (With<sel::Selected>, Without<sel::Tentative>)>,
+    mut wq_defaults: Query<&mut Handle<WireMaterial>, (Without<sel::Selected>, Without<sel::Tentative>)>,
     res_wire_mats: ResMut<WireRes>,
 ) {
     for mut h in wq_defaults.iter_mut() {

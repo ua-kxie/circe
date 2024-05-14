@@ -4,7 +4,6 @@ use crate::types::{CanvasSpace, SchematicSpace};
 
 mod grid;
 mod net_vertex;
-mod selectable;
 mod state;
 mod tools;
 mod circuit;
@@ -55,7 +54,7 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((grid::Grid, tools::ToolsPlugin, selectable::SelectablePlugin));
+        app.add_plugins((grid::Grid, tools::ToolsPlugin));
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,
@@ -172,7 +171,7 @@ fn cursor_update(
     q_camera: Query<(&Camera, &GlobalTransform), With<SchematicCameraMarker>>,
     mut e_curpos_ssp: EventWriter<NewCurposI>,
     mut e_curpos_vsp: EventWriter<NewCurposF>,
-    mut e_new_collider: EventWriter<selectable::NewTentativeCollider>,
+    // mut e_new_collider: EventWriter<NewTentativeCollider>,
 ) {
     let mut new_curpos = Curpos {
         opt_ssp: None,
@@ -199,13 +198,13 @@ fn cursor_update(
         if schematic_res.cursor_position.opt_ssp != new_curpos.opt_ssp {
             e_curpos_ssp.send(NewCurposI(new_curpos.opt_ssp));
 
-            if let Some(pt) = new_curpos.opt_ssp {
-                e_new_collider.send(
-                    selectable::NewTentativeCollider::Ray(
-                        RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 10000.)
-                    )
-                );
-            }
+            // if let Some(pt) = new_curpos.opt_ssp {
+            //     e_new_collider.send(
+            //         selectable::NewTentativeCollider::Ray(
+            //             RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 10000.)
+            //         )
+            //     );
+            // }
         }
     }
     schematic_res.cursor_position = new_curpos;

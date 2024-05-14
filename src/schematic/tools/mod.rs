@@ -22,7 +22,7 @@ pub struct ToolsPlugin;
 impl Plugin for ToolsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(wire::Wire);
-        app.add_plugins(sel::Sel);
+        app.add_plugins(sel::SelToolPlugin);
         app.add_systems(Update, main);
 
         app.init_state::<SchematicToolState>();
