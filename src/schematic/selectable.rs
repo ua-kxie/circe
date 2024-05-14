@@ -7,15 +7,19 @@
 ///
 ///
 use bevy::prelude::*;
-use euclid::default;
-
-use super::NewCurposI;
-
+use bevy::math::bounding::{Aabb3d, AabbCast3d, IntersectsVolume, RayCast3d};
 /// componenent marks entity as a schematic element - can be selected, marked as tentative.
 /// Entities with this compoenent should be checked for collision against cursor
 
 #[derive(Component)]
-struct SchematicElement;
+pub struct SchematicElement{
+    pub aabb: Aabb3d,
+}
+
+// /// component is added automatically to SchematicElements without it. 
+// /// Should be deleted on elements which changes position/shape.
+// #[derive(Component)]
+// pub struct Collider(Aabb3d);
 
 #[derive(Component)]
 struct Selected;
@@ -35,35 +39,35 @@ struct ClearSelected;
 
 /// event fires when tentative collider changes (mouse moves, or area selection is dropped)
 #[derive(Event)]
-struct NewTentativeCollider;
-
-/// state
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-enum SelectSt {
-    #[default]
-    Point, // select elements from a point / by intersection with ray
-    Aabb, // select elements from an aabb area / by intersection with frustrum (cuboid in orthographic projection)
+enum NewTentativeCollider{
+    Ray(RayCast3d),
+    Volume(AabbCast3d),
 }
-
 
 /// this function marks schematic elements with the [`Tentative`] marker if they intersect the selection collider
 fn mark_tentatives(
-    schematic_elements: Query<Entity, With<SchematicElement>>, 
+    schematic_elements: Query<(Entity, &SchematicElement)>, 
     e_tentatives: Query<Entity, With<Tentative>>, 
     mut enew_tentative_collider: EventReader<NewTentativeCollider>,
     mut commands: Commands,
-    selst: Res<State<SelectSt>>,
 ) {
-    if let Some(curpos) = enew_tentative_collider.read().last() {
+    // mark as tentative if tentative collider changes
+    if let Some(collider) = enew_tentative_collider.read().last() {
         // clear tentative markers
         for e in &e_tentatives {
             commands.entity(e).remove::<Tentative>();
         }
         // add tentative markers based on new information
-        let st = selst.get();
         for e in schematic_elements.iter() {
-            if false {  // todo: if entity collides with point/ray or area/cuboid based on selection state
-                commands.entity(e).insert(Tentative);
+            if match collider {
+                NewTentativeCollider::Ray(cast) => {
+                    cast.intersects(&e.1.aabb)
+                },
+                NewTentativeCollider::Volume(cast) => {
+                    cast.intersects(&e.1.aabb)
+                },
+            } {
+                commands.entity(e.0).insert(Tentative);
             }
         }
     }
@@ -95,5 +99,29 @@ fn clr_selected (
         for element in es.iter() {
             commands.entity(element).remove::<Selected>();
         }
+    }
+}
+
+// fn update_element_collider(
+//     schematic_elements: Query<Entity, With<SchematicElement>, Without<Collider>>, 
+// ) {
+    
+// }
+
+pub struct SelectablePlugin;
+
+impl Plugin for SelectablePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                select,
+                clr_selected,
+                mark_tentatives,
+            ),
+        );
+        app.add_event::<TentativesToSelected>();
+        app.add_event::<ClearSelected>();
+        app.add_event::<NewTentativeCollider>();
     }
 }

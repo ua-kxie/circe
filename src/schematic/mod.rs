@@ -53,7 +53,7 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((grid::Grid, tools::ToolsPlugin));
+        app.add_plugins((grid::Grid, tools::ToolsPlugin, selectable::SelectablePlugin));
         app.add_systems(Startup, (setup, setup_camera));
         app.add_systems(
             Update,

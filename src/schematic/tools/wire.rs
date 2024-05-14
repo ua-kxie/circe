@@ -1,9 +1,6 @@
 pub struct Wire;
 use bevy::{
-    pbr::{MaterialPipeline, MaterialPipelineKey},
-    prelude::*,
-    reflect::TypePath,
-    render::{
+    math::bounding::Aabb3d, pbr::{MaterialPipeline, MaterialPipelineKey}, prelude::*, reflect::TypePath, render::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
         primitives::Aabb,
         render_asset::RenderAssetUsages,
@@ -11,7 +8,7 @@ use bevy::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
             SpecializedMeshPipelineError,
         },
-    },
+    }
 };
 
 #[derive(Resource, Default)]
@@ -27,7 +24,7 @@ enum WiringToolState {
 }
 
 use crate::{
-    schematic::{NewCurposI, SchematicRes},
+    schematic::{selectable::SchematicElement, NewCurposI, SchematicRes},
     types::SSPoint,
 };
 
@@ -77,6 +74,7 @@ impl Material for WireMaterial {
 struct WireSegBundle {
     wireseg: WireSeg,
     meshbundle: MaterialMeshBundle<WireMaterial>,
+    schematic_element: SchematicElement,
 }
 
 impl WireSegBundle {
@@ -100,6 +98,9 @@ impl WireSegBundle {
                     material: wire_mat_id,
                     ..default()
                 },
+                schematic_element: SchematicElement{
+                    aabb: Aabb3d::from_point_cloud(Vec3::ZERO, Quat::IDENTITY, &[pt.as_vec2().extend(0.0)]),
+                }
             },
             meshid,
         )
