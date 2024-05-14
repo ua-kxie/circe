@@ -1,3 +1,4 @@
+// schematic tools - selection, drag move, etc.
 mod sel;
 pub mod wire;
 

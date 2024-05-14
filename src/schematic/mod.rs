@@ -1,11 +1,13 @@
 use bevy::{input::mouse::MouseWheel, math::bounding::RayCast3d, prelude::*, window::PrimaryWindow};
 use euclid::{Box2D, Point2D};
+use crate::types::{CanvasSpace, SchematicSpace};
 
 mod grid;
 mod net_vertex;
 mod selectable;
 mod state;
 mod tools;
+mod circuit;
 
 const MINSCALE: f32 = 0.001;
 const MAXSCALE: f32 = 1.0;
@@ -128,8 +130,6 @@ fn update_info_text(
         text.push_str(&format!("scale: {:.4};", opj.scale));
     }
 }
-
-use crate::types::{CSPoint, CanvasSpace, SSPoint, SchematicSpace};
 
 /// this function maps the viewport rect onto the canvas (aabb) and sends out events
 fn visible_canvas_aabb(
