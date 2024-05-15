@@ -1,6 +1,10 @@
 pub struct Wire;
 use bevy::{
-    math::bounding::Aabb3d, pbr::{MaterialPipeline, MaterialPipelineKey}, prelude::*, reflect::TypePath, render::{
+    math::bounding::Aabb3d,
+    pbr::{MaterialPipeline, MaterialPipelineKey},
+    prelude::*,
+    reflect::TypePath,
+    render::{
         mesh::{MeshVertexBufferLayout, PrimitiveTopology},
         primitives::Aabb,
         render_asset::RenderAssetUsages,
@@ -8,7 +12,7 @@ use bevy::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
             SpecializedMeshPipelineError,
         },
-    }
+    },
 };
 
 #[derive(Resource, Default)]
@@ -25,9 +29,12 @@ enum WiringToolState {
     Drawing(ActiveWireSeg), // placing second anchor point
 }
 
-use crate::schematic::{self, NewCurposI, SchematicRes};
+use crate::schematic::{NewCurposI, SchematicRes};
 
-use super::{sel::{self, SchematicElement}, SchematicToolState};
+use super::{
+    sel::{self, SchematicElement},
+    SchematicToolState,
+};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
 struct WireSeg {
@@ -97,9 +104,13 @@ impl WireSegBundle {
                     material: wire_mat_id,
                     ..default()
                 },
-                schematic_element: SchematicElement{
-                    aabb: Aabb3d::from_point_cloud(Vec3::ZERO, Quat::IDENTITY, &[pt.as_vec2().extend(0.0)]),
-                }
+                schematic_element: SchematicElement {
+                    aabb: Aabb3d::from_point_cloud(
+                        Vec3::ZERO,
+                        Quat::IDENTITY,
+                        &[pt.as_vec2().extend(0.0)],
+                    ),
+                },
             },
             meshid,
         )
@@ -130,14 +141,18 @@ impl ActiveWireSeg {
         );
 
         commands.entity(self.entityid).remove::<Aabb>();
-        commands.entity(self.entityid).insert(sel::SchematicElement{
-            aabb: Aabb3d::from_point_cloud(
-                Vec3::ZERO, 
-                Quat::IDENTITY, 
-                &[self.wireseg.p0.as_vec2().extend(0.0), pt.as_vec2().extend(0.0)]
-            )
-        }
-        );
+        commands
+            .entity(self.entityid)
+            .insert(sel::SchematicElement {
+                aabb: Aabb3d::from_point_cloud(
+                    Vec3::ZERO,
+                    Quat::IDENTITY,
+                    &[
+                        self.wireseg.p0.as_vec2().extend(0.0),
+                        pt.as_vec2().extend(0.0),
+                    ],
+                ),
+            });
 
         ActiveWireSeg {
             entityid: self.entityid,
@@ -156,7 +171,10 @@ impl Plugin for Wire {
         app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
         app.add_systems(
             Update,
-            (main.run_if(in_state(super::SchematicToolState::Wiring)), set_material),
+            (
+                main.run_if(in_state(super::SchematicToolState::Wiring)),
+                set_material,
+            ),
         );
 
         app.init_state::<WiringToolState>();
@@ -186,8 +204,14 @@ fn setup(
 // set material based on tentative and selection
 fn set_material(
     mut wq_tentatives: Query<&mut Handle<WireMaterial>, With<sel::Tentative>>,
-    mut wq_selected: Query<&mut Handle<WireMaterial>, (With<sel::Selected>, Without<sel::Tentative>)>,
-    mut wq_defaults: Query<&mut Handle<WireMaterial>, (Without<sel::Selected>, Without<sel::Tentative>)>,
+    mut wq_selected: Query<
+        &mut Handle<WireMaterial>,
+        (With<sel::Selected>, Without<sel::Tentative>),
+    >,
+    mut wq_defaults: Query<
+        &mut Handle<WireMaterial>,
+        (Without<sel::Selected>, Without<sel::Tentative>),
+    >,
     res_wire_mats: ResMut<WireRes>,
 ) {
     for mut h in wq_defaults.iter_mut() {
@@ -211,7 +235,7 @@ fn main(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     wireres: Res<WireRes>,
-    mut e_new_ssp: EventReader<NewCurposI>,
+    e_new_ssp: EventReader<NewCurposI>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {

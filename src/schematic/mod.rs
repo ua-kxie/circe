@@ -1,12 +1,12 @@
-use bevy::{input::{keyboard, mouse::MouseWheel}, prelude::*, window::PrimaryWindow};
-use euclid::{Box2D, Point2D};
 use crate::types::{CanvasSpace, SchematicSpace};
+use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
+use euclid::{Box2D, Point2D};
 
+mod circuit;
 mod grid;
 mod net_vertex;
 mod state;
 mod tools;
-mod circuit;
 
 const MINSCALE: f32 = 0.001;
 const MAXSCALE: f32 = 1.0;

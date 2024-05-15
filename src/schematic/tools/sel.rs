@@ -1,4 +1,8 @@
 // tool for making selections
+use crate::{
+    schematic::{NewCurposI, SchematicRes},
+    types::{NewIVec2, SSBox},
+};
 use bevy::{
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
@@ -11,10 +15,6 @@ use bevy::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
     },
-};
-use crate::{
-    schematic::{NewCurposI, SchematicRes},
-    types::{NewIVec2, SSBox},
 };
 
 use super::SchematicToolState;
@@ -55,11 +55,11 @@ impl SelBox {
 /// Entities with this compoenent should be checked for collision against cursor
 
 #[derive(Component)]
-pub struct SchematicElement{
+pub struct SchematicElement {
     pub aabb: Aabb3d,
 }
 
-// /// component is added automatically to SchematicElements without it. 
+// /// component is added automatically to SchematicElements without it.
 // /// Should be deleted on elements which changes position/shape.
 // #[derive(Component)]
 // pub struct Collider(Aabb3d);
@@ -82,7 +82,7 @@ struct ClearSelected;
 
 /// event fires when tentative collider changes (mouse moves, or area selection is dropped)
 #[derive(Event)]
-pub enum NewTentativeCollider{
+pub enum NewTentativeCollider {
     /// no collider, e.g. cursor moved off canvas
     None,
     /// ray collider, selection by point
@@ -94,7 +94,7 @@ pub enum NewTentativeCollider{
 /// New Element Selection State
 /// event fired by this plugin when an element's selection status has changed
 #[derive(Event)]
-pub struct NewElementSelSt{
+pub struct NewElementSelSt {
     entity: Entity,
     sel_st: SelSt,
 }
@@ -145,16 +145,13 @@ fn main(
 ) {
     // system runs if tool state is idle/selection mode
     if let Some(new_curpos) = e_new_ssp.read().last() {
-
         // send new collider event based on new cursor position
         if let Some(pt) = new_curpos.0 {
             match seltoolstate.get() {
                 SelToolState::Ready => {
                     let ray = RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 1.0);
-                    e_new_sel_collider.send(NewTentativeCollider::Ray(
-                        ray
-                    ));
-                },
+                    e_new_sel_collider.send(NewTentativeCollider::Ray(ray));
+                }
                 SelToolState::Active(asb) => {
                     // update selection visual
                     next_seltoolstate.set(SelToolState::Active(
@@ -165,14 +162,17 @@ fn main(
                     let pt0: IVec2 = NewIVec2::from(asb.selbox.sel.min).into();
                     let pt1: IVec2 = NewIVec2::from(asb.selbox.sel.max).into();
                     let aabb = Aabb3d::from_point_cloud(
-                        Vec3::ZERO, 
-                        Quat::IDENTITY, 
-                        &[pt0.as_vec2().extend(0.0), pt1.as_vec2().extend(0.0)]
+                        Vec3::ZERO,
+                        Quat::IDENTITY,
+                        &[pt0.as_vec2().extend(0.0), pt1.as_vec2().extend(0.0)],
                     );
-                    e_new_sel_collider.send(NewTentativeCollider::Volume(
-                        AabbCast3d::new(aabb, Vec3::ZERO, Direction3d::Z, 1.0)
-                    ));
-                },
+                    e_new_sel_collider.send(NewTentativeCollider::Volume(AabbCast3d::new(
+                        aabb,
+                        Vec3::ZERO,
+                        Direction3d::Z,
+                        1.0,
+                    )));
+                }
             }
         } else {
             // todo: make selection visual disappear if applicable
@@ -193,7 +193,7 @@ fn main(
                 selbox,
             }));
         }
-    
+
         if buttons.just_released(MouseButton::Left) {
             if let SelToolState::Active(asb) = seltoolstate.get() {
                 // remove entity, change state
@@ -207,8 +207,8 @@ fn main(
 
 /// this system marks schematic elements with the [`Tentative`] marker if they intersect the selection collider
 fn mark_tentatives(
-    schematic_elements: Query<(Entity, &SchematicElement)>, 
-    e_tentatives: Query<Entity, With<Tentative>>, 
+    schematic_elements: Query<(Entity, &SchematicElement)>,
+    e_tentatives: Query<Entity, With<Tentative>>,
     mut enew_tentative_collider: EventReader<NewTentativeCollider>,
     mut commands: Commands,
 ) {
@@ -220,31 +220,30 @@ fn mark_tentatives(
         }
         // add tentative markers based on new information
         match collider {
-            NewTentativeCollider::None => {},
+            NewTentativeCollider::None => {}
             NewTentativeCollider::Ray(cast) => {
                 for e in schematic_elements.iter() {
                     if cast.intersects(&e.1.aabb) {
                         commands.entity(e.0).insert(Tentative);
                     }
                 }
-            },
+            }
             NewTentativeCollider::Volume(cast) => {
                 for e in schematic_elements.iter() {
                     if cast.intersects(&e.1.aabb) {
                         commands.entity(e.0).insert(Tentative);
                     }
                 }
-            },
+            }
         }
     }
 }
 
-
-/// this system simply adds the [`Selected`] marker to all entities already marked with [`Tentative`], 
+/// this system simply adds the [`Selected`] marker to all entities already marked with [`Tentative`],
 /// conditioned on the event [`TentativesToSelected`]
-fn select (
+fn select(
     mut e: EventReader<TentativesToSelected>,
-    es: Query<Entity, With<Tentative>>, 
+    es: Query<Entity, With<Tentative>>,
     mut commands: Commands,
 ) {
     if e.read().last().is_some() {
@@ -254,12 +253,12 @@ fn select (
     }
 }
 
-/// this system simply removes the [`Selected`] marker to all entities already marked, 
+/// this system simply removes the [`Selected`] marker to all entities already marked,
 /// conditioned on the event [`ClearSelected`]
-fn clr_selected (
+fn clr_selected(
     keys: Res<ButtonInput<KeyCode>>,
     // mut e: EventReader<ClearSelected>,
-    es: Query<Entity, With<Selected>>, 
+    es: Query<Entity, With<Selected>>,
     mut commands: Commands,
 ) {
     if keys.just_pressed(KeyCode::Escape) {
@@ -279,15 +278,16 @@ pub struct SelToolPlugin;
 impl Plugin for SelToolPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<SelMaterial>::default());
-        app.add_systems(Startup, (
-            setup,
-        ));
-        app.add_systems(Update, (
-            main.run_if(in_state(SchematicToolState::Idle)),
-            select,
-            clr_selected,
-            mark_tentatives,
-        ));
+        app.add_systems(Startup, (setup,));
+        app.add_systems(
+            Update,
+            (
+                main.run_if(in_state(SchematicToolState::Idle)),
+                select,
+                clr_selected,
+                mark_tentatives,
+            ),
+        );
 
         app.init_state::<SelToolState>();
         app.init_resource::<SelRes>();
@@ -363,7 +363,6 @@ impl SelectionBundle {
         )
     }
 }
-
 
 // helper structs
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
