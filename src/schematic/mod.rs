@@ -1,4 +1,4 @@
-use bevy::{input::mouse::MouseWheel, math::bounding::RayCast3d, prelude::*, window::PrimaryWindow};
+use bevy::{input::{keyboard, mouse::MouseWheel}, prelude::*, window::PrimaryWindow};
 use euclid::{Box2D, Point2D};
 use crate::types::{CanvasSpace, SchematicSpace};
 

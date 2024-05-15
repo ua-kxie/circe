@@ -12,7 +12,6 @@ use bevy::{
         },
     },
 };
-use euclid::default;
 use crate::{
     schematic::{NewCurposI, SchematicRes},
     types::{NewIVec2, SSBox},
@@ -146,6 +145,7 @@ fn main(
 ) {
     // system runs if tool state is idle/selection mode
     if let Some(new_curpos) = e_new_ssp.read().last() {
+
         // send new collider event based on new cursor position
         if let Some(pt) = new_curpos.0 {
             let ray = RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 1000.);
@@ -179,71 +179,29 @@ fn main(
         }
     }
 
-    if let Some(new_curpos) = e_new_ssp.read().last() {
-        if let Some(pt) = new_curpos.0 { 
-            if buttons.just_pressed(MouseButton::Left) {
-                // set next tool state to be area selection
-                let (bundle, meshid) =
-                    SelectionBundle::new(pt, meshes, selres.sel_mat_id.clone().unwrap());
-                let selbox = bundle.selbox.clone();
-                let asel = commands.spawn(bundle).id();
-                next_seltoolstate.set(SelToolState::Active(ActiveSelBox {
-                    entityid: asel,
-                    meshid,
-                    selbox,
-                }));
+    if let Some(pt) = schematic_res.cursor_position.opt_ssp {
+        if buttons.just_pressed(MouseButton::Left) {
+            // set next tool state to be area selection
+            let (bundle, meshid) =
+                SelectionBundle::new(pt, meshes, selres.sel_mat_id.clone().unwrap());
+            let selbox = bundle.selbox.clone();
+            let asel = commands.spawn(bundle).id();
+            next_seltoolstate.set(SelToolState::Active(ActiveSelBox {
+                entityid: asel,
+                meshid,
+                selbox,
+            }));
+        }
+    
+        if buttons.just_released(MouseButton::Left) {
+            if let SelToolState::Active(asb) = seltoolstate.get() {
+                // remove entity, change state
+                commands.entity(asb.entityid).despawn();
+                next_seltoolstate.set(SelToolState::Ready);
             }
-        
-            if buttons.just_released(MouseButton::Left) {
-                if let SelToolState::Active(asb) = seltoolstate.get() {
-                    // remove entity, change state
-                    commands.entity(asb.entityid).despawn();
-                    next_seltoolstate.set(SelToolState::Ready);
-                }
-                e_tentatives_to_selected.send(TentativesToSelected);
-            }
+            e_tentatives_to_selected.send(TentativesToSelected);
         }
     }
-
-    // match seltoolstate.get() {
-    //     SelToolState::Ready => {
-    //         // add box selection entity, change state
-    //         if buttons.just_pressed(MouseButton::Left) {
-    //             if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-    //                 let (bundle, meshid) =
-    //                     SelectionBundle::new(pt, meshes, selres.sel_mat_id.clone().unwrap());
-    //                 let selbox = bundle.selbox.clone();
-    //                 let asel = commands.spawn(bundle).id();
-    //                 next_seltoolstate.set(SelToolState::Active(ActiveSelBox {
-    //                     entityid: asel,
-    //                     meshid,
-    //                     selbox,
-    //                 }));
-    //             }
-    //         }
-    //     }
-    //     SelToolState::Active(asb) => {
-    //         if let Some(new_curpos) = e_new_ssp.read().last() {
-    //             if let Some(curpos_ssp) = new_curpos.0 {
-    //                 next_seltoolstate.set(SelToolState::Active(
-    //                     // also update selected entities
-    //                     asb.new_endpoint(curpos_ssp, &mut commands, meshes),
-    //                 ));
-    //             }
-    //         }
-    //         if buttons.just_released(MouseButton::Left) {
-    //             // remove entity, change state
-    //             commands.entity(asb.entityid).despawn();
-    //             next_seltoolstate.set(SelToolState::Ready);
-    //         }
-    //     }
-    // }
-
-    // todo: functionality to spawn selection collider events
-    // on cursor moved: spawn selection collider event, based on selection state point or area
-    // on left click pressed: enter area selection mode
-    // on left click release: exit area selection mode and send Select event
-    // no need to differentiate above 2 behavior will be as intended
 }
 
 /// this system marks schematic elements with the [`Tentative`] marker if they intersect the selection collider
@@ -298,15 +256,21 @@ fn select (
 /// this system simply removes the [`Selected`] marker to all entities already marked, 
 /// conditioned on the event [`ClearSelected`]
 fn clr_selected (
-    mut e: EventReader<ClearSelected>,
+    keys: Res<ButtonInput<KeyCode>>,
+    // mut e: EventReader<ClearSelected>,
     es: Query<Entity, With<Selected>>, 
     mut commands: Commands,
 ) {
-    if e.read().last().is_some() {
+    if keys.just_pressed(KeyCode::Escape) {
         for element in es.iter() {
             commands.entity(element).remove::<Selected>();
         }
     }
+    // if e.read().last().is_some() {
+    //     for element in es.iter() {
+    //         commands.entity(element).remove::<Selected>();
+    //     }
+    // }
 }
 
 pub struct SelToolPlugin;
@@ -316,11 +280,13 @@ impl Plugin for SelToolPlugin {
         app.add_plugins(MaterialPlugin::<SelMaterial>::default());
         app.add_systems(Startup, (
             setup,
+        ));
+        app.add_systems(Update, (
+            main.run_if(in_state(SchematicToolState::Idle)),
             select,
             clr_selected,
             mark_tentatives,
         ));
-        app.add_systems(Update, main.run_if(in_state(SchematicToolState::Idle)));
 
         app.init_state::<SelToolState>();
         app.init_resource::<SelRes>();

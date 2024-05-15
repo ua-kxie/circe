@@ -27,7 +27,6 @@ enum WiringToolState {
 
 use crate::{
     schematic::{NewCurposI, SchematicRes},
-    types::SSPoint,
 };
 
 use super::{sel::{self, SchematicElement}, SchematicToolState};
