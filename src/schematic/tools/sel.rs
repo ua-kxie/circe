@@ -148,9 +148,9 @@ fn main(
 
         // send new collider event based on new cursor position
         if let Some(pt) = new_curpos.0 {
-            let ray = RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 1000.);
             match seltoolstate.get() {
                 SelToolState::Ready => {
+                    let ray = RayCast3d::new(pt.as_vec2().extend(0.0), Direction3d::Z, 1.0);
                     e_new_sel_collider.send(NewTentativeCollider::Ray(
                         ray
                     ));
@@ -164,12 +164,13 @@ fn main(
                     // send new collider event
                     let pt0: IVec2 = NewIVec2::from(asb.selbox.sel.min).into();
                     let pt1: IVec2 = NewIVec2::from(asb.selbox.sel.max).into();
+                    let aabb = Aabb3d::from_point_cloud(
+                        Vec3::ZERO, 
+                        Quat::IDENTITY, 
+                        &[pt0.as_vec2().extend(0.0), pt1.as_vec2().extend(0.0)]
+                    );
                     e_new_sel_collider.send(NewTentativeCollider::Volume(
-                        AabbCast3d { ray, aabb: Aabb3d::from_point_cloud(
-                            Vec3::ZERO, 
-                            Quat::IDENTITY, 
-                            &[pt0.as_vec2().extend(0.0), pt1.as_vec2().extend(0.0)]
-                        )}
+                        AabbCast3d::new(aabb, Vec3::ZERO, Direction3d::Z, 1.0)
                     ));
                 },
             }

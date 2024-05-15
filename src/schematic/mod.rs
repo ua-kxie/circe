@@ -248,7 +248,7 @@ fn setup_camera(
     let bg = commands
         .spawn(PbrBundle {
             mesh: meshes.add(Plane3d::new(*Direction3d::Z).mesh().size(1e6, 1e6)),
-            material: materials.add(Color::GREEN),
+            material: materials.add(Color::GRAY),
             transform: Transform::default().with_translation(Direction3d::NEG_Z * 1e2),
             ..default()
         })

@@ -25,9 +25,7 @@ enum WiringToolState {
     Drawing(ActiveWireSeg), // placing second anchor point
 }
 
-use crate::{
-    schematic::{NewCurposI, SchematicRes},
-};
+use crate::schematic::{self, NewCurposI, SchematicRes};
 
 use super::{sel::{self, SchematicElement}, SchematicToolState};
 
@@ -175,7 +173,7 @@ fn setup(
     next_wirestate.set(WiringToolState::Ready);
 
     wireres.wire_mat_id = Some(materials.add(WireMaterial {
-        color: Color::BLUE,
+        color: Color::rgb(0.6, 0.8, 1.0),
     }));
     wireres.tentative_wire_mat_id = Some(materials.add(WireMaterial {
         color: Color::WHITE,
@@ -261,12 +259,18 @@ fn main(
                 // zero length wire segments will be cleaned up during check
             } else {
                 // update aws on mouse movement
-                if let Some(new_curpos) = e_new_ssp.read().last() {
-                    if let Some(curpos_ssp) = new_curpos.0 {
-                        next_wiretoolstate.set(WiringToolState::Drawing(
-                            aws.new_endpoint(curpos_ssp, commands, meshes),
-                        ));
-                    }
+                // cant use event since for some reason mesh lags by 1 event
+                // if let Some(new_curpos) = e_new_ssp.read().last() {
+                //     if let Some(curpos_ssp) = new_curpos.0 {
+                //         next_wiretoolstate.set(WiringToolState::Drawing(
+                //             aws.new_endpoint(curpos_ssp, commands, meshes),
+                //         ));
+                //     }
+                // }
+                if let Some(pt) = schematic_res.cursor_position.opt_ssp {
+                    next_wiretoolstate.set(WiringToolState::Drawing(
+                        aws.new_endpoint(pt, commands, meshes),
+                    ));
                 }
             }
         }
