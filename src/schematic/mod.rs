@@ -1,5 +1,5 @@
 use crate::types::{CanvasSpace, SchematicSpace};
-use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
+use bevy::{core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping}, input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
 use euclid::{Box2D, Point2D};
 
 mod circuit;
@@ -237,10 +237,16 @@ fn setup_camera(
                     scale: 0.1,
                     ..Default::default()
                 }),
+                camera: Camera {
+                    hdr: true, // HDR is required for bloom
+                    ..default()
+                },
+                tonemapping: Tonemapping::TonyMcMapface, // Using a tonemapper that desaturates to white is recommended (bloom)
                 ..default()
             },
             SchematicCameraMarker,
             InheritedVisibility::VISIBLE,
+            BloomSettings::NATURAL, // Enable bloom for the camera
         ))
         .id();
 

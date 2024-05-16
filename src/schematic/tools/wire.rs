@@ -32,7 +32,7 @@ enum WiringToolState {
 use crate::schematic::{NewCurposI, SchematicRes};
 
 use super::{
-    sel::{self, SchematicElement},
+    sel::{self, SchematicElement, Selected},
     SchematicToolState,
 };
 
@@ -50,29 +50,33 @@ impl WireSeg {
 
 // This is the struct that will be passed to your shader
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub(crate) struct WireMaterial {
+struct WireMaterial {
     #[uniform(0)]
-    pub(crate) color: Color,
+    color: Color,
+    #[uniform(1)]
+    selected: f32,
+    #[uniform(2)]
+    tentative: f32,
 }
 
 impl Material for WireMaterial {
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
-        layout: &MeshVertexBufferLayout,
+        _layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.primitive.polygon_mode = PolygonMode::Line;
-        let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
-        descriptor.vertex.buffers = vec![vertex_layout];
+        // let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
+        // descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }
 
     fn vertex_shader() -> ShaderRef {
-        "wire_shader.wgsl".into()
+        "schematic_shader.wgsl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "wire_shader.wgsl".into()
+        "schematic_shader.wgsl".into()
     }
 }
 
@@ -87,7 +91,7 @@ impl WireSegBundle {
     fn new(
         pt: IVec2,
         mut meshes: ResMut<Assets<Mesh>>,
-        wire_mat_id: Handle<WireMaterial>,
+        mut wire_materials: ResMut<Assets<WireMaterial>>,
     ) -> (WireSegBundle, Handle<Mesh>) {
         let ptf = Vec3::from_array([pt.x as f32, pt.y as f32, 0.0]);
         let mesh = Mesh::new(
@@ -96,12 +100,17 @@ impl WireSegBundle {
         )
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![ptf, ptf]);
         let meshid = meshes.add(mesh);
+        let mat = wire_materials.add(WireMaterial {
+            color: Color::rgb(0.6, 0.8, 1.0),
+            selected: 0.0,
+            tentative: 0.0,
+        });
         (
             WireSegBundle {
                 wireseg: WireSeg::new(pt),
                 meshbundle: MaterialMeshBundle {
                     mesh: meshid.clone(),
-                    material: wire_mat_id,
+                    material: mat,
                     ..default()
                 },
                 schematic_element: SchematicElement {
@@ -168,7 +177,7 @@ impl ActiveWireSeg {
 impl Plugin for Wire {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<WireMaterial>::default());
-        app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
+        // app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
         app.add_systems(
             Update,
             (
@@ -182,46 +191,35 @@ impl Plugin for Wire {
     }
 }
 
-fn setup(
-    mut next_wirestate: ResMut<NextState<WiringToolState>>,
-    mut materials: ResMut<Assets<WireMaterial>>,
-    mut wireres: ResMut<WireRes>,
-) {
-    // on entering wiring tool
-    next_wirestate.set(WiringToolState::Ready);
+// fn setup(
+//     mut next_wirestate: ResMut<NextState<WiringToolState>>,
+//     mut materials: ResMut<Assets<WireMaterial>>,
+//     mut wireres: ResMut<WireRes>,
+// ) {
+//     // on entering wiring tool
+//     next_wirestate.set(WiringToolState::Ready);
 
-    wireres.wire_mat_id = Some(materials.add(WireMaterial {
-        color: Color::rgb(0.6, 0.8, 1.0),
-    }));
-    wireres.tentative_wire_mat_id = Some(materials.add(WireMaterial {
-        color: Color::WHITE,
-    }));
-    wireres.selected_wire_mat_id = Some(materials.add(WireMaterial {
-        color: Color::YELLOW,
-    }));
-}
+//     wireres.wire_mat_id = Some(materials.add(WireMaterial {
+//         color: Color::rgb(0.6, 0.8, 1.0),
+//     }));
+//     wireres.tentative_wire_mat_id = Some(materials.add(WireMaterial {
+//         color: Color::WHITE,
+//     }));
+//     wireres.selected_wire_mat_id = Some(materials.add(WireMaterial {
+//         color: Color::YELLOW,
+//     }));
+// }
 
 // set material based on tentative and selection
 fn set_material(
-    mut wq_tentatives: Query<&mut Handle<WireMaterial>, With<sel::Tentative>>,
-    mut wq_selected: Query<
-        &mut Handle<WireMaterial>,
-        (With<sel::Selected>, Without<sel::Tentative>),
-    >,
-    mut wq_defaults: Query<
-        &mut Handle<WireMaterial>,
-        (Without<sel::Selected>, Without<sel::Tentative>),
-    >,
-    res_wire_mats: ResMut<WireRes>,
+    mut wq: Query<(&Handle<WireMaterial>, Option<&sel::Tentative>, Option<&sel::Selected>), With<WireSeg>>,
+    mut materials: ResMut<Assets<WireMaterial>>,
 ) {
-    for mut h in wq_defaults.iter_mut() {
-        *h = res_wire_mats.wire_mat_id.clone().unwrap();
-    }
-    for mut h in wq_tentatives.iter_mut() {
-        *h = res_wire_mats.tentative_wire_mat_id.clone().unwrap();
-    }
-    for mut h in wq_selected.iter_mut() {
-        *h = res_wire_mats.selected_wire_mat_id.clone().unwrap();
+    for (matid, has_tentative, has_selected) in wq.iter_mut() {
+        if let Some(mat) = materials.get_mut(matid) {
+            mat.tentative = has_tentative.is_some() as i32 as f32;
+            mat.selected = has_selected.is_some() as i32 as f32;
+        }
     }
 }
 
@@ -234,8 +232,7 @@ fn main(
     mut next_schematictoolstate: ResMut<NextState<SchematicToolState>>,
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    wireres: Res<WireRes>,
-    e_new_ssp: EventReader<NewCurposI>,
+    wire_materials: ResMut<Assets<WireMaterial>>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {
@@ -244,7 +241,7 @@ fn main(
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
                     let (bundle, meshid) =
-                        WireSegBundle::new(pt, meshes, wireres.wire_mat_id.clone().unwrap());
+                        WireSegBundle::new(pt, meshes, wire_materials);
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -267,7 +264,7 @@ fn main(
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
                         let (bundle, meshid) =
-                            WireSegBundle::new(pt, meshes, wireres.wire_mat_id.clone().unwrap());
+                            WireSegBundle::new(pt, meshes, wire_materials);
                         let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
                         next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {

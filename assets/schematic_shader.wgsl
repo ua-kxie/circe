@@ -1,15 +1,16 @@
 // general purpose shader to minimize pipeline count - wip
 // color: base color of the schematic element
-// selected: 
+// selected: bool flag of whether material belongs to selected element
+// tentative: bool flag of whether material belongs to tentative element
 
 #import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
 
-struct SchematicMaterial {
-    color: vec4<f32>,
-    selected: bool,
-    // color_neg: vec4<f32>,
-};
-@group(2) @binding(0) var<uniform> material: SchematicMaterial;
+@group(2) @binding(0) var<uniform> color: vec4<f32>;
+@group(2) @binding(1) var<uniform> selected: f32;
+@group(2) @binding(2) var<uniform> tentative: f32;
+
+const SELECTED_COLOR = vec4(2.0, 1.0, 0.0, 1.0) * 0.3;
+const TENTATIVE_COLOR = vec4(1.0, 1.0, 1.0, 1.0);
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
@@ -27,15 +28,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-    // out.clip_position[2] = 1.0;  // keep the z coordinate fixed to maintain rendered size of lines and points
     return out;
 }
 
 @fragment
-// fn fragment(@builtin(position) coord: vec4<f32>) -> @location(0) vec4<f32> {
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
-    // return material.color_pos;
-    reutrn material.selected * material.color;
-    // return vec4(coord.x/1920.0, coord.y/1080.0, 1.0, 1.0);
-    // return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 0.2);
+    return color + f32(selected) * SELECTED_COLOR + f32(tentative) * TENTATIVE_COLOR;
+    // return material.color;
 }

@@ -1,8 +1,19 @@
-change element material for collision - make event based so it doesnt run every frame
+sel: 
+    tentatives do not need to be marked, essentially marked by tentative collider
 
-fix persistent sel area if mouse leaves canvas while button pressed
+    query for Handle<wire_material>, etc. different for different types. code should reside with that type.
 
-selection by enclosure vs by collision based on selection area sign
+    cant send out events for tentatives marked since tentatives are cleared everytime collider changes
+    unless, loop through elements already marked and conditionally unmark, loop through elements not marked and conditionally mark - still need marker component
+    - tentatives: use current system
+
+    selected: can use events but why bother right now
+
+    change element material for collision - make event based so it doesnt run every frame
+
+    fix persistent sel area if mouse leaves canvas while button pressed
+
+    selection by enclosure vs by collision based on selection area sign
 
 make into 2d, use bounding area intersections: https://bevyengine.org/examples/2D%20Rendering/bounding-2d/ - wait on 2d render improvements
 
