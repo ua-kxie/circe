@@ -1,10 +1,12 @@
 // general purpose shader to minimize pipeline count - wip
+// color: base color of the schematic element
+// selected: 
 
 #import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
 
 struct SchematicMaterial {
     color: vec4<f32>,
-    depth: f32,
+    selected: bool,
     // color_neg: vec4<f32>,
 };
 @group(2) @binding(0) var<uniform> material: SchematicMaterial;
@@ -32,7 +34,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 @fragment
 // fn fragment(@builtin(position) coord: vec4<f32>) -> @location(0) vec4<f32> {
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
-    return material.color_pos;
+    // return material.color_pos;
+    reutrn material.selected * material.color;
     // return vec4(coord.x/1920.0, coord.y/1080.0, 1.0, 1.0);
     // return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 0.2);
 }

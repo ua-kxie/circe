@@ -1,8 +1,7 @@
 #import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
 
 struct SelMaterial {
-    color_pos: vec4<f32>,
-    // color_neg: vec4<f32>,
+    color: vec4<f32>,
 };
 @group(2) @binding(0) var<uniform> material: SelMaterial;
 
@@ -30,4 +29,5 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 // fn fragment(@builtin(position) coord: vec4<f32>) -> @location(0) vec4<f32> {
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
     return vec4(1.0, 0.8, 0.5, 0.2);
+    // return vec4(1.0, input.clip_position.x/1920.0, input.clip_position.y/1080.0, 1.0);
 }
