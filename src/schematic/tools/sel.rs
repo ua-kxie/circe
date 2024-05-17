@@ -171,7 +171,7 @@ fn main(
             }));
         }
     }
-    if buttons.just_released(MouseButton::Left) {
+    if !buttons.pressed(MouseButton::Left) {
         if let SelToolState::Active(asb) = seltoolstate.get() {
             // remove entity, change state
             commands.entity(asb.entityid).despawn();
