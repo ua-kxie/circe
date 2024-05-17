@@ -1,5 +1,10 @@
 use crate::types::{CanvasSpace, SchematicSpace};
-use bevy::{core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping}, input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
+use bevy::{
+    core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
+    input::mouse::MouseWheel,
+    prelude::*,
+    window::PrimaryWindow,
+};
 use euclid::{Box2D, Point2D};
 
 mod circuit;

@@ -185,7 +185,14 @@ impl Plugin for Wire {
 
 // set material based on tentative and selection
 fn set_material(
-    mut wq: Query<(&Handle<WireMaterial>, Option<&sel::Tentative>, Option<&sel::Selected>), With<WireSeg>>,
+    mut wq: Query<
+        (
+            &Handle<WireMaterial>,
+            Option<&sel::Tentative>,
+            Option<&sel::Selected>,
+        ),
+        With<WireSeg>,
+    >,
     mut materials: ResMut<Assets<WireMaterial>>,
 ) {
     for (matid, has_tentative, has_selected) in wq.iter_mut() {
@@ -213,8 +220,7 @@ fn main(
             if buttons.just_released(MouseButton::Left) {
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) =
-                        WireSegBundle::new(pt, meshes, wire_materials);
+                    let (bundle, meshid) = WireSegBundle::new(pt, meshes, wire_materials);
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -236,8 +242,7 @@ fn main(
                 // add entity, change state
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                        let (bundle, meshid) =
-                            WireSegBundle::new(pt, meshes, wire_materials);
+                        let (bundle, meshid) = WireSegBundle::new(pt, meshes, wire_materials);
                         let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
                         next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
