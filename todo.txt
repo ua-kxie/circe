@@ -1,52 +1,35 @@
 sel: 
-    tentatives do not need to be marked, essentially marked by tentative collider
-
-    query for Handle<wire_material>, etc. different for different types. code should reside with that type.
-
-    cant send out events for tentatives marked since tentatives are cleared everytime collider changes
-    unless, loop through elements already marked and conditionally unmark, loop through elements not marked and conditionally mark - still need marker component
-    - tentatives: use current system
-
-    selected: can use events but why bother right now
-
     selection by enclosure vs by collision based on selection area sign - create aabbs and test for enclosure
+    switch color based on selection area - just check for area sign then recreate rect from min/max pts
 
     select single object when multiple are overlapped
 
-    fix persistent sel area if mouse leaves canvas while button pressed
-    rethink states:
-    sel tool - on exit tool state: clear all tool related entities (sel area)
-        point: ray collider, single (with button for cycling) or all
-        area: 
-            enter on click on canvas
-            exit on mouse button release
-            on mouse leave canvas: what do? extrapolate? freeze until cursor returns? exit state until mouse returns?
-            states:
-                point
-                area
-                area_offcanvas
+transform:
+    g for grab
+    ctrl-c for copy (use buffer? or just c for cadence-like behavior)
 
+    translate
 
+    mirror
 
-make into 2d, use bounding area intersections: https://bevyengine.org/examples/2D%20Rendering/bounding-2d/ - wait on 2d render improvements
+    rotate
 
-make selection aabb show different color based on pos/neg area
-    draw 2 opposing rects simultaneously with different colors?
-    switch color based on selection area - just check for area sign then recreate rect from min/max pts
+undo/redo:
+    take snapshot of scheamtic elements
 
-remove euclid dependency (?)
+wire:
+    make wiring tool draw axis aligned segments only
+    add wire pruning
+    make wiring use cursor events
+    draw wire terminals/solder dots
+
+make into 2d, use bounding area intersections: 
+https://bevyengine.org/examples/2D%20Rendering/bounding-2d/ - wait on 2d render improvements
 
 camera zoom towards cursor
 
 add cursor material
 fix sync issue between cursor and wire/selection (events) - cursor uses default material, sel/wire uses custom - submitted issue
-
-selectable/draggable entities (picking plugin?)
-
-make wiring tool draw axis aligned segments only
-add wire pruning
-make wiring use cursor events
-draw wire terminals/solder dots
 
 add device designer
 make cursor always appear as same size on screen
