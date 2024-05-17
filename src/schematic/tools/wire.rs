@@ -15,12 +15,7 @@ use bevy::{
     },
 };
 
-#[derive(Resource, Default)]
-struct WireRes {
-    wire_mat_id: Option<Handle<WireMaterial>>,
-    tentative_wire_mat_id: Option<Handle<WireMaterial>>,
-    selected_wire_mat_id: Option<Handle<WireMaterial>>,
-}
+use crate::schematic::SchematicRes;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum WiringToolState {
@@ -29,10 +24,8 @@ enum WiringToolState {
     Drawing(ActiveWireSeg), // placing second anchor point
 }
 
-use crate::schematic::{NewCurposI, SchematicRes};
-
 use super::{
-    sel::{self, SchematicElement, Selected},
+    sel::{self, SchematicElement},
     SchematicToolState,
 };
 
@@ -187,28 +180,8 @@ impl Plugin for Wire {
         );
 
         app.init_state::<WiringToolState>();
-        app.init_resource::<WireRes>();
     }
 }
-
-// fn setup(
-//     mut next_wirestate: ResMut<NextState<WiringToolState>>,
-//     mut materials: ResMut<Assets<WireMaterial>>,
-//     mut wireres: ResMut<WireRes>,
-// ) {
-//     // on entering wiring tool
-//     next_wirestate.set(WiringToolState::Ready);
-
-//     wireres.wire_mat_id = Some(materials.add(WireMaterial {
-//         color: Color::rgb(0.6, 0.8, 1.0),
-//     }));
-//     wireres.tentative_wire_mat_id = Some(materials.add(WireMaterial {
-//         color: Color::WHITE,
-//     }));
-//     wireres.selected_wire_mat_id = Some(materials.add(WireMaterial {
-//         color: Color::YELLOW,
-//     }));
-// }
 
 // set material based on tentative and selection
 fn set_material(

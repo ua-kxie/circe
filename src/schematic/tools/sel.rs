@@ -91,29 +91,6 @@ pub enum NewTentativeCollider {
     Volume(AabbCast3d),
 }
 
-/// New Element Selection State
-/// event fired by this plugin when an element's selection status has changed
-#[derive(Event)]
-pub struct NewElementSelSt {
-    entity: Entity,
-    sel_st: SelSt,
-}
-
-/// Selection State - should be bitflag?
-/// state representing the selection status of an element
-#[derive(Default)]
-enum SelSt {
-    /// default state, neither selected nor tentative
-    #[default]
-    None,
-    /// tentative state, marked to have its selection state toggled but is currently not selected
-    Tentative,
-    /// marked as selected but not tentative
-    Selected,
-    /// marked as selected and tentative
-    SelectedTentative,
-}
-
 // systems
 // setup system to run on startup
 fn setup(
@@ -257,7 +234,6 @@ fn select(
 /// conditioned on the event [`ClearSelected`]
 fn clr_selected(
     keys: Res<ButtonInput<KeyCode>>,
-    // mut e: EventReader<ClearSelected>,
     es: Query<Entity, With<Selected>>,
     mut commands: Commands,
 ) {
@@ -266,11 +242,19 @@ fn clr_selected(
             commands.entity(element).remove::<Selected>();
         }
     }
-    // if e.read().last().is_some() {
-    //     for element in es.iter() {
-    //         commands.entity(element).remove::<Selected>();
-    //     }
-    // }
+}
+
+/// this system simply removes all entities marked with Selected,
+fn del_selected(
+    keys: Res<ButtonInput<KeyCode>>,
+    es: Query<Entity, With<Selected>>,
+    mut commands: Commands,
+) {
+    if keys.just_pressed(KeyCode::Delete) {
+        for element in es.iter() {
+            commands.entity(element).despawn();
+        }
+    }
 }
 
 pub struct SelToolPlugin;
@@ -285,6 +269,7 @@ impl Plugin for SelToolPlugin {
                 main.run_if(in_state(SchematicToolState::Idle)),
                 select,
                 clr_selected,
+                del_selected,
                 mark_tentatives,
             ),
         );
