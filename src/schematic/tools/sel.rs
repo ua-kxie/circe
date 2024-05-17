@@ -170,15 +170,14 @@ fn main(
                 selbox,
             }));
         }
-
-        if buttons.just_released(MouseButton::Left) {
-            if let SelToolState::Active(asb) = seltoolstate.get() {
-                // remove entity, change state
-                commands.entity(asb.entityid).despawn();
-                next_seltoolstate.set(SelToolState::Ready);
-            }
-            e_tentatives_to_selected.send(TentativesToSelected);
+    }
+    if buttons.just_released(MouseButton::Left) {
+        if let SelToolState::Active(asb) = seltoolstate.get() {
+            // remove entity, change state
+            commands.entity(asb.entityid).despawn();
+            next_seltoolstate.set(SelToolState::Ready);
         }
+        e_tentatives_to_selected.send(TentativesToSelected);
     }
 }
 

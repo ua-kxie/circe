@@ -178,6 +178,7 @@ impl Plugin for Wire {
                 set_material,
             ),
         );
+        app.add_systems(OnExit(SchematicToolState::Wiring), tool_cleanup);
 
         app.init_state::<WiringToolState>();
     }
@@ -201,6 +202,20 @@ fn set_material(
             mat.selected = has_selected.is_some() as i32 as f32;
         }
     }
+}
+
+fn tool_setup(
+
+) {
+    // this system is deisgned to be run everytime the tool is activated
+
+}
+
+fn tool_cleanup(
+    mut next_wiretoolstate: ResMut<NextState<WiringToolState>>,
+) {
+    // this system is deisgned to be run everytime the tool is deactivated
+    next_wiretoolstate.set(WiringToolState::Ready);
 }
 
 fn main(
