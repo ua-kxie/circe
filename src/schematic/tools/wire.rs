@@ -26,7 +26,7 @@ enum WiringToolState {
 }
 
 use super::{
-    CloneToEnt, ElementType, SchematicToolState, Selected, Tentative
+    CloneToEnt, ElementType, Preview, SchematicToolState, Selected, Tentative
 };
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
@@ -50,12 +50,13 @@ pub struct WireSegBundle {
 }
 
 impl WireSegBundle {
-    pub fn clone(
+    fn clone(
         ws: WireSeg,
         meshes: &mut ResMut<Assets<Mesh>>,
         wire_materials: &mut ResMut<Assets<WireMaterial>>,
     ) -> (WireSegBundle, Handle<Mesh>) {
         let pts = vec![ws.p0.as_vec2().extend(0.0), ws.p1.as_vec2().extend(0.0)];
+        dbg!(&pts);
         let mesh = Mesh::new(
             PrimitiveTopology::LineList,
             RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
@@ -100,7 +101,7 @@ impl ActiveWireSeg {
     fn new_endpoint(
         &self,
         pt: IVec2,
-        mut commands: Commands,
+        commands: &mut Commands,
         mut meshes: ResMut<Assets<Mesh>>,
     ) -> ActiveWireSeg {
         let mesh = meshes.get_mut(self.meshid.clone()).unwrap();
@@ -164,15 +165,17 @@ fn set_material(
             &Handle<WireMaterial>,
             Option<&Tentative>,
             Option<&Selected>,
+            Option<&Preview>,
         ),
         With<WireSeg>,
     >,
     mut materials: ResMut<Assets<WireMaterial>>,
 ) {
-    for (matid, has_tentative, has_selected) in wq.iter_mut() {
+    for (matid, has_tentative, has_selected, has_preview) in wq.iter_mut() {
         if let Some(mat) = materials.get_mut(matid) {
             mat.tentative = has_tentative.is_some() as i32 as f32;
             mat.selected = has_selected.is_some() as i32 as f32;
+            mat.preview = has_preview.is_some() as i32 as f32;
         }
     }
 }
@@ -250,9 +253,9 @@ fn main(
                 //     }
                 // }
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    next_wiretoolstate.set(WiringToolState::Drawing(
-                        aws.new_endpoint(pt, commands, meshes),
-                    ));
+                    let new_aws = aws.new_endpoint(pt, &mut commands, meshes);
+                    commands.entity(new_aws.entityid).insert(new_aws.wireseg.clone());
+                    next_wiretoolstate.set(WiringToolState::Drawing(new_aws));
                 }
             }
         }
@@ -308,5 +311,8 @@ impl Material for WireMaterial {
     }
     fn fragment_shader() -> ShaderRef {
         "schematic_shader.wgsl".into()
+    }
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Blend
     }
 }

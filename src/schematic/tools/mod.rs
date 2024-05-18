@@ -64,6 +64,7 @@ impl Plugin for ToolsPlugin {
             grab::GrabToolPlugin,
         ));
         app.add_systems(Update, main);
+        app.add_systems(OnEnter(SchematicToolState::Idle), reset);
 
         app.init_state::<SchematicToolState>();
         app.init_resource::<PreviewElements>();
@@ -112,4 +113,14 @@ fn main(
         SchematicToolState::Label => {}
         SchematicToolState::Comment => {}
     }
+}
+
+fn reset (
+    mut previews: ResMut<PreviewElements>,
+    mut commands: Commands,
+) {
+    for e in &previews.ve {
+        commands.entity(*e).despawn();
+    }
+    previews.ve.clear();
 }

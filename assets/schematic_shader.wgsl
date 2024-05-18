@@ -37,6 +37,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
     return 
     (color + f32(selected) * SELECTED_COLOR + f32(tentative) * TENTATIVE_COLOR) 
-    * max(PREVIEW_COLOR, vec4<f32>(preview,preview,preview,preview));
+    * max(PREVIEW_COLOR, 1 - vec4<f32>(preview,preview,preview,preview));
     // return material.color;
 }
