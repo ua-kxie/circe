@@ -25,9 +25,7 @@ enum WiringToolState {
     Drawing(ActiveWireSeg), // placing second anchor point
 }
 
-use super::{
-    CloneToEnt, ElementType, Preview, SchematicToolState, Selected, Tentative
-};
+use super::{CloneToEnt, ElementType, Preview, SchematicToolState, Selected, Tentative};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WireSeg {
@@ -40,7 +38,6 @@ impl WireSeg {
         WireSeg { p0: pt, p1: pt }
     }
 }
-
 
 #[derive(Bundle)]
 pub struct WireSegBundle {
@@ -78,11 +75,7 @@ impl WireSegBundle {
                     ..default()
                 },
                 schematic_element: SchematicElement {
-                    aabb: Aabb3d::from_point_cloud(
-                        Vec3::ZERO,
-                        Quat::IDENTITY,
-                        &pts,
-                    ),
+                    aabb: Aabb3d::from_point_cloud(Vec3::ZERO, Quat::IDENTITY, &pts),
                 },
             },
             meshid,
@@ -114,18 +107,16 @@ impl ActiveWireSeg {
         );
 
         commands.entity(self.entityid).remove::<Aabb>();
-        commands
-            .entity(self.entityid)
-            .insert(SchematicElement {
-                aabb: Aabb3d::from_point_cloud(
-                    Vec3::ZERO,
-                    Quat::IDENTITY,
-                    &[
-                        self.wireseg.p0.as_vec2().extend(0.0),
-                        pt.as_vec2().extend(0.0),
-                    ],
-                ),
-            });
+        commands.entity(self.entityid).insert(SchematicElement {
+            aabb: Aabb3d::from_point_cloud(
+                Vec3::ZERO,
+                Quat::IDENTITY,
+                &[
+                    self.wireseg.p0.as_vec2().extend(0.0),
+                    pt.as_vec2().extend(0.0),
+                ],
+            ),
+        });
 
         ActiveWireSeg {
             entityid: self.entityid,
@@ -180,10 +171,6 @@ fn set_material(
     }
 }
 
-fn tool_setup() {
-    // this system is deisgned to be run everytime the tool is activated
-}
-
 fn tool_cleanup(mut next_wiretoolstate: ResMut<NextState<WiringToolState>>) {
     // this system is deisgned to be run everytime the tool is deactivated
     next_wiretoolstate.set(WiringToolState::Ready);
@@ -206,7 +193,8 @@ fn main(
             if buttons.just_released(MouseButton::Left) {
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) = WireSegBundle::clone(WireSeg::new(pt), &mut meshes, &mut wire_materials);
+                    let (bundle, meshid) =
+                        WireSegBundle::clone(WireSeg::new(pt), &mut meshes, &mut wire_materials);
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -228,7 +216,11 @@ fn main(
                 // add entity, change state
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                        let (bundle, meshid) = WireSegBundle::clone(WireSeg::new(pt), &mut meshes, &mut wire_materials);
+                        let (bundle, meshid) = WireSegBundle::clone(
+                            WireSeg::new(pt),
+                            &mut meshes,
+                            &mut wire_materials,
+                        );
                         let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
                         next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -254,7 +246,9 @@ fn main(
                 // }
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
                     let new_aws = aws.new_endpoint(pt, &mut commands, meshes);
-                    commands.entity(new_aws.entityid).insert(new_aws.wireseg.clone());
+                    commands
+                        .entity(new_aws.entityid)
+                        .insert(new_aws.wireseg.clone());
                     next_wiretoolstate.set(WiringToolState::Drawing(new_aws));
                 }
             }

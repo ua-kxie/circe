@@ -1,7 +1,7 @@
 // schematic tools - selection, drag move, etc.
+mod grab;
 mod sel;
 mod wire;
-mod grab;
 
 const WIRE_TOOL_KEY: KeyCode = KeyCode::KeyW;
 const COPY_KEY: KeyCode = KeyCode::KeyC;
@@ -18,7 +18,7 @@ pub struct Selected;
 pub struct Tentative;
 
 // events
-/// event fires when some system wants to clone a Wire entity 
+/// event fires when some system wants to clone a Wire entity
 #[derive(Event)]
 struct CloneToEnt((Entity, ElementType));
 
@@ -33,7 +33,7 @@ enum ElementType {
 // previewElements: vector of elements used for preview (e.g. for grab tool)
 #[derive(Resource, Default)]
 struct PreviewElements {
-    ve: Vec<Entity>,  // stores all the entities marked as preview
+    ve: Vec<Entity>, // stores all the entities marked as preview
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -42,8 +42,8 @@ pub enum SchematicToolState {
     Idle,
     Wiring,
     Grab,
-    Label,   // wire/net labeling
-    Comment, // plain text comment with basic formatting options
+    // Label,   // wire/net labeling
+    // Comment, // plain text comment with basic formatting options
 }
 
 // different tools a schematic may have active
@@ -96,9 +96,7 @@ fn main(
                 let c = q_cursor.single();
                 for ws in q_selected.iter() {
                     let ent = commands.spawn((ws.clone(), Preview)).id();
-                    e_clonetoent.send(CloneToEnt((
-                        ent.clone(), ElementType::WireSeg(ws.clone())
-                    )));
+                    e_clonetoent.send(CloneToEnt((ent.clone(), ElementType::WireSeg(ws.clone()))));
                     previews.ve.push(ent);
                 }
                 commands.entity(c).push_children(&previews.ve);
@@ -110,15 +108,10 @@ fn main(
         }
         SchematicToolState::Grab => {}
         SchematicToolState::Wiring => {}
-        SchematicToolState::Label => {}
-        SchematicToolState::Comment => {}
     }
 }
 
-fn reset (
-    mut previews: ResMut<PreviewElements>,
-    mut commands: Commands,
-) {
+fn reset(mut previews: ResMut<PreviewElements>, mut commands: Commands) {
     for e in &previews.ve {
         commands.entity(*e).despawn();
     }

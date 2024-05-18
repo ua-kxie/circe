@@ -3,6 +3,7 @@
 use crate::schematic::net_vertex::NetVertex;
 use petgraph::graphmap::GraphMap;
 
+/// for saving circuit schematic state
 #[derive(Default)]
 pub struct State {
     nets: Nets,

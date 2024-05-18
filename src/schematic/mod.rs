@@ -2,7 +2,11 @@ use std::f32::consts::PI;
 
 use crate::types::{CanvasSpace, SchematicSpace};
 use bevy::{
-    core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping}, input::mouse::MouseWheel, math::bounding::Aabb3d, prelude::*, window::PrimaryWindow
+    core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
+    input::mouse::MouseWheel,
+    math::bounding::Aabb3d,
+    prelude::*,
+    window::PrimaryWindow,
 };
 use euclid::{Box2D, Point2D};
 
@@ -236,7 +240,8 @@ fn setup_camera(
     let cam = commands
         .spawn((
             Camera3dBundle {
-                transform: Transform::from_xyz(0., 0., -1.0).with_rotation(Quat::from_rotation_y(PI)),
+                transform: Transform::from_xyz(0., 0., -1.0)
+                    .with_rotation(Quat::from_rotation_y(PI)),
                 projection: Projection::Orthographic(OrthographicProjection {
                     scale: 0.1,
                     ..Default::default()
