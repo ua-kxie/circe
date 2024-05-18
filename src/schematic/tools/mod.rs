@@ -9,6 +9,7 @@ pub(crate) enum SchematicToolState {
     #[default]
     Idle,
     Wiring,
+    Grab,
     Label,   // wire/net labeling
     Comment, // plain text comment with basic formatting options
 }
@@ -21,7 +22,7 @@ pub struct ToolsPlugin;
 
 impl Plugin for ToolsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(wire::Wire);
+        app.add_plugins(wire::WireToolPlugin);
         app.add_plugins(sel::SelToolPlugin);
         app.add_systems(Update, main);
 
@@ -44,6 +45,7 @@ fn main(
                 next_toolstate.set(SchematicToolState::Wiring);
             }
         }
+        SchematicToolState::Grab => {}
         SchematicToolState::Wiring => {}
         SchematicToolState::Label => {}
         SchematicToolState::Comment => {}

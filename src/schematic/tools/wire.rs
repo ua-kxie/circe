@@ -1,4 +1,3 @@
-pub struct Wire;
 use bevy::{
     math::bounding::Aabb3d,
     pbr::{MaterialPipeline, MaterialPipelineKey},
@@ -170,7 +169,9 @@ impl ActiveWireSeg {
     }
 }
 
-impl Plugin for Wire {
+pub struct WireToolPlugin;
+
+impl Plugin for WireToolPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<WireMaterial>::default());
         // app.add_systems(OnEnter(SchematicToolState::Wiring), setup);
@@ -207,16 +208,11 @@ fn set_material(
     }
 }
 
-fn tool_setup(
-
-) {
+fn tool_setup() {
     // this system is deisgned to be run everytime the tool is activated
-
 }
 
-fn tool_cleanup(
-    mut next_wiretoolstate: ResMut<NextState<WiringToolState>>,
-) {
+fn tool_cleanup(mut next_wiretoolstate: ResMut<NextState<WiringToolState>>) {
     // this system is deisgned to be run everytime the tool is deactivated
     next_wiretoolstate.set(WiringToolState::Ready);
 }
