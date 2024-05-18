@@ -102,7 +102,6 @@ fn setup(
     next_selstate.set(SelToolState::Ready);
     let sel_mat_id = materials.add(SelMaterial {
         color_pos: Color::rgba(1.0, 1.0, 0.0, 0.1),
-        // color_neg: Color::AQUAMARINE,
     });
     selres.sel_mat_id = Some(sel_mat_id);
 }
@@ -170,6 +169,9 @@ fn main(
                 selbox,
             }));
         }
+        if buttons.just_released(MouseButton::Left) {
+            e_tentatives_to_selected.send(TentativesToSelected);
+        }
     }
     if !buttons.pressed(MouseButton::Left) {
         if let SelToolState::Active(asb) = seltoolstate.get() {
@@ -177,7 +179,6 @@ fn main(
             commands.entity(asb.entityid).despawn();
             next_seltoolstate.set(SelToolState::Ready);
         }
-        e_tentatives_to_selected.send(TentativesToSelected);
     }
 }
 

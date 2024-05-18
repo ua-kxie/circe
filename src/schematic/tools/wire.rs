@@ -50,6 +50,8 @@ struct WireMaterial {
     selected: f32,
     #[uniform(2)]
     tentative: f32,
+    #[uniform(3)]
+    preview: f32,
 }
 
 impl Material for WireMaterial {
@@ -97,6 +99,7 @@ impl WireSegBundle {
             color: Color::rgb(0.6, 0.8, 1.0),
             selected: 0.0,
             tentative: 0.0,
+            preview: 0.0,
         });
         (
             WireSegBundle {
