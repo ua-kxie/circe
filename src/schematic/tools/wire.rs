@@ -14,7 +14,9 @@ use bevy::{
     },
 };
 
-use crate::schematic::SchematicRes;
+use crate::schematic::{SchematicElement, SchematicRes};
+
+// states
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum WiringToolState {
@@ -24,12 +26,11 @@ enum WiringToolState {
 }
 
 use super::{
-    sel::{self, SchematicElement},
-    SchematicToolState,
+    CloneToEnt, ElementType, SchematicToolState, Selected, Tentative
 };
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
-struct WireSeg {
+pub struct WireSeg {
     p0: IVec2,
     p1: IVec2,
 }
@@ -40,59 +41,26 @@ impl WireSeg {
     }
 }
 
-// This is the struct that will be passed to your shader
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct WireMaterial {
-    #[uniform(0)]
-    color: Color,
-    #[uniform(1)]
-    selected: f32,
-    #[uniform(2)]
-    tentative: f32,
-    #[uniform(3)]
-    preview: f32,
-}
-
-impl Material for WireMaterial {
-    fn specialize(
-        _pipeline: &MaterialPipeline<Self>,
-        descriptor: &mut RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayout,
-        _key: MaterialPipelineKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        descriptor.primitive.polygon_mode = PolygonMode::Line;
-        // let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
-        // descriptor.vertex.buffers = vec![vertex_layout];
-        Ok(())
-    }
-
-    fn vertex_shader() -> ShaderRef {
-        "schematic_shader.wgsl".into()
-    }
-    fn fragment_shader() -> ShaderRef {
-        "schematic_shader.wgsl".into()
-    }
-}
 
 #[derive(Bundle)]
-struct WireSegBundle {
+pub struct WireSegBundle {
     wireseg: WireSeg,
     meshbundle: MaterialMeshBundle<WireMaterial>,
     schematic_element: SchematicElement,
 }
 
 impl WireSegBundle {
-    fn new(
-        pt: IVec2,
-        mut meshes: ResMut<Assets<Mesh>>,
-        mut wire_materials: ResMut<Assets<WireMaterial>>,
+    pub fn clone(
+        ws: WireSeg,
+        meshes: &mut ResMut<Assets<Mesh>>,
+        wire_materials: &mut ResMut<Assets<WireMaterial>>,
     ) -> (WireSegBundle, Handle<Mesh>) {
-        let ptf = Vec3::from_array([pt.x as f32, pt.y as f32, 0.0]);
+        let pts = vec![ws.p0.as_vec2().extend(0.0), ws.p1.as_vec2().extend(0.0)];
         let mesh = Mesh::new(
             PrimitiveTopology::LineList,
             RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
         )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![ptf, ptf]);
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, pts.clone());
         let meshid = meshes.add(mesh);
         let mat = wire_materials.add(WireMaterial {
             color: Color::rgb(0.6, 0.8, 1.0),
@@ -102,7 +70,7 @@ impl WireSegBundle {
         });
         (
             WireSegBundle {
-                wireseg: WireSeg::new(pt),
+                wireseg: ws,
                 meshbundle: MaterialMeshBundle {
                     mesh: meshid.clone(),
                     material: mat,
@@ -112,7 +80,7 @@ impl WireSegBundle {
                     aabb: Aabb3d::from_point_cloud(
                         Vec3::ZERO,
                         Quat::IDENTITY,
-                        &[pt.as_vec2().extend(0.0)],
+                        &pts,
                     ),
                 },
             },
@@ -147,7 +115,7 @@ impl ActiveWireSeg {
         commands.entity(self.entityid).remove::<Aabb>();
         commands
             .entity(self.entityid)
-            .insert(sel::SchematicElement {
+            .insert(SchematicElement {
                 aabb: Aabb3d::from_point_cloud(
                     Vec3::ZERO,
                     Quat::IDENTITY,
@@ -180,6 +148,7 @@ impl Plugin for WireToolPlugin {
             (
                 main.run_if(in_state(super::SchematicToolState::Wiring)),
                 set_material,
+                append_components,
             ),
         );
         app.add_systems(OnExit(SchematicToolState::Wiring), tool_cleanup);
@@ -193,8 +162,8 @@ fn set_material(
     mut wq: Query<
         (
             &Handle<WireMaterial>,
-            Option<&sel::Tentative>,
-            Option<&sel::Selected>,
+            Option<&Tentative>,
+            Option<&Selected>,
         ),
         With<WireSeg>,
     >,
@@ -225,8 +194,8 @@ fn main(
     mut next_wiretoolstate: ResMut<NextState<WiringToolState>>,
     mut next_schematictoolstate: ResMut<NextState<SchematicToolState>>,
     mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    wire_materials: ResMut<Assets<WireMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut wire_materials: ResMut<Assets<WireMaterial>>,
 ) {
     // run if tool state is wire
     match wiretoolstate.get() {
@@ -234,7 +203,7 @@ fn main(
             if buttons.just_released(MouseButton::Left) {
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) = WireSegBundle::new(pt, meshes, wire_materials);
+                    let (bundle, meshid) = WireSegBundle::clone(WireSeg::new(pt), &mut meshes, &mut wire_materials);
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -256,7 +225,7 @@ fn main(
                 // add entity, change state
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                        let (bundle, meshid) = WireSegBundle::new(pt, meshes, wire_materials);
+                        let (bundle, meshid) = WireSegBundle::clone(WireSeg::new(pt), &mut meshes, &mut wire_materials);
                         let wireseg = bundle.wireseg.clone();
                         let aws = commands.spawn(bundle).id();
                         next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -287,5 +256,57 @@ fn main(
                 }
             }
         }
+    }
+}
+
+// bevy doesnt have an easy way to clone entities yet...
+/// this function is used to fill out componenets that is easier to add in this module, e.g. mesh and material
+/// conceived for cloning entities. Cloner creates an entity and adds data compoennt, which are both passed here
+/// through an event.
+fn append_components(
+    mut ce: EventReader<CloneToEnt>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut wire_materials: ResMut<Assets<WireMaterial>>,
+) {
+    for CloneToEnt((e, et)) in ce.read() {
+        if let ElementType::WireSeg(ws) = et {
+            let (wb, _mesh) = WireSegBundle::clone(ws.clone(), &mut meshes, &mut wire_materials);
+            commands.entity(*e).insert(wb);
+        }
+    }
+}
+
+// This is the struct that will be passed to your shader
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct WireMaterial {
+    #[uniform(0)]
+    color: Color,
+    #[uniform(1)]
+    selected: f32,
+    #[uniform(2)]
+    tentative: f32,
+    #[uniform(3)]
+    preview: f32,
+}
+
+impl Material for WireMaterial {
+    fn specialize(
+        _pipeline: &MaterialPipeline<Self>,
+        descriptor: &mut RenderPipelineDescriptor,
+        _layout: &MeshVertexBufferLayout,
+        _key: MaterialPipelineKey<Self>,
+    ) -> Result<(), SpecializedMeshPipelineError> {
+        descriptor.primitive.polygon_mode = PolygonMode::Line;
+        // let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
+        // descriptor.vertex.buffers = vec![vertex_layout];
+        Ok(())
+    }
+
+    fn vertex_shader() -> ShaderRef {
+        "schematic_shader.wgsl".into()
+    }
+    fn fragment_shader() -> ShaderRef {
+        "schematic_shader.wgsl".into()
     }
 }

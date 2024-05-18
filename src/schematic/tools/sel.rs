@@ -1,6 +1,6 @@
 // tool for making selections
 use crate::{
-    schematic::{NewCurposI, SchematicRes},
+    schematic::{NewCurposI, SchematicElement, SchematicRes},
     types::{NewIVec2, SSBox},
 };
 use bevy::{
@@ -17,7 +17,7 @@ use bevy::{
     },
 };
 
-use super::SchematicToolState;
+use super::{SchematicToolState, Selected, Tentative};
 
 use bevy::math::bounding::{Aabb3d, AabbCast3d, IntersectsVolume, RayCast3d};
 
@@ -50,25 +50,10 @@ impl SelBox {
     }
 }
 
-// marker components
-/// componenent marks entity as a schematic element - can be selected, marked as tentative.
-/// Entities with this compoenent should be checked for collision against cursor
-
-#[derive(Component)]
-pub struct SchematicElement {
-    pub aabb: Aabb3d,
-}
-
 // /// component is added automatically to SchematicElements without it.
 // /// Should be deleted on elements which changes position/shape.
 // #[derive(Component)]
 // pub struct Collider(Aabb3d);
-
-#[derive(Component)]
-pub struct Selected;
-
-#[derive(Component)]
-pub struct Tentative;
 
 // events
 

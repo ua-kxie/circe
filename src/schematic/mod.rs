@@ -2,10 +2,7 @@ use std::f32::consts::PI;
 
 use crate::types::{CanvasSpace, SchematicSpace};
 use bevy::{
-    core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
-    input::mouse::MouseWheel,
-    prelude::*,
-    window::PrimaryWindow,
+    core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping}, input::mouse::MouseWheel, math::bounding::Aabb3d, prelude::*, window::PrimaryWindow
 };
 use euclid::{Box2D, Point2D};
 
@@ -17,6 +14,15 @@ mod tools;
 
 const MINSCALE: f32 = 0.001;
 const MAXSCALE: f32 = 1.0;
+
+// marker components
+/// componenent marks entity as a schematic element - can be selected, marked as tentative.
+/// Entities with this compoenent should be checked for collision against cursor
+
+#[derive(Component)]
+pub struct SchematicElement {
+    pub aabb: Aabb3d,
+}
 
 #[derive(Component)]
 struct InfoTextMarker;
