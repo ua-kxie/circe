@@ -2,7 +2,11 @@
 
 use bevy::prelude::*;
 
-use super::SchematicToolState;
+use crate::schematic::{self, SchematicRes};
+
+use super::{CloneToEnt, ElementType, PreviewElements, SchematicToolState};
+
+const PLACE_BUTTON: MouseButton = MouseButton::Left;
 
 // events
 // enter/exit grab tool can be done via tool state
@@ -15,7 +19,6 @@ struct Place;
 // system to run on entering tool
 fn on_enter() {
     // handle from schematic, enter as copy, move, or placing of new element (e.g. device)
-    // upon entering, provide with vector Entities which should be marked as preview and used to show transforms
 
     // on entering grab tool
     // make copy of all elements marked as selected,
@@ -29,10 +32,26 @@ fn on_exit() {
     // delete all elements marked as preview
 }
 
-// system to run on grab tool place
-fn on_place() {
+// system to run on grab tool 'place' event
+fn on_place(
+    schematic_res: Res<SchematicRes>,
+    pes: Res<PreviewElements>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    mut e_clonetoent: EventWriter<CloneToEnt>,
+    mut commands: Commands,
+) {
     // on place event:
     // make copy of all elements marked as preview
+    if schematic_res.cursor_position.opt_ssp.is_some() && buttons.just_pressed(PLACE_BUTTON) {
+        for pe in pes.ve.iter() {
+            match pe {
+                ElementType::WireSeg((e, ws)) => {
+                    let ent = commands.spawn(ws.clone()).id();
+                    e_clonetoent.send(CloneToEnt(ElementType::WireSeg((ent.clone(), ws.clone()))));
+                },
+            }
+        }
+    }
 }
 
 // main loop system to handle basic transformation commands

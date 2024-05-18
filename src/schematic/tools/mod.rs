@@ -20,10 +20,11 @@ pub struct Tentative;
 // events
 /// event fires when some system wants to clone a Wire entity
 #[derive(Event)]
-struct CloneToEnt((Entity, ElementType));
+struct CloneToEnt(ElementType);
 
+#[derive(Debug, Clone)]
 enum ElementType {
-    WireSeg(WireSeg),
+    WireSeg((Entity, WireSeg)),
     // device
     // comment
     // etc.
@@ -33,7 +34,7 @@ enum ElementType {
 // previewElements: vector of elements used for preview (e.g. for grab tool)
 #[derive(Resource, Default)]
 struct PreviewElements {
-    ve: Vec<Entity>, // stores all the entities marked as preview
+    ve: Vec<ElementType>, // stores all the entities marked as preview
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -76,7 +77,7 @@ fn main(
     keys: Res<ButtonInput<KeyCode>>,
     curr_toolstate: Res<State<SchematicToolState>>,
     mut next_toolstate: ResMut<NextState<SchematicToolState>>,
-    q_selected: Query<&wire::WireSeg, With<Selected>>,
+    q_selected: Query<&WireSeg, With<Selected>>,
     mut commands: Commands,
     mut e_clonetoent: EventWriter<CloneToEnt>,
     mut previews: ResMut<PreviewElements>,
@@ -96,10 +97,16 @@ fn main(
                 let c = q_cursor.single();
                 for ws in q_selected.iter() {
                     let ent = commands.spawn((ws.clone(), Preview)).id();
-                    e_clonetoent.send(CloneToEnt((ent.clone(), ElementType::WireSeg(ws.clone()))));
-                    previews.ve.push(ent);
+                    let et = ElementType::WireSeg((ent.clone(), ws.clone()));
+                    e_clonetoent.send(CloneToEnt(et.clone()));
+                    previews.ve.push(et);
                 }
-                commands.entity(c).push_children(&previews.ve);
+                let entity_vec: Vec<Entity> = previews.ve.iter().map(|x| {
+                    match x {
+                        ElementType::WireSeg((e, _)) => e.clone(),
+                    }
+                }).collect();
+                commands.entity(c).push_children(&entity_vec);
                 next_toolstate.set(SchematicToolState::Grab);
             }
             if keys.just_released(MOVE_KEY) {
@@ -113,7 +120,11 @@ fn main(
 
 fn reset(mut previews: ResMut<PreviewElements>, mut commands: Commands) {
     for e in &previews.ve {
-        commands.entity(*e).despawn();
+        match e {
+            ElementType::WireSeg((e, ws)) => {
+                commands.entity(*e).despawn();
+            },
+        }
     }
     previews.ve.clear();
 }

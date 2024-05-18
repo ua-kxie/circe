@@ -53,7 +53,6 @@ impl WireSegBundle {
         wire_materials: &mut ResMut<Assets<WireMaterial>>,
     ) -> (WireSegBundle, Handle<Mesh>) {
         let pts = vec![ws.p0.as_vec2().extend(0.0), ws.p1.as_vec2().extend(0.0)];
-        dbg!(&pts);
         let mesh = Mesh::new(
             PrimitiveTopology::LineList,
             RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
@@ -266,11 +265,9 @@ fn append_components(
     mut meshes: ResMut<Assets<Mesh>>,
     mut wire_materials: ResMut<Assets<WireMaterial>>,
 ) {
-    for CloneToEnt((e, et)) in ce.read() {
-        if let ElementType::WireSeg(ws) = et {
-            let (wb, _mesh) = WireSegBundle::clone(ws.clone(), &mut meshes, &mut wire_materials);
-            commands.entity(*e).insert(wb);
-        }
+    for CloneToEnt(ElementType::WireSeg((ent, ws))) in ce.read() {
+        let (wb, _mesh) = WireSegBundle::clone(ws.clone(), &mut meshes, &mut wire_materials);
+        commands.entity(*ent).insert(wb);
     }
 }
 
