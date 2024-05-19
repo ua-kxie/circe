@@ -43,6 +43,10 @@ fn on_place(
 ) {
     // on place event:
     // make copy of all elements marked as preview
+
+    // whats a better way for grab tool to branch off based on different type?
+    // systemId callback - create a clone callback in each type
+    // get callback here, call it with a transform arg - but wire segs have 2 points that can have different relative distances...
     if schematic_res.cursor_position.opt_ssp.is_some() && buttons.just_pressed(PLACE_BUTTON) {
         for (gt, ws) in q_pes.iter() {
             let ent = commands.spawn(ws.clone()).id();

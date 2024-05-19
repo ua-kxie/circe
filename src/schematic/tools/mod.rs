@@ -30,13 +30,6 @@ enum ElementType {
     // etc.
 }
 
-// resources
-// previewElements: vector of elements used for preview (e.g. for grab tool)
-#[derive(Resource, Default)]
-struct PreviewElements {
-    ve: Vec<ElementType>, // stores all the entities marked as preview
-}
-
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SchematicToolState {
     #[default]
@@ -68,7 +61,6 @@ impl Plugin for ToolsPlugin {
         app.add_systems(OnEnter(SchematicToolState::Idle), reset);
 
         app.init_state::<SchematicToolState>();
-        app.init_resource::<PreviewElements>();
         app.add_event::<CloneToEnt>();
     }
 }
@@ -80,7 +72,6 @@ fn main(
     q_selected: Query<&WireSeg, With<Selected>>,
     mut commands: Commands,
     mut e_clonetoent: EventWriter<CloneToEnt>,
-    mut previews: ResMut<PreviewElements>,
     q_cursor: Query<Entity, With<CursorMarker>>,
 ) {
     if keys.just_released(KeyCode::Escape) {
@@ -93,22 +84,15 @@ fn main(
                 next_toolstate.set(SchematicToolState::Wiring);
             }
             if keys.just_released(COPY_KEY) {
-                previews.ve.clear();
                 let c = q_cursor.single();
+                let mut entities = vec![];
                 for ws in q_selected.iter() {
                     let ent = commands.spawn((ws.clone(), Preview)).id();
                     let et = ElementType::WireSeg((ent.clone(), ws.clone()));
                     e_clonetoent.send(CloneToEnt(et.clone()));
-                    previews.ve.push(et);
+                    entities.push(ent);
                 }
-                let entity_vec: Vec<Entity> = previews
-                    .ve
-                    .iter()
-                    .map(|x| match x {
-                        ElementType::WireSeg((e, _)) => e.clone(),
-                    })
-                    .collect();
-                commands.entity(c).push_children(&entity_vec);
+                commands.entity(c).push_children(&entities);
                 next_toolstate.set(SchematicToolState::Grab);
             }
             if keys.just_released(MOVE_KEY) {
@@ -120,13 +104,8 @@ fn main(
     }
 }
 
-fn reset(mut previews: ResMut<PreviewElements>, mut commands: Commands) {
-    for e in &previews.ve {
-        match e {
-            ElementType::WireSeg((e, _ws)) => {
-                commands.entity(*e).despawn();
-            }
-        }
+fn reset(previews: Query<Entity, With<Preview>>, mut commands: Commands) {
+    for e in &previews {
+        commands.entity(e).despawn();
     }
-    previews.ve.clear();
 }

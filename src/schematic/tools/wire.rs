@@ -1,4 +1,5 @@
 use bevy::{
+    ecs::system::SystemId,
     math::bounding::Aabb3d,
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
@@ -14,7 +15,8 @@ use bevy::{
     },
 };
 
-use crate::schematic::{SchematicElement, SchematicRes};
+use super::{CloneToEnt, ElementType, Preview, SchematicToolState, Selected, Tentative};
+use crate::schematic::{CloneCb, SchematicElement, SchematicRes};
 
 // states
 
@@ -25,8 +27,7 @@ enum WiringToolState {
     Drawing(ActiveWireSeg), // placing second anchor point
 }
 
-use super::{CloneToEnt, ElementType, Preview, SchematicToolState, Selected, Tentative};
-
+// wire segment data
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WireSeg {
     p0: IVec2,
