@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::schematic::{self, SchematicRes};
 
-use super::{CloneToEnt, ElementType, PreviewElements, SchematicToolState};
+use super::{wire::WireSeg, CloneToEnt, ElementType, Preview, PreviewElements, SchematicToolState};
 
 const PLACE_BUTTON: MouseButton = MouseButton::Left;
 
@@ -35,7 +35,8 @@ fn on_exit() {
 // system to run on grab tool 'place' event
 fn on_place(
     schematic_res: Res<SchematicRes>,
-    pes: Res<PreviewElements>,
+    // pes: Res<PreviewElements>,
+    q_pes: Query<(&GlobalTransform, &WireSeg), With<Preview>>,
     buttons: Res<ButtonInput<MouseButton>>,
     mut e_clonetoent: EventWriter<CloneToEnt>,
     mut commands: Commands,
@@ -43,13 +44,19 @@ fn on_place(
     // on place event:
     // make copy of all elements marked as preview
     if schematic_res.cursor_position.opt_ssp.is_some() && buttons.just_pressed(PLACE_BUTTON) {
-        for pe in pes.ve.iter() {
-            match pe {
-                ElementType::WireSeg((e, ws)) => {
-                    let ent = commands.spawn(ws.clone()).id();
-                    e_clonetoent.send(CloneToEnt(ElementType::WireSeg((ent.clone(), ws.clone()))));
-                },
-            }
+        for (gt, ws) in q_pes.iter() {
+            let ent = commands.spawn(ws.clone()).id();
+            let ws1 = WireSeg::new(
+                gt.transform_point(ws.p0().extend(0).as_vec3()).as_ivec3().truncate(),
+                gt.transform_point(ws.p1().extend(0).as_vec3()).as_ivec3().truncate(),
+            );
+            e_clonetoent.send(CloneToEnt(ElementType::WireSeg((ent.clone(), ws1.clone()))));
+            // match pe {
+            //     ElementType::WireSeg((e, ws)) => {
+            //         let ent = commands.spawn(ws.clone()).id();
+            //         e_clonetoent.send(CloneToEnt(ElementType::WireSeg((ent.clone(), ws.clone()))));
+            //     },
+            // }
         }
     }
 }

@@ -34,8 +34,20 @@ pub struct WireSeg {
 }
 
 impl WireSeg {
-    fn new(pt: IVec2) -> WireSeg {
+    fn new_single(pt: IVec2) -> WireSeg {
         WireSeg { p0: pt, p1: pt }
+    }
+
+    pub fn new(p0: IVec2, p1: IVec2) -> WireSeg {
+        WireSeg { p0, p1 }
+    }
+
+    pub fn p0(&self) -> IVec2 {
+        self.p0
+    }
+
+    pub fn p1(&self) -> IVec2 {
+        self.p1
     }
 }
 
@@ -193,7 +205,7 @@ fn main(
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
                     let (bundle, meshid) =
-                        WireSegBundle::clone(WireSeg::new(pt), &mut meshes, &mut wire_materials);
+                        WireSegBundle::clone(WireSeg::new_single(pt), &mut meshes, &mut wire_materials);
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {
@@ -216,7 +228,7 @@ fn main(
                 if aws.wireseg.p0 != aws.wireseg.p1 {
                     if let Some(pt) = schematic_res.cursor_position.opt_ssp {
                         let (bundle, meshid) = WireSegBundle::clone(
-                            WireSeg::new(pt),
+                            WireSeg::new_single(pt),
                             &mut meshes,
                             &mut wire_materials,
                         );
