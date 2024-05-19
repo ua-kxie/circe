@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::schematic::{self, SchematicRes};
+use crate::schematic::SchematicRes;
 
-use super::{wire::WireSeg, CloneToEnt, ElementType, Preview, PreviewElements, SchematicToolState};
+use super::{wire::WireSeg, CloneToEnt, ElementType, Preview, SchematicToolState};
 
 const PLACE_BUTTON: MouseButton = MouseButton::Left;
 
@@ -47,8 +47,12 @@ fn on_place(
         for (gt, ws) in q_pes.iter() {
             let ent = commands.spawn(ws.clone()).id();
             let ws1 = WireSeg::new(
-                gt.transform_point(ws.p0().extend(0).as_vec3()).as_ivec3().truncate(),
-                gt.transform_point(ws.p1().extend(0).as_vec3()).as_ivec3().truncate(),
+                gt.transform_point(ws.p0().extend(0).as_vec3())
+                    .as_ivec3()
+                    .truncate(),
+                gt.transform_point(ws.p1().extend(0).as_vec3())
+                    .as_ivec3()
+                    .truncate(),
             );
             e_clonetoent.send(CloneToEnt(ElementType::WireSeg((ent.clone(), ws1.clone()))));
             // match pe {

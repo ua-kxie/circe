@@ -204,8 +204,11 @@ fn main(
             if buttons.just_released(MouseButton::Left) {
                 // add entity, change state
                 if let Some(pt) = schematic_res.cursor_position.opt_ssp {
-                    let (bundle, meshid) =
-                        WireSegBundle::clone(WireSeg::new_single(pt), &mut meshes, &mut wire_materials);
+                    let (bundle, meshid) = WireSegBundle::clone(
+                        WireSeg::new_single(pt),
+                        &mut meshes,
+                        &mut wire_materials,
+                    );
                     let wireseg = bundle.wireseg.clone();
                     let aws = commands.spawn(bundle).id();
                     next_wiretoolstate.set(WiringToolState::Drawing(ActiveWireSeg {

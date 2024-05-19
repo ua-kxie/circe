@@ -101,11 +101,13 @@ fn main(
                     e_clonetoent.send(CloneToEnt(et.clone()));
                     previews.ve.push(et);
                 }
-                let entity_vec: Vec<Entity> = previews.ve.iter().map(|x| {
-                    match x {
+                let entity_vec: Vec<Entity> = previews
+                    .ve
+                    .iter()
+                    .map(|x| match x {
                         ElementType::WireSeg((e, _)) => e.clone(),
-                    }
-                }).collect();
+                    })
+                    .collect();
                 commands.entity(c).push_children(&entity_vec);
                 next_toolstate.set(SchematicToolState::Grab);
             }
@@ -121,9 +123,9 @@ fn main(
 fn reset(mut previews: ResMut<PreviewElements>, mut commands: Commands) {
     for e in &previews.ve {
         match e {
-            ElementType::WireSeg((e, ws)) => {
+            ElementType::WireSeg((e, _ws)) => {
                 commands.entity(*e).despawn();
-            },
+            }
         }
     }
     previews.ve.clear();
