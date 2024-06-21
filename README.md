@@ -1,6 +1,6 @@
 Circe: Prototyping for 2D CAD drawn with Iced canvas
 
-Soliciting experienced help and/or advice with architecture and gui
+This Project is ABANDONED in favor of [Scirke](https://github.com/ua-kxie/scirke)
 
 ### Preview:
 Dcop simulation\
@@ -84,8 +84,6 @@ B - define device boundary
 ### Goals
 Target application is EDA schematic capture
 
-#### Currently Working On:
-Looking into building this with a game engine instead, since useful systems should be supported already such as entity (device) instancing with unique properties.
 
 This is happening in a branch.
 
